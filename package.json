@@ -12,11 +12,20 @@
     "files": [
       "public/**/*",
       "main.js",
-      "preload.js"
+      "node_modules/**/*",
+      "preload.js",
+      "models/**/*",
+      "lib/**/*"
+    ],
+    "extraFiles": [
+    ],
+    "extraResources": [
     ],
     "win": {},
     "linux": {},
-    "mac": {}
+    "mac": {
+      "asar": false
+    }
   },
   "scripts": {
     "build": "rollup -c --bundleConfigAsCjs",
@@ -25,18 +34,22 @@
     "electron": "wait-on http://localhost:8080 && electron .",
     "electron-dev": "concurrently \"yarn run dev\" \"yarn run electron\"",
     "preelectron-pack": "yarn run build",
-    "electron-pack": "electron-builder"
+    "electron-pack": "electron-builder",
+    "electron-rebuild": "./node_modules/.bin/electron-rebuild"
   },
   "dependencies": {
-    "electron-serve": "^1.1.0"
+    "@picovoice/pvrecorder-node": "^1.2.1",
+    "electron-serve": "^1.1.0",
+    "wavefile": "^11.0.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.3.0",
     "@rollup/plugin-commonjs": "^23.0.2",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-terser": "0.2.1",
     "concurrently": "^7.5.0",
-    "electron": "^21.2.0",
-    "electron-builder": "^23.6.0",
+    "electron": "^27.0.2",
+    "electron-builder": "^24.6.4",
     "rollup": "^3.2.3",
     "rollup-plugin-css-only": "^4.2.0",
     "rollup-plugin-livereload": "^2.0.5",
