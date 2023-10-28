@@ -24,8 +24,8 @@ function isDev() {
 function createWindow() {
     // Create the browser window.
     mainWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1100,
+        height: 800,
         webPreferences: {
             nodeIntegration: true,
             preload: path.join(__dirname, 'preload.js'),
@@ -33,7 +33,8 @@ function createWindow() {
             // contextIsolation: false
         },
         icon: path.join(__dirname, 'public/favicon.png'),
-        show: false
+        show: false,
+        // titleBarStyle: 'hidden',
     });
 
     // This block of code is intended for development purpose only.
@@ -64,7 +65,7 @@ function createWindow() {
     mainWindow.once('ready-to-show', () => {
         mainWindow.show()
     });
-    mainWindow.webContents.openDevTools()
+    // mainWindow.webContents.openDevTools()
 }
 
 // This method will be called when Electron has finished
@@ -191,3 +192,9 @@ function spawnStreamProcess() {
 setTimeout(() => {
     spawnStreamProcess()
 }, 3000)
+
+setTimeout(() => {
+    mainWindow.webContents.print({}, (success, errorType) => {
+        if (!success) console.log(errorType)
+    })
+}, 10000)
