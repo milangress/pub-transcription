@@ -4,6 +4,7 @@
 	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[']
 
 	let list = [];
+	let fullList = [];
 	let currentSentence = ''
 
 	let transData = []
@@ -11,6 +12,7 @@
 	$: compText = compList.reverse().join(' ')
 	window.electronAPI.onTransData((event, value) => {
 		console.log("onUpdateCounter", value)
+		fullList = [value, ...fullList]
 		if (String(value).startsWith('NEW')) {
 			commitFinalSentence()
 			currentSentence = String(value).replace('NEW', '')
@@ -61,7 +63,7 @@
 
 	<div class="print-non">
 	<hr>
-	{#each compList as item}
+	{#each fullList as item}
 		<p>{item}</p>
 	{/each}
 	<hr>
@@ -88,7 +90,7 @@
 	}
 	page[size="A4"] {
 		width: 21cm;
-		height: 29.7cm;
+		min-height: 29.7cm;
 		padding: 1cm;
 	}
 
@@ -117,12 +119,10 @@
 		.print-non {
 			display: none;
 		}
-		main {
-			padding: 0;
-		}
-		body, page {
+		body, page, main {
 			background: white;
 			margin: 0;
+			padding: 0;
 			box-shadow: 0;
 		}
 	}
