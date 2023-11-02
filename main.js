@@ -3,6 +3,8 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const serve = require('electron-serve');
 const loadURL = serve({ directory: 'public' });
+const os = require('node:os')
+
 
 const fs= require("fs");
 const { PvRecorder } = require("@picovoice/pvrecorder-node");
@@ -162,8 +164,8 @@ function spawnStreamProcess() {
 
     const ls = spawn(path.join(__dirname, 'lib/stream'),
         [
-            '--model', path.join(__dirname, 'models/ggml-medium.bin'),
-            '-t', '8',
+            '--model', path.join(__dirname, 'models/ggml-large.bin'),
+            // '-t', '8',
             // '--step', '500',
             // '--length', '3000',
             // '-vth', '0.6'
@@ -183,6 +185,9 @@ function spawnStreamProcess() {
 
     ls.on('error', (error) => {
         console.log(`error: ${error.message}`);
+        if(mainWindow){
+            mainWindow.webContents.send('trans-info', error.message)
+        }
     });
 
     ls.on("close", code => {
@@ -194,7 +199,21 @@ setTimeout(() => {
 }, 3000)
 
 setTimeout(() => {
+    print()
+}, 10000)
+
+function print() {
     mainWindow.webContents.print({}, (success, errorType) => {
         if (!success) console.log(errorType)
     })
-}, 10000)
+
+    const pdfPath = path.join(os.homedir(), 'Desktop', 'temp.pdf')
+    mainWindow.webContents.printToPDF({}).then(data => {
+        fs.writeFile(pdfPath, data, (error) => {
+            if (error) throw error
+            console.log(`Wrote PDF successfully to ${pdfPath}`)
+        })
+    }).catch(error => {
+        console.log(`Failed to write PDF to ${pdfPath}: `, error)
+    })
+}

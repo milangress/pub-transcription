@@ -24,11 +24,13 @@
     "win": {},
     "linux": {},
     "mac": {
-      "asar": false
+      "asar": false,
+      "target": "dir"
     }
   },
   "scripts": {
     "build": "rollup -c --bundleConfigAsCjs",
+    "dlwisper": "./models/download-ggml-model.sh large",
     "dev": "rollup -c -w --bundleConfigAsCjs",
     "start": "sirv public --no-clear",
     "electron": "wait-on http://localhost:8080 && electron .",
