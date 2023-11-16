@@ -203,12 +203,25 @@ setTimeout(() => {
 }, 10000)
 
 function print() {
-    mainWindow.webContents.print({}, (success, errorType) => {
+    const options = {
+        margins: {
+            marginType: 'custom',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0
+        },
+        pageSize: 'A3',
+        printBackground: true,
+        printSelectionOnly: false,
+        landscape: true
+    }
+    mainWindow.webContents.print(options, (success, errorType) => {
         if (!success) console.log(errorType)
     })
 
     const pdfPath = path.join(os.homedir(), 'Desktop', 'temp.pdf')
-    mainWindow.webContents.printToPDF({}).then(data => {
+    mainWindow.webContents.printToPDF(options).then(data => {
         fs.writeFile(pdfPath, data, (error) => {
             if (error) throw error
             console.log(`Wrote PDF successfully to ${pdfPath}`)
