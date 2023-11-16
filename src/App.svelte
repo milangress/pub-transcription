@@ -56,12 +56,13 @@
 
 <main>
 	{#if compText.length > 0}
-		<div class="maintxt">
-			<page size="A4">{compText}</page>
+		<div class="print-context">
+			<page size="A3">{compText}</page>
 		</div>
 	{/if}
 
 	<div class="print-non">
+		<div class="infobox">
 	<hr>
 	{#each fullList as item}
 		<p>{item}</p>
@@ -70,34 +71,40 @@
 	{#each transData as item}
 		<p>{item}</p>
 	{/each}
+		</div>
 	</div>
 </main>
 
 <style>
+	html, body {
+		margin: 0;
+		padding: 0;
+	}
 	main {
 		text-align: left;
-		padding: 1em;
-		max-width: 240px;
-		margin: 0 auto;
 		font-family: "American Typewriter",monospace;
+		outline: 1px solid green;
 	}
 	page {
 		background: white;
 		display: block;
-		margin: 0 auto;
-		margin-bottom: 0.5cm;
 		box-shadow: 0 0 0.5cm rgba(0,0,0,0.5);
 	}
-	page[size="A4"] {
-		width: 21cm;
-		min-height: 29.7cm;
-		padding: 1cm;
-	}
 
-	.maintxt {
+	page[size="A3"] {
+		aspect-ratio: 1.414/1;
+		padding: 1cm;
+		background: url('../scan.jpeg');
+		background-size: contain;
+		outline: 1px solid red;
+
+	}
+	.print-context {
 		text-align: left;
 		font-size: 2em;
 		font-weight: 100;
+		width: 80vw;
+		float: left;
 	}
 
 	h1 {
@@ -106,12 +113,10 @@
 		font-size: 4em;
 		font-weight: 100;
 	}
+	.infobox {
 
-	@media (min-width: 640px) {
-		main {
-			max-width: none;
-		}
 	}
+
 	@media print {
 		* {
 			-webkit-print-color-adjust: exact;
@@ -119,11 +124,14 @@
 		.print-non {
 			display: none;
 		}
+		.print-context {
+			width: 100%;
+		}
 		body, page, main {
 			background: white;
 			margin: 0;
 			padding: 0;
-			box-shadow: 0;
+			box-shadow: none;
 		}
 	}
 </style>
