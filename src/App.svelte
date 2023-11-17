@@ -1,11 +1,15 @@
 <script>
 	import {onMount} from "svelte"
 
+	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
+
+
 	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[']
 
-	let list = [];
+	let list = [loremIpsum];
 	let fullList = [];
 	let currentSentence = ''
+
 
 	let transData = []
 	$: compList = [currentSentence, ...list]
@@ -84,6 +88,11 @@
 		text-align: left;
 		font-family: "American Typewriter",monospace;
 		outline: 1px solid green;
+		display: grid;
+		grid-template-columns: 1fr;
+		height: 100%;
+		background: #000;
+		padding: 0.5rem;
 	}
 	page {
 		background: white;
@@ -93,18 +102,25 @@
 
 	page[size="A3"] {
 		aspect-ratio: 1.414/1;
+		height: 297mm;
+		width: 420mm;
 		padding: 1cm;
 		background: url('../scan.jpeg');
 		background-size: contain;
 		outline: 1px solid red;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%) scale(0.6);
+		z-index: 500;
 
 	}
 	.print-context {
 		text-align: left;
 		font-size: 2em;
 		font-weight: 100;
-		width: 80vw;
-		float: left;
+		z-index: 500;
+		position: fixed;
 	}
 
 	h1 {
@@ -114,7 +130,7 @@
 		font-weight: 100;
 	}
 	.infobox {
-
+		opacity: 0.7;
 	}
 
 	@media print {
@@ -127,11 +143,17 @@
 		.print-context {
 			width: 100%;
 		}
+		page[size="A3"] {
+			transform: none;
+			top: 0;
+			left: 0;
+		}
 		body, page, main {
 			background: white;
 			margin: 0;
 			padding: 0;
 			box-shadow: none;
+			display: block;
 		}
 	}
 </style>
