@@ -1,5 +1,8 @@
 <script>
 	import {onMount} from "svelte"
+	import inputJson from "../input-defaults/input.json"
+
+	console.log(inputJson)
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
 
@@ -57,6 +60,17 @@
 					console.error(`${err.name}: ${err.message}`);
 				});
 	}
+
+	function onKeyDown(e) {
+		console.log("onKeyDown", e)
+		const inputSettings = inputJson.keys[e.key]
+		if (inputSettings) {
+			eval(`${inputSettings.function}()`);
+		}
+	}
+	function increaseFontSize() {
+		console.log("increaseFontSize")
+	}
 </script>
 
 <main>
@@ -78,7 +92,10 @@
 	{/each}
 		</div>
 	</div>
+
 </main>
+
+<svelte:window on:keydown={onKeyDown} />
 
 <style>
 	html, body {

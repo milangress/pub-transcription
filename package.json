@@ -15,12 +15,11 @@
       "node_modules/**/*",
       "preload.js",
       "models/**/*",
-      "lib/**/*"
+      "lib/**/*",
+      "input-defaults/**/*"
     ],
-    "extraFiles": [
-    ],
-    "extraResources": [
-    ],
+    "extraFiles": [],
+    "extraResources": [],
     "win": {},
     "linux": {},
     "mac": {
@@ -47,6 +46,7 @@
   "devDependencies": {
     "@electron/rebuild": "^3.3.0",
     "@rollup/plugin-commonjs": "^23.0.2",
+    "@rollup/plugin-json": "^6.0.1",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-terser": "0.2.1",
     "concurrently": "^7.5.0",
