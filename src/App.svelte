@@ -1,5 +1,4 @@
 <script>
-	import {onMount} from "svelte"
 	import inputJson from "../input-defaults/input.json"
 
 	console.log(inputJson)
@@ -9,7 +8,7 @@
 
 	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)']
 
-	let list = [loremIpsum];
+	let list = [];
 
 	let fullList = [];
 	let currentSentence = ''
