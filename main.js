@@ -164,7 +164,7 @@ function spawnStreamProcess() {
 
     const ls = spawn(path.join(__dirname, 'lib/stream'),
         [
-            '--model', path.join(__dirname, 'models/ggml-large.bin'),
+            '--model', path.join(__dirname, 'models/ggml-base.en.bin'),
             '-t', '8',
             // '--step', '500',
             // '--length', '5000',
