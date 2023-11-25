@@ -2,6 +2,9 @@
 	import inputJson from "../input-defaults/input.json"
 	import BlockTxt from "./components/BlockTxt.svelte"
 	import BlockImg from "./components/BlockImg.svelte"
+	import { SimpleCodeEditor } from 'svelte-simple-code-editor';
+	import Prism from 'prismjs';
+
 	console.log(inputJson)
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
@@ -21,7 +24,8 @@
 
 	const settings = {
 		fontSize: 1,
-		inlineStyle: `background: rgba(1,1,1,0.1);
+		inlineStyle: `
+background: rgba(1,1,1,0.1);
 display: inline-block;
 rotate: -3deg;
 `
@@ -88,6 +92,7 @@ rotate: -3deg;
 			id: Math.random()
 		}]
 	}
+
 </script>
 
 <main>
@@ -105,17 +110,22 @@ rotate: -3deg;
 	<div class="print-non">
 		<div class="infobox">
 <!--	<BlockTxt content="Text Preview current settings" settings="{settings}"/>-->
-			<textarea id="positionX"  rows="10" cols="50" bind:value="{settings.inlineStyle}" ></textarea>
+			<SimpleCodeEditor
+					bind:value="{settings.inlineStyle}"
+					highlight={(code) => Prism.highlight(code, Prism.languages.javascript, 'javascript')}
+			/>
+
+			<!--			<textarea id="positionX"  rows="10" cols="50" bind:value="{settings.inlineStyle}" ></textarea>-->
 
 			<p>Font size {settings.fontSize}</p>
 			<hr>
-	{#each allIncomingTTSMessages as item}
-		<p>{item}</p>
-	{/each}
-	<hr>
-	{#each transInfoMessages as item}
-		<p>{item}</p>
-	{/each}
+	<!--{#each allIncomingTTSMessages as item}-->
+	<!--	<p>{item}</p>-->
+	<!--{/each}-->
+	<!--<hr>-->
+	<!--{#each transInfoMessages as item}-->
+	<!--	<p>{item}</p>-->
+	<!--{/each}-->
 		</div>
 	</div>
 
@@ -141,6 +151,7 @@ rotate: -3deg;
 		background: white;
 		display: block;
 		box-shadow: 0 0 0.5cm rgba(0,0,0,0.5);
+		contain: paint;
 	}
 
 	page[size="A3"] {
@@ -173,7 +184,7 @@ rotate: -3deg;
 		font-weight: 100;
 	}
 	.infobox {
-		opacity: 0.7;
+		font-family: Arial,serif;
 	}
 
 	@media print {

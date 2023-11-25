@@ -6,7 +6,6 @@
 </script>
 
 <span
-        contenteditable="true"
         class="{isCurrentClass}"
         style="{settings.inlineStyle}"
         style:font-size="{settings.fontSize}em"
