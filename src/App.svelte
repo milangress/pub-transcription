@@ -1,7 +1,7 @@
 <script>
 	import inputJson from "../input-defaults/input.json"
-	import blockTxt from "./components/blockTxt.svelte"
-	import blockImg from "./components/blockImg.svelte"
+	import BlockTxt from "./components/BlockTxt.svelte"
+	import BlockImg from "./components/BlockImg.svelte"
 	console.log(inputJson)
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
@@ -68,7 +68,7 @@
 	function formatTTSasTxtObject(tts) {
 		const removeNEWKeyword = String(tts).replace('NEW', '')
 		return {
-			type: blockTxt,
+			type: BlockTxt,
 			content: removeNEWKeyword
 		}
 
@@ -87,7 +87,7 @@
 	function addImage() {
 		console.log("addImage")
 		committedContent = [...committedContent, {
-			type: blockImg,
+			type: BlockImg,
 			content: 'https://picsum.photos/200/300'
 		}]
 	}
