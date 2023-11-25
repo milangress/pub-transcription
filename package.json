@@ -41,6 +41,8 @@
   "dependencies": {
     "@picovoice/pvrecorder-node": "^1.2.1",
     "electron-serve": "^1.1.0",
+    "prismjs": "^1.29.0",
+    "svelte-simple-code-editor": "^0.0.2",
     "wavefile": "^11.0.0"
   },
   "devDependencies": {
