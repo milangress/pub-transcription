@@ -1,4 +1,4 @@
-<script>
+<script xmlns="http://www.w3.org/1999/html">
 	import inputJson from "../input-defaults/input.json"
 	import BlockTxt from "./components/BlockTxt.svelte"
 	import BlockImg from "./components/BlockImg.svelte"
@@ -9,15 +9,23 @@
 	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)']
 
 	// Only Contains the final sentences
-	let committedContent = [];
+	let committedContent = []
 
 	// Contains all incoming TTS sentences
-	let allIncomingTTSMessages = [];
+	let allIncomingTTSMessages = []
 
 	let currentSentence = {}
 
 	// only Info and debug messages
 	let transInfoMessages = []
+
+	const settings = {
+		fontSize: 1,
+		inlineStyle: `background: rgba(1,1,1,0.1);
+display: inline-block;
+rotate: -3deg;
+`
+	}
 
 	$: currentContentList = [...committedContent, currentSentence]
 
@@ -47,48 +55,37 @@
 		transInfoMessages = [...transInfoMessages, value]
 	})
 
-	if (!navigator.mediaDevices?.enumerateDevices) {
-		console.log("enumerateDevices() not supported.");
-	} else {
-		// List cameras and microphones.
-		navigator.mediaDevices
-				.enumerateDevices()
-				.then((devices) => {
-					devices.forEach((device) => {
-						if (device.kind === "audioinput") {
-							console.log(`${device.kind}: ${device.label} id = ${JSON.stringify(device)}`);
-						}
-					});
-				})
-				.catch((err) => {
-					console.error(`${err.name}: ${err.message}`);
-				});
-	}
-
 	function formatTTSasTxtObject(tts) {
 		const removeNEWKeyword = String(tts).replace('NEW', '')
 		return {
 			type: BlockTxt,
-			content: removeNEWKeyword
+			content: removeNEWKeyword,
+			settings: {...settings},
+			id: Math.random()
 		}
 
 	}
 
 	function onKeyDown(e) {
-		console.log("onKeyDown", e)
 		const inputSettings = inputJson.keys[e.key]
 		if (inputSettings) {
-			eval(`${inputSettings.function}()`);
+			eval(`${inputSettings.function}()`)
 		}
 	}
 	function increaseFontSize() {
-		console.log("increaseFontSize")
+		const newFontSize = settings.fontSize + 0.1
+		settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
+	}
+	function decreaseFontSize() {
+		const newFontSize = settings.fontSize - 0.1
+		settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
 	}
 	function addImage() {
 		console.log("addImage")
 		committedContent = [...committedContent, {
 			type: BlockImg,
-			content: 'https://picsum.photos/200/300'
+			content: 'https://picsum.photos/200/300',
+			id: Math.random()
 		}]
 	}
 </script>
@@ -97,17 +94,21 @@
 	{#if currentContentList.length > 0}
 		<div class="print-context">
 			<page size="A3">
-				{#each committedContent as item}
-					<svelte:component this={item.type} content={item.content}/>
+				{#each committedContent as item (item.id)}
+					<svelte:component this={item.type} content={item.content} settings="{item.settings}"/>
 				{/each}
-					<svelte:component this={currentSentence.type} content={currentSentence.content} isCurrent/>
+					<svelte:component this={currentSentence.type} content={currentSentence.content} settings="{settings}" isCurrent/>
 			</page>
 		</div>
 	{/if}
 
 	<div class="print-non">
 		<div class="infobox">
-	<hr>
+<!--	<BlockTxt content="Text Preview current settings" settings="{settings}"/>-->
+			<textarea id="positionX"  rows="10" cols="50" bind:value="{settings.inlineStyle}" ></textarea>
+
+			<p>Font size {settings.fontSize}</p>
+			<hr>
 	{#each allIncomingTTSMessages as item}
 		<p>{item}</p>
 	{/each}
@@ -129,7 +130,7 @@
 	}
 	main {
 		text-align: left;
-		font-family: "American Typewriter",monospace;
+		font-family: "Garamondt-Regular","American Typewriter",monospace;
 		outline: 1px solid green;
 		display: grid;
 		grid-template-columns: 1fr;
@@ -143,9 +144,9 @@
 	}
 
 	page[size="A3"] {
-		aspect-ratio: 1.414/1;
-		height: 297mm;
-		width: 420mm;
+		/*aspect-ratio: 1.414/1;*/
+		width: 297mm;
+		height: 420mm;
 		padding: 1cm;
 		background: url('../scan.jpeg');
 		background-size: contain;
@@ -153,7 +154,7 @@
 		position: fixed;
 		top: 50%;
 		left: 50%;
-		transform: translate(-50%, -50%) scale(0.6);
+		transform: translate(-50%, -50%) scale(0.5);
 		z-index: 500;
 
 	}
