@@ -3,6 +3,9 @@
     "a": {
       "function": "increaseFontSize"
     },
+    "s": {
+      "function": "decreaseFontSize"
+    },
     "q": {
       "function": "addImage"
     }
