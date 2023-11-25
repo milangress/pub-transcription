@@ -2,6 +2,9 @@
   "keys": {
     "a": {
       "function": "increaseFontSize"
+    },
+    "q": {
+      "function": "addImage"
     }
   }
 }
