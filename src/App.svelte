@@ -1,45 +1,50 @@
 <script>
 	import inputJson from "../input-defaults/input.json"
-
+	import blockTxt from "./components/blockTxt.svelte"
+	import blockImg from "./components/blockImg.svelte"
 	console.log(inputJson)
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
 
-
 	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)']
 
-	let list = [];
+	// Only Contains the final sentences
+	let committedContent = [];
 
-	let fullList = [];
-	let currentSentence = ''
+	// Contains all incoming TTS sentences
+	let allIncomingTTSMessages = [];
 
+	let currentSentence = {}
 
-	let transData = []
-	$: compList = [currentSentence, ...list]
-	$: compText = compList.reverse().join(' ')
+	// only Info and debug messages
+	let transInfoMessages = []
+
+	$: currentContentList = [...committedContent, currentSentence]
+
 	window.electronAPI.onTransData((event, value) => {
 		console.log("onUpdateCounter", value)
-		fullList = [value, ...fullList]
+		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
 		if (String(value).startsWith('NEW')) {
 			commitFinalSentence()
-			currentSentence = String(value).replace('NEW', '')
+			currentSentence = formatTTSasTxtObject(value)
 			return
 		} else {
-			currentSentence = String(value)
+			currentSentence = formatTTSasTxtObject(value)
+			console.log("currentSentence", currentSentence)
 		}
 		// list = [value, ...list]
-		console.log("list", list)
+		console.log("list", committedContent)
 	})
 
 	function commitFinalSentence() {
-		if (!dontSave.some(x => x.toLowerCase() === currentSentence.toLowerCase().trim())) {
-			list = [currentSentence, ...list]
+		if (!dontSave.some(x => x.toLowerCase() === currentSentence.content.toLowerCase().trim())) {
+			committedContent = [...committedContent, currentSentence]
 		}
 		currentSentence = ''
 	}
 
 	window.electronAPI.onTransInfo((event, value) => {
-		transData = [...transData, value]
+		transInfoMessages = [...transInfoMessages, value]
 	})
 
 	if (!navigator.mediaDevices?.enumerateDevices) {
@@ -60,6 +65,15 @@
 				});
 	}
 
+	function formatTTSasTxtObject(tts) {
+		const removeNEWKeyword = String(tts).replace('NEW', '')
+		return {
+			type: blockTxt,
+			content: removeNEWKeyword
+		}
+
+	}
+
 	function onKeyDown(e) {
 		console.log("onKeyDown", e)
 		const inputSettings = inputJson.keys[e.key]
@@ -70,23 +84,35 @@
 	function increaseFontSize() {
 		console.log("increaseFontSize")
 	}
+	function addImage() {
+		console.log("addImage")
+		committedContent = [...committedContent, {
+			type: blockImg,
+			content: 'https://picsum.photos/200/300'
+		}]
+	}
 </script>
 
 <main>
-	{#if compText.length > 0}
+	{#if currentContentList.length > 0}
 		<div class="print-context">
-			<page size="A3">{compText}</page>
+			<page size="A3">
+				{#each committedContent as item}
+					<svelte:component this={item.type} content={item.content}/>
+				{/each}
+					<svelte:component this={currentSentence.type} content={currentSentence.content} isCurrent/>
+			</page>
 		</div>
 	{/if}
 
 	<div class="print-non">
 		<div class="infobox">
 	<hr>
-	{#each fullList as item}
+	{#each allIncomingTTSMessages as item}
 		<p>{item}</p>
 	{/each}
 	<hr>
-	{#each transData as item}
+	{#each transInfoMessages as item}
 		<p>{item}</p>
 	{/each}
 		</div>
@@ -108,7 +134,6 @@
 		display: grid;
 		grid-template-columns: 1fr;
 		height: 100%;
-		background: #000;
 		padding: 0.5rem;
 	}
 	page {
