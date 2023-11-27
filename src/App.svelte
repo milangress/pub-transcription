@@ -22,12 +22,20 @@
 	// only Info and debug messages
 	let transInfoMessages = []
 
-	const settings = {
+	let settings = {
 		fontSize: 1,
+		controllerSettings: [...inputJson.controllers],
 		inlineStyle: `
 background: rgba(1,1,1,0.1);
 display: inline-block;
 rotate: -3deg;
+transform: skew(30deg, 2deg);
+line-height: 1.8;
+//letter-spacing: 7px;
+//text-decoration: green wavy underline;
+text-shadow: 2px 2px 10px red;
+//text-shadow: 5px 5px #000;
+//text-shadow: 1px 1px 2px red, 0 0 1em blue, 0 0 0.2em blue;
 `
 	}
 
@@ -64,11 +72,34 @@ rotate: -3deg;
 		return {
 			type: BlockTxt,
 			content: removeNEWKeyword,
-			settings: {...settings},
+			settings: JSON.parse(JSON.stringify(settings)),
 			id: Math.random()
 		}
 
 	}
+
+	function setupControllers() {
+		inputJson.controllers.forEach((controller) => {
+			console.log("controller", controller)
+			window.addEventListener("keydown", (event) => {
+				if (event.key === controller.keys.up) {
+					console.log("up")
+					console.log("settings", settings.controllerSettings)
+					const sett = settings.controllerSettings.find((elm) => elm.name === controller.name)
+					sett.value += controller.step
+					sett.value = Number.parseFloat(sett.value.toFixed(1))
+					settings = settings
+				} else if (event.key === controller.keys.down) {
+					console.log("down")
+					const sett = settings.controllerSettings.find((elm) => elm.name === controller.name)
+					sett.value -= controller.step
+					sett.value = Number.parseFloat(sett.value.toFixed(1))
+					settings = settings
+				}
+			});
+		})
+	}
+	setupControllers()
 
 	function onKeyDown(e) {
 		const inputSettings = inputJson.keys[e.key]
@@ -109,7 +140,6 @@ rotate: -3deg;
 
 	<div class="print-non">
 		<div class="infobox">
-<!--	<BlockTxt content="Text Preview current settings" settings="{settings}"/>-->
 			<SimpleCodeEditor
 					bind:value="{settings.inlineStyle}"
 					highlight={(code) => Prism.highlight(code, Prism.languages.javascript, 'javascript')}
@@ -117,7 +147,14 @@ rotate: -3deg;
 
 			<!--			<textarea id="positionX"  rows="10" cols="50" bind:value="{settings.inlineStyle}" ></textarea>-->
 
-			<p>Font size {settings.fontSize}</p>
+			<BlockTxt content="Text Preview" settings="{settings}"/>
+
+			<p>Font size -> <b>{settings.fontSize}</b></p>
+
+			{#each settings.controllerSettings as item}
+				<p>{item.name}, {item.var} -> <b>{item.value}</b> (+-{item.step})</p>
+			{/each}
+
 			<hr>
 	<!--{#each allIncomingTTSMessages as item}-->
 	<!--	<p>{item}</p>-->
