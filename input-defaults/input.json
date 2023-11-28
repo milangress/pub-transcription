@@ -16,6 +16,44 @@
       "var": "m1",
       "value": 1,
       "step": 0.1,
+      "knobNR": 12,
+      "range": [0, 1],
+      "keys": {
+        "up": "y",
+        "down": "Y"
+      }
+    },
+    {
+      "name": "midi2",
+      "var": "m2",
+      "value": 1,
+      "step": 0.1,
+      "knobNR": 13,
+      "range": [0, 1],
+      "keys": {
+        "up": "y",
+        "down": "Y"
+      }
+    },
+    {
+      "name": "midi3",
+      "var": "m3",
+      "value": 1,
+      "step": 0.1,
+      "knobNR": 14,
+      "range": [0, 1],
+      "keys": {
+        "up": "y",
+        "down": "Y"
+      }
+    },
+    {
+      "name": "Fontsize",
+      "var": "fsz",
+      "value": 1,
+      "step": 0.1,
+      "knobNR": 15,
+      "range": [0.5, 4],
       "keys": {
         "up": "y",
         "down": "Y"
@@ -26,6 +64,8 @@
       "var": "r1",
       "value": 0,
       "step": 1,
+      "knobNR": 11,
+      "range": [-20, 20],
       "keys": {
         "up": "x",
         "down": "X"

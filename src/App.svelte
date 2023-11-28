@@ -9,7 +9,7 @@
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
 
-	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)']
+	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)', '(buzzing)']
 
 	// Only Contains the final sentences
 	let committedContent = []
@@ -22,27 +22,46 @@
 	// only Info and debug messages
 	let transInfoMessages = []
 
+	let fontFamilys = [
+		{
+			name: 'Garamondt-Regular',
+		},
+		{
+			name: 'American Typewriter',
+		},
+		{
+			name: 'Arial',
+		}
+	]
+
 	let settings = {
 		fontSize: 1,
 		controllerSettings: [...inputJson.controllers],
+		fontFamily: fontFamilys[0],
 		inlineStyle: `
 background: rgba(1,1,1,0.1);
 display: inline-block;
-rotate: -3deg;
-transform: skew(30deg, 2deg);
+rotate: r1deg;
+//transform: skew(30deg, 2deg);
 line-height: 1.8;
+//filter: blur(3px);
+//filter: drop-shadow(16px 16px 10px black);
 //letter-spacing: 7px;
 //text-decoration: green wavy underline;
 text-shadow: 2px 2px 10px red;
 //text-shadow: 5px 5px #000;
 //text-shadow: 1px 1px 2px red, 0 0 1em blue, 0 0 0.2em blue;
+font-size:fszem;
 `
 	}
+
+	let mySynth = null
+
 
 	$: currentContentList = [...committedContent, currentSentence]
 
 	window.electronAPI.onTransData((event, value) => {
-		console.log("onUpdateCounter", value)
+		// console.log("onUpdateCounter", value)
 		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
 		if (String(value).startsWith('NEW')) {
 			commitFinalSentence()
@@ -50,10 +69,10 @@ text-shadow: 2px 2px 10px red;
 			return
 		} else {
 			currentSentence = formatTTSasTxtObject(value)
-			console.log("currentSentence", currentSentence)
+			// console.log("currentSentence", currentSentence)
 		}
 		// list = [value, ...list]
-		console.log("list", committedContent)
+		// console.log("list", committedContent)
 	})
 
 	function commitFinalSentence() {
@@ -78,6 +97,8 @@ text-shadow: 2px 2px 10px red;
 
 	}
 
+	const mapRange = (value, x1, y1, x2, y2) => (value - x1) * (y2 - x2) / (y1 - x1) + x2;
+
 	function setupControllers() {
 		inputJson.controllers.forEach((controller) => {
 			console.log("controller", controller)
@@ -97,6 +118,25 @@ text-shadow: 2px 2px 10px red;
 					settings = settings
 				}
 			});
+			window.setTimeout(() => {
+				console.log('set synth')
+				console.log("mySynth", mySynth)
+
+				if (mySynth) {
+					mySynth.channels[1].addListener("controlchange", e => {
+						if (e.controller.number === controller.knobNR) {
+							// console.log("e", e)
+							// console.log("controller", controller)
+							// console.log("settings", settings.controllerSettings)
+							const sett = settings.controllerSettings.find((elm) => elm.name === controller.name)
+							// console.log(e.value, controller.range[1])
+							const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1])
+							sett.value = Number.parseFloat(value.toFixed(2))
+							settings = settings
+						}
+					});
+				}
+			}, 5000)
 		})
 	}
 	setupControllers()
@@ -124,9 +164,74 @@ text-shadow: 2px 2px 10px red;
 		}]
 	}
 
+	function printFile() {
+		window.electronAPI.print('test')
+	}
+	function clearAll() {
+		committedContent = []
+	}
+
+	function isPageFull() {
+		let page = document.getElementsByTagName('page')[0]
+		const {height: pageHeight, y: pageY} = page.getBoundingClientRect()
+		const pageBottom = pageHeight + pageY
+		const {height: contentHeight, y: contentY} = document.getElementsByClassName('current')[0].getBoundingClientRect()
+		const contentBottom = contentHeight + contentY
+		const distance = pageBottom - contentBottom
+		const percent = (distance / pageHeight) * 100
+		// console.log("distance", distance, percent)
+
+		if (percent < 10) {
+			console.log("page full")
+			printFile()
+			setTimeout(() => {
+				clearAll()
+			}, 1000)
+		}
+	}
+	window.setInterval(isPageFull, 3000)
+
+
+	WebMidi
+			.enable()
+			.then(onEnabled)
+			.catch(err => alert(err));
+
+	function onEnabled() {
+
+		if (WebMidi.inputs.length < 1) {
+			console.warn("No MIDI device detected.")
+		} else {
+			WebMidi.inputs.forEach((device, index) => {
+				console.log(`MIDI DEVICE: ${index}: ${device.name} <br>`)
+			});
+			mySynth = WebMidi.inputs[0];
+		}
+
+		// const mySynth = WebMidi.getInputByName("TYPE NAME HERE!")
+
+		// mySynth.channels[1].addListener("noteon", e => {
+		// 	console.log(`${e.note.name}`)
+		// });
+		// mySynth.channels[1].addListener("controlchange", e => {
+		// 	console.log(e)
+		// });
+
+	}
+
 </script>
 
 <main>
+	<svg id="filters">
+		<defs>
+			<filter id="threshold">
+				<feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0
+                  0 1 0 0 0
+                  0 0 1 0 0
+                  0 0 0 255 -140" />
+			</filter>
+		</defs>
+	</svg>
 	{#if currentContentList.length > 0}
 		<div class="print-context">
 			<page size="A3">
@@ -149,13 +254,25 @@ text-shadow: 2px 2px 10px red;
 
 			<BlockTxt content="Text Preview" settings="{settings}"/>
 
+			<hr>
+
+			<select bind:value={settings.fontFamily}>
+				{#each fontFamilys as fam}
+					<option value={fam}>
+						{fam.name}
+					</option>
+				{/each}
+			</select>
+
 			<p>Font size -> <b>{settings.fontSize}</b></p>
 
 			{#each settings.controllerSettings as item}
-				<p>{item.name}, {item.var} -> <b>{item.value}</b> (+-{item.step})</p>
+				<p>{item.name}, {item.var} -> <b>{item.value}</b> (+-{item.step}) {item.range}</p>
 			{/each}
 
 			<hr>
+			<button on:click="{printFile}">PRINT</button>
+			<button on:click="{clearAll}">CLEAR ALL</button>
 	<!--{#each allIncomingTTSMessages as item}-->
 	<!--	<p>{item}</p>-->
 	<!--{/each}-->
@@ -188,14 +305,14 @@ text-shadow: 2px 2px 10px red;
 		background: white;
 		display: block;
 		box-shadow: 0 0 0.5cm rgba(0,0,0,0.5);
-		contain: paint;
 	}
 
 	page[size="A3"] {
 		/*aspect-ratio: 1.414/1;*/
-		width: 297mm;
-		height: 420mm;
-		padding: 1cm;
+		width: 210mm;
+		height: 297mm;
+		/*height: 420mm;*/
+		padding: 2cm;
 		background: url('../scan.jpeg');
 		background-size: contain;
 		outline: 1px solid red;
@@ -204,6 +321,7 @@ text-shadow: 2px 2px 10px red;
 		left: 50%;
 		transform: translate(-50%, -50%) scale(0.5);
 		z-index: 500;
+		contain: strict;
 
 	}
 	.print-context {
@@ -238,6 +356,7 @@ text-shadow: 2px 2px 10px red;
 			transform: none;
 			top: 0;
 			left: 0;
+			background: none;
 		}
 		body, page, main {
 			background: white;

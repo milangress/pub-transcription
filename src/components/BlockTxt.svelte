@@ -4,7 +4,8 @@
     export let settings = {}
 
     function replaceVariables(str, settings) {
-        console.log(str, settings)
+        str = str.replace(/^[\/\/].*\n/gm, '')
+        // console.log(str, settings)
         if (settings && Array.isArray(settings) && settings.length>0) {
             settings.forEach(function (setting) {
                 str = str.replace(new RegExp(setting.var, 'g'), setting.value)
@@ -24,14 +25,17 @@
 <span
         class="{isCurrentClass}"
         style="{replacedInlineStyles}"
-        style:font-size="{settings.fontSize}em"
+        style:font-family="{settings.fontFamily.name}"
 >
     {content}
 </span>
 
 
 <style>
-
+    span {
+        -webkit-print-color-adjust:exact;
+        -webkit-filter:blur(0);
+    }
     .current {
         color: blue;
     }
