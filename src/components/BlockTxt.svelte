@@ -35,6 +35,7 @@
     span {
         -webkit-print-color-adjust:exact;
         -webkit-filter:blur(0);
+        contain: paint;
     }
     .current {
         color: blue;
