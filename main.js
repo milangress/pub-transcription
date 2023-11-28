@@ -54,6 +54,11 @@ function createWindow() {
     // process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = true;
     // mainWindow.webContents.openDevTools();
 
+    ipcMain.on('print', (event, printMessage) => {
+        console.log('printMessage', printMessage)
+        print()
+    })
+
     // Emitted when the window is closed.
     mainWindow.on('closed', function () {
         // Dereference the window object, usually you would store windows
@@ -166,8 +171,8 @@ function spawnStreamProcess() {
         [
             '--model', path.join(__dirname, 'models/ggml-base.en.bin'),
             '-t', '8',
-            // '--step', '500',
-            // '--length', '5000',
+            '--step', '500',
+            '--length', '5000',
             // '-vth', '0.6'
         ])
 //-t 6 --step 0 --length 30000 -vth 0.6
@@ -198,9 +203,7 @@ setTimeout(() => {
     spawnStreamProcess()
 }, 3000)
 
-setTimeout(() => {
-    print()
-}, 10000)
+
 
 function print() {
     const options = {
@@ -211,16 +214,19 @@ function print() {
             left: 0,
             right: 0
         },
+        deviceName: 'Xerox_Phaser_5550N',
         pageSize: 'A3',
-        printBackground: true,
+        printBackground: false,
         printSelectionOnly: false,
-        landscape: true
+        landscape: false,
+        silent: true
     }
     mainWindow.webContents.print(options, (success, errorType) => {
         if (!success) console.log(errorType)
     })
 
-    const pdfPath = path.join(os.homedir(), 'Desktop', 'temp.pdf')
+    const dateString = new Date().toISOString().replace(/:/g, '-') + 'temp.pdf'
+    const pdfPath = path.join(os.homedir(), 'Desktop', dateString)
     mainWindow.webContents.printToPDF(options).then(data => {
         fs.writeFile(pdfPath, data, (error) => {
             if (error) throw error
