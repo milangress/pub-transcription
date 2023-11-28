@@ -4,6 +4,7 @@
 	import BlockImg from "./components/BlockImg.svelte"
 	import { SimpleCodeEditor } from 'svelte-simple-code-editor';
 	import Prism from 'prismjs';
+	import ControllerManager from "./components/ControllerManager.svelte"
 
 	console.log(inputJson)
 
@@ -35,7 +36,6 @@
 	]
 
 	let settings = {
-		fontSize: 1,
 		controllerSettings: [...inputJson.controllers],
 		fontFamily: fontFamilys[0],
 		inlineStyle: `
@@ -222,7 +222,7 @@ font-size:fszem;
 </script>
 
 <main>
-	<svg id="filters">
+	<!--<svg id="filters">
 		<defs>
 			<filter id="threshold">
 				<feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0
@@ -231,14 +231,16 @@ font-size:fszem;
                   0 0 0 255 -140" />
 			</filter>
 		</defs>
-	</svg>
+	</svg>-->
 	{#if currentContentList.length > 0}
 		<div class="print-context">
 			<page size="A3">
+				<div class="content-context">
 				{#each committedContent as item (item.id)}
 					<svelte:component this={item.type} content={item.content} settings="{item.settings}"/>
 				{/each}
 					<svelte:component this={currentSentence.type} content={currentSentence.content} settings="{settings}" isCurrent/>
+				</div>
 			</page>
 		</div>
 	{/if}
@@ -264,11 +266,7 @@ font-size:fszem;
 				{/each}
 			</select>
 
-			<p>Font size -> <b>{settings.fontSize}</b></p>
-
-			{#each settings.controllerSettings as item}
-				<p>{item.name}, {item.var} -> <b>{item.value}</b> (+-{item.step}) {item.range}</p>
-			{/each}
+			<ControllerManager bind:controllerSettings="{settings.controllerSettings}"></ControllerManager>
 
 			<hr>
 			<button on:click="{printFile}">PRINT</button>
@@ -295,7 +293,6 @@ font-size:fszem;
 	main {
 		text-align: left;
 		font-family: "Garamondt-Regular","American Typewriter",monospace;
-		outline: 1px solid green;
 		display: grid;
 		grid-template-columns: 1fr;
 		height: 100%;
@@ -309,17 +306,18 @@ font-size:fszem;
 
 	page[size="A3"] {
 		/*aspect-ratio: 1.414/1;*/
-		width: 210mm;
-		height: 297mm;
-		/*height: 420mm;*/
+		/*width: 210mm;*/
+		/*height: 297mm;*/
+		width: 297mm;
+		height: 420mm;
 		padding: 2cm;
 		background: url('../scan.jpeg');
 		background-size: contain;
 		outline: 1px solid red;
 		position: fixed;
 		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%) scale(0.5);
+		left: 70%;
+		transform: translate(-50%, -50%) scale(0.5) translate3d(0,0,0); ;
 		z-index: 500;
 		contain: strict;
 
@@ -339,7 +337,14 @@ font-size:fszem;
 		font-weight: 100;
 	}
 	.infobox {
-		font-family: Arial,serif;
+		font-family: "SpaceMono",serif;
+		max-width: 40vw;
+		border: 1px solid black;
+		margin: 1rem;
+		padding: 1rem;
+	}
+	.content-context {
+		height: 100%;
 	}
 
 	@media print {
