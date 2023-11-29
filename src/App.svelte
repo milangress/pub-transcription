@@ -6,6 +6,10 @@
 	import Prism from 'prismjs';
 	import ControllerManager from "./components/ControllerManager.svelte"
 
+	import CodeMirror from "svelte-codemirror-editor";
+	import { css } from "@codemirror/lang-css";
+
+
 	console.log(inputJson)
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
@@ -61,11 +65,11 @@ font-size:fszem;
 	$: currentContentList = [...committedContent, currentSentence]
 
 	window.electronAPI.onTransData((event, value) => {
-		// console.log("onUpdateCounter", value)
+		console.log("New Trans Data: ", value)
 		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
-		if (String(value).startsWith('NEW')) {
-			commitFinalSentence()
+		if (String(value).endsWith('NEW')) {
 			currentSentence = formatTTSasTxtObject(value)
+			commitFinalSentence()
 			return
 		} else {
 			currentSentence = formatTTSasTxtObject(value)
@@ -87,7 +91,7 @@ font-size:fszem;
 	})
 
 	function formatTTSasTxtObject(tts) {
-		const removeNEWKeyword = String(tts).replace('NEW', '')
+		const removeNEWKeyword = String(tts).replace('NEW', '').trim()
 		return {
 			type: BlockTxt,
 			content: removeNEWKeyword,
@@ -247,12 +251,16 @@ font-size:fszem;
 
 	<div class="print-non">
 		<div class="infobox">
-			<SimpleCodeEditor
-					bind:value="{settings.inlineStyle}"
-					highlight={(code) => Prism.highlight(code, Prism.languages.javascript, 'javascript')}
-			/>
+			<CodeMirror bind:value={settings.inlineStyle} lang={css()}/>
+
+<!--			<SimpleCodeEditor-->
+<!--					bind:value="{settings.inlineStyle}"-->
+<!--					highlight={(code) => Prism.highlight(code, Prism.languages.javascript, 'javascript')}-->
+<!--			/>-->
 
 			<!--			<textarea id="positionX"  rows="10" cols="50" bind:value="{settings.inlineStyle}" ></textarea>-->
+
+			<hr>
 
 			<BlockTxt content="Text Preview" settings="{settings}"/>
 
