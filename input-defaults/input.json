@@ -12,12 +12,64 @@
   },
   "controllers": [
     {
+      "name": "BGRed",
+      "var": "bgR",
+      "value": 0,
+      "default": 0,
+      "step": 5,
+      "knobNR": 0,
+      "range": [0, 255],
+      "keys": {
+        "up": "l",
+        "down": "L"
+      }
+    },
+    {
+      "name": "BGGreen",
+      "var": "bgG",
+      "value": 0,
+      "default": 0,
+      "step": 5,
+      "knobNR": 1,
+      "range": [0, 255],
+      "keys": {
+        "up": "l",
+        "down": "L"
+      }
+    },
+    {
+      "name": "BGBlue",
+      "var": "bgB",
+      "value": 0,
+      "default": 0,
+      "step": 5,
+      "knobNR": 2,
+      "range": [0, 255],
+      "keys": {
+        "up": "l",
+        "down": "L"
+      }
+    },
+    {
+      "name": "BGAlpha",
+      "var": "bgA",
+      "value": 0,
+      "default": 0,
+      "step": 0.05,
+      "knobNR": 3,
+      "range": [0, 1],
+      "keys": {
+        "up": "l",
+        "down": "L"
+      }
+    },
+    {
       "name": "midi1",
       "var": "m1",
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 12,
+      "knobNR": 4,
       "range": [0, 1],
       "keys": {
         "up": "y",
@@ -30,7 +82,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 13,
+      "knobNR": 5,
       "range": [0, 1],
       "keys": {
         "up": "y",
@@ -43,7 +95,20 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 14,
+      "knobNR": 6,
+      "range": [0, 1],
+      "keys": {
+        "up": "y",
+        "down": "Y"
+      }
+    },
+    {
+      "name": "midi4",
+      "var": "m4",
+      "value": 1,
+      "default": 1,
+      "step": 0.1,
+      "knobNR": 7,
       "range": [0, 1],
       "keys": {
         "up": "y",

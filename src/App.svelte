@@ -42,20 +42,26 @@
 	let settings = {
 		controllerSettings: [...inputJson.controllers],
 		fontFamily: fontFamilys[0],
-		inlineStyle: `
-background: rgba(1,1,1,0.1);
-display: inline-block;
-rotate: r1deg;
-//transform: skew(30deg, 2deg);
-line-height: 1.8;
-//filter: blur(3px);
-//filter: drop-shadow(16px 16px 10px black);
-//letter-spacing: 7px;
-//text-decoration: green wavy underline;
-text-shadow: 2px 2px 10px red;
-//text-shadow: 5px 5px #000;
-//text-shadow: 1px 1px 2px red, 0 0 1em blue, 0 0 0.2em blue;
-font-size:fszem;
+		inlineStyle: `.el {
+  display: inline-block;
+  //transform: skew(30deg, 2deg);
+  line-height: 1.8;
+  filter: blur(calc(5px * m1));
+  //filter: drop-shadow(16px 16px 10px black);
+  //letter-spacing: 7px;
+  //text-decoration: green wavy underline;
+  //text-shadow: 2px 2px 10px red;
+  //text-shadow: 5px 5px #000;
+  //text-shadow: 1px 1px 2px red, 0 0 1em blue, 0 0 0.2em blue;
+
+  color: white;
+  text-shadow: 1px 1px 4px black, 0 0 1em black, 0 0 10px black;
+
+  background: rgba(bgR,bgG,bgB,bgA);
+  //color: rgba(bgR,bgG,bgB,bgA);
+  rotate: r1deg;
+  font-size:fszem;
+}
 `
 	}
 
@@ -283,9 +289,9 @@ font-size:fszem;
 	<!--	<p>{item}</p>-->
 	<!--{/each}-->
 	<!--<hr>-->
-	<!--{#each transInfoMessages as item}-->
-	<!--	<p>{item}</p>-->
-	<!--{/each}-->
+	{#each transInfoMessages as item}
+		<p>{item}</p>
+	{/each}
 		</div>
 	</div>
 
