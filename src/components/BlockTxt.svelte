@@ -4,6 +4,8 @@
     export let settings = {}
 
     function replaceVariables(str, settings) {
+        str = str.replace(/\..*{\n/gm, '')
+        str = str.replace(/^}$/gm, '')
         str = str.replace(/^[\/\/].*\n/gm, '')
         // console.log(str, settings)
         if (settings && Array.isArray(settings) && settings.length>0) {
@@ -34,7 +36,6 @@
     span {
         -webkit-print-color-adjust:exact;
         -webkit-filter:blur(0);
-        contain: paint;
     }
     .current {
         color: blue;

@@ -171,10 +171,12 @@ function spawnStreamProcess() {
         [
             '--model', path.join(__dirname, 'models/ggml-small.en-q5_1.bin'),
             '-t', '8',
-            '--step', '500',
+            '--step', '800',
             '--length', '5000',
+            '--keep', '300',
+            '--max-tokens', '64',
             '--save-audio',
-            '--keep-context',
+            // '--keep-context',
             // '-vth', '0.6'
         ])
 //-t 6 --step 0 --length 30000 -vth 0.6
