@@ -14,7 +14,7 @@
                 window[setting.var] = setting.value
             })
             str = eval('`'+str+'`')*/
-            console.log('replaced: ',str)
+            // console.log('replaced: ',str)
         }
         return str
     }
@@ -27,9 +27,8 @@
         style="{replacedInlineStyles}"
         style:font-family="{settings.fontFamily.name}"
 >
-    {content}
+    {content}&nbsp;<wbr>
 </span>
-
 
 <style>
     span {
