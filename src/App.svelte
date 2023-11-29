@@ -8,6 +8,7 @@
 
 	import CodeMirror from "svelte-codemirror-editor";
 	import { css } from "@codemirror/lang-css";
+	import { html } from "@codemirror/lang-html";
 
 
 	console.log(inputJson)
@@ -43,10 +44,10 @@
 		controllerSettings: [...inputJson.controllers],
 		fontFamily: fontFamilys[0],
 		inlineStyle: `.el {
-  display: inline-block;
+   display: inline-block;
   //transform: skew(30deg, 2deg);
   line-height: 1.8;
-  filter: blur(calc(5px * m1));
+  //filter: blur(calc(5px * m1));
   //filter: drop-shadow(16px 16px 10px black);
   //letter-spacing: 7px;
   //text-decoration: green wavy underline;
@@ -57,6 +58,8 @@
   color: white;
   text-shadow: 1px 1px 4px black, 0 0 1em black, 0 0 10px black;
 
+  filter: url(#disp);
+
   background: rgba(bgR,bgG,bgB,bgA);
   //color: rgba(bgR,bgG,bgB,bgA);
   rotate: r1deg;
@@ -64,6 +67,32 @@
 }
 `
 	}
+
+	let svgFiltersCode = `<svg>
+<filter id="glitch">
+	<feTurbulence type="fractalNoise" baseFrequency="0.03 0.01" numOctaves="1" result="warp" id="turb"/>
+	<feColorMatrix in="warp" result="huedturb" type="hueRotate" values="90">
+	<animate attributeType="XML" attributeName="values" values="0;180;360" dur="6s"
+                         repeatCount="indefinite"/>
+	</feColorMatrix>
+	<feDisplacementMap xChannelSelector="R" yChannelSelector="G" scale="30" in="SourceGraphic" in2="huedturb"/>
+</filter>
+
+
+<filter id="disp">
+  <feTurbulence type="turbulence"
+    baseFrequency="1.5" numOctaves="2" result="turbulence"/>
+  <feDisplacementMap in2="turbulence" in="SourceGraphic"
+    scale="30" xChannelSelector="R" yChannelSelector="G" />
+</filter>
+
+<filter id="swoot" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse" color-interpolation-filters="linearRGB">
+	<feTurbulence type="turbulence" baseFrequency="0.015 0.1" numOctaves="2" seed="2" stitchTiles="stitch" x="0%" y="0%" width="100%" height="100%" result="turbulence"/>
+	<feDisplacementMap in="SourceGraphic" in2="turbulence" scale="15" xChannelSelector="R" yChannelSelector="B" x="0%" y="0%" width="100%" height="100%" result="displacementMap1"/>
+</filter>
+
+</svg>
+`
 
 	let mySynth = null
 
@@ -285,6 +314,11 @@
 			<hr>
 			<button on:click="{printFile}">PRINT</button>
 			<button on:click="{clearAll}">CLEAR ALL</button>
+			<hr>
+			<CodeMirror bind:value={svgFiltersCode} lang={html()}/>
+			<div>
+				{@html svgFiltersCode}
+			</div>
 	<!--{#each allIncomingTTSMessages as item}-->
 	<!--	<p>{item}</p>-->
 	<!--{/each}-->
