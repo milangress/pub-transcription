@@ -153,6 +153,11 @@
 
 </svg>
 `
+	let printerSettings = {
+		deviceName: 'Xerox_Phaser_5550N',
+		forcePrint: true
+	}
+	let isSuccessfulPrint = true
 
 	let mySynth = null
 
@@ -182,7 +187,20 @@
 	}
 
 	window.electronAPI.onTransInfo((event, value) => {
-		transInfoMessages = [...transInfoMessages, value]
+		transInfoMessages = [value, ...transInfoMessages]
+	})
+
+	window.electronAPI.printSuccess((event, value) => {
+		console.log("printSuccess", value)
+		if (value === 'pdf' || value=== 'print') {
+			clearAll()
+			setTimeout(() => {
+				isSuccessfulPrint = true
+			}, 2000)
+		} else if (value === false) {
+			console.error("print failed")
+			isSuccessfulPrint = false
+		}
 	})
 
 	function formatTTSasTxtObject(tts) {
@@ -266,7 +284,7 @@
 	}
 
 	function printFile() {
-		window.electronAPI.print('test')
+		window.electronAPI.print(printerSettings)
 	}
 	function clearAll() {
 		committedContent = []
@@ -285,9 +303,9 @@
 		if (percent < 10) {
 			console.log("page full")
 			printFile()
-			setTimeout(() => {
-				clearAll()
-			}, 1000)
+			// setTimeout(() => {
+			// 	clearAll()
+			// }, 1000)
 		}
 	}
 	window.setInterval(isPageFull, 3000)
@@ -346,7 +364,7 @@
 		</div>
 	{/if}
 
-	<div class="print-non">
+	<div class="print-non" class:printFailed={!isSuccessfulPrint}>
 		<div class="infobox">
 			<CodeMirror bind:value={settings.inlineStyle} lang={css()}/>
 
@@ -374,8 +392,12 @@
 			<ControllerManager bind:controllerSettings="{settings.controllerSettings}"></ControllerManager>
 
 			<hr>
+			<div class="printControls">
 			<button on:click="{printFile}">PRINT</button>
 			<button on:click="{clearAll}">CLEAR ALL</button>
+			<input bind:value={printerSettings.deviceName} type="text" disabled>
+			<label><input bind:checked={printerSettings.forcePrint} type="checkbox">Force Print</label>
+			</div>
 			<hr>
 			<CodeMirror bind:value={svgFiltersCode} lang={html()}/>
 			<div style="display: none">
@@ -456,6 +478,14 @@
 	.content-context {
 		height: 100%;
 		outline: 1px solid red;
+	}
+	.printControls {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
+	}
+	.printFailed {
+		background: red;
 	}
 
 	@media print {
