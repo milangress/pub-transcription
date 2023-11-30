@@ -29,7 +29,7 @@
   },
   "scripts": {
     "build": "rollup -c --bundleConfigAsCjs",
-    "dlwisper": "./models/download-ggml-model.sh ggml-small.en-q5_1",
+    "dlwisper": "./models/download-ggml-model.sh small.en-q5_1",
     "dev": "rollup -c -w --bundleConfigAsCjs",
     "start": "sirv public --no-clear",
     "electron": "wait-on http://localhost:8080 && electron .",
