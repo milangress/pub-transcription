@@ -54,9 +54,9 @@ function createWindow() {
     // process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = true;
     // mainWindow.webContents.openDevTools();
 
-    ipcMain.on('print', (event, printMessage) => {
-        console.log('printMessage', printMessage)
-        print()
+    ipcMain.on('print', (event, printSettings) => {
+        console.log('printSettings', printSettings)
+        print(printSettings)
     })
 
     // Emitted when the window is closed.
@@ -209,7 +209,7 @@ setTimeout(() => {
 
 
 
-function print() {
+function print(printSettingsFrontend = {}) {
     const options = {
         margins: {
             marginType: 'custom',
@@ -218,26 +218,58 @@ function print() {
             left: 0,
             right: 0
         },
-        deviceName: 'Xerox_Phaser_5550N',
+        // deviceName: 'Xerox_Phaser_5550N',
         pageSize: 'A3',
         scaleFactor: 100,
         printBackground: false,
         printSelectionOnly: false,
         landscape: false,
         silent: true,
+        ...printSettingsFrontend
     }
-    mainWindow.webContents.print(options, (success, errorType) => {
-        if (!success) console.log(errorType)
-    })
+    mainWindow.webContents.send('trans-info', '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥')
+    if (printSettingsFrontend.forcePrint === true) {
+        try {
+            mainWindow.webContents.print(options, (success, errorType) => {
+                if (!success) {
+                    console.log(errorType)
+                    mainWindow.webContents.send('trans-info', '🥵 Printing failed')
+                    mainWindow.webContents.send('trans-info', errorType)
+                    mainWindow.webContents.send('print-success', false)
+                } else {
+                    mainWindow.webContents.send('trans-info', '🖨️ Printed successfully')
+                    mainWindow.webContents.send('print-success', 'print')
+                }
+            })
+        } catch (e) {
+            console.error('PRINT FAILED', e)
+            mainWindow.webContents.send('trans-info', `🥵 Printing failed: ${e}`)
+        }
+    } else {
+        console.info('Printing is disabled. Set forcePrint to true to override this.')
+        mainWindow.webContents.send('trans-info', `⚠️🔗 Printing is disabled. Set forcePrint to true to override this.`)
+    }
 
-    const dateString = new Date().toISOString().replace(/:/g, '-') + 'temp.pdf'
-    const pdfPath = path.join(os.homedir(), 'Desktop', dateString)
-    mainWindow.webContents.printToPDF(options).then(data => {
-        fs.writeFile(pdfPath, data, (error) => {
-            if (error) throw error
-            console.log(`Wrote PDF successfully to ${pdfPath}`)
+    try {
+
+        const dateString = new Date().toISOString().replace(/:/g, '-') + 'temp.pdf'
+        const pdfPath = path.join(os.homedir(), 'Desktop', dateString)
+        mainWindow.webContents.printToPDF(options).then(data => {
+            fs.writeFile(pdfPath, data, (error) => {
+                if (error) throw error
+                console.log(`Wrote PDF successfully to ${pdfPath}`)
+                mainWindow.webContents.send('trans-info', `💦 Wrote PDF successfully to ${pdfPath}`)
+                mainWindow.webContents.send('print-success', 'pdf')
+            })
+        }).catch(error => {
+            console.log(`Failed to write PDF to ${pdfPath}: `, error)
+            mainWindow.webContents.send('trans-info', `🥵 Failed to write PDF to ${pdfPath}: ${JSON.stringify(error)}`)
+            mainWindow.webContents.send('print-success', false)
+
         })
-    }).catch(error => {
-        console.log(`Failed to write PDF to ${pdfPath}: `, error)
-    })
+
+    } catch (e) {
+        console.error('PDF FAILED', e)
+        mainWindow.webContents.send('trans-info', `🥵 Failed to write PDF: ${JSON.stringify(e)}`)
+    }
 }
