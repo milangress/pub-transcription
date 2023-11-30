@@ -31,12 +31,20 @@
 	let fontFamilys = [
 		{
 			name: 'Garamondt-Regular',
-		},
-		{
+		}, {
 			name: 'American Typewriter',
-		},
-		{
+		}, {
 			name: 'Arial',
+		}, {
+			name: 'Arial Black',
+		}, {
+			name: 'Arial Narrow',
+		}, {
+			name: 'SpaceMono'
+		}, {
+			name: 'Unifont'
+		}, {
+			name: 'OracleGM-RegularMono'
 		}
 	]
 
@@ -477,7 +485,9 @@
 	}
 	.content-context {
 		height: 100%;
-		outline: 1px solid red;
+	}
+	.content-context:hover {
+		outline: 2px solid #00ff00;
 	}
 	.printControls {
 		display: flex;
