@@ -55,10 +55,10 @@
   //text-shadow: 5px 5px #000;
   //text-shadow: 1px 1px 2px red, 0 0 1em blue, 0 0 0.2em blue;
 
-  color: white;
+  //color: white;
   text-shadow: 1px 1px 4px black, 0 0 1em black, 0 0 10px black;
 
-  filter: url(#grain);
+  filter: url(#outline);
 
   background: rgba(bgR,bgG,bgB,bgA);
   //color: rgba(bgR,bgG,bgB,bgA);
@@ -178,7 +178,7 @@
 		if (!dontSave.some(x => x.toLowerCase() === currentSentence.content.toLowerCase().trim())) {
 			committedContent = [...committedContent, currentSentence]
 		}
-		currentSentence = ''
+		// currentSentence = ''
 	}
 
 	window.electronAPI.onTransInfo((event, value) => {
@@ -415,14 +415,14 @@
 	}
 
 	page[size="A3"] {
-		/*aspect-ratio: 1.414/1;*/
+		/*aspect-ratio: 1/1.414;*/
 		/*width: 210mm;*/
 		/*height: 297mm;*/
-		width: 297mm;
-		height: 420mm;
+		width: calc(297.3mm * 0.86);
+		height: calc(420.2mm * 0.895);
 		padding: 2cm;
-		background: url('../scan.jpeg');
-		background-size: contain;
+		background: url('../scan.png');
+		background-size: 100% 100%;
 		outline: 1px solid red;
 		position: fixed;
 		top: 50%;
@@ -455,6 +455,7 @@
 	}
 	.content-context {
 		height: 100%;
+		outline: 1px solid red;
 	}
 
 	@media print {
@@ -471,7 +472,8 @@
 			transform: none;
 			top: 0;
 			left: 0;
-			background: none;
+			/*scale: 0.5;*/
+			/*background: none;*/
 		}
 		body, page, main {
 			background: white;
@@ -479,6 +481,9 @@
 			padding: 0;
 			box-shadow: none;
 			display: block;
+		}
+		:global(span.current) {
+			display: none !important;
 		}
 	}
 </style>

@@ -220,10 +220,11 @@ function print() {
         },
         deviceName: 'Xerox_Phaser_5550N',
         pageSize: 'A3',
+        scaleFactor: 100,
         printBackground: false,
         printSelectionOnly: false,
         landscape: false,
-        silent: true
+        silent: true,
     }
     mainWindow.webContents.print(options, (success, errorType) => {
         if (!success) console.log(errorType)
