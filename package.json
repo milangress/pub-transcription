@@ -1,7 +1,7 @@
 {
   "name": "pub-transcriptions",
-  "version": "1.2.1",
-  "description": "The boilerplate code to get started creating Cross-platform Desktop Apps with Electron and Svelte as front-end technology.",
+  "version": "1.0.0",
+  "description": "Pub Transcriptions",
   "private": false,
   "license": "MIT",
   "main": "main.js",
