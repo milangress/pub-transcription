@@ -8,6 +8,20 @@
         controllerSettings = controllerSettings
 
     }
+
+    let copySuccess = false
+    const copyContent = async (text) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            console.log('Content copied to clipboard');
+            copySuccess = true
+            setTimeout(() => {
+                copySuccess = false
+            }, 100)
+        } catch (err) {
+            console.error('Failed to copy: ', err);
+        }
+    }
 </script>
 <hr>
 <div class="controller-wrapper">
@@ -22,8 +36,8 @@
             <p>-{item.keys.down}  +{item.keys.up}</p>
             <p>+-{item.step}</p>
         </div>
-        <div class="var">
-            <p>{item.var}</p>
+        <div class="var" on:click={() => copyContent(item.var)}>
+            <p class:copySuccess>{item.var}</p>
         </div>
         <div class="value" on:click={() => resetValueToDefault(item)}>
             <p>{item.value}</p>
@@ -36,6 +50,9 @@
 </div>
 
 <style>
+    .copySuccess {
+        color: #00ff00;
+    }
     .controller-wrapper {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -59,6 +76,9 @@
         text-align: right;
         font-size: 1.2em;
         font-weight: bold;
+    }
+    .var:hover {
+        color: #00ff00;
     }
     .value {
         cursor: pointer;

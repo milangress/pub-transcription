@@ -116,6 +116,59 @@
       }
     },
     {
+      "name": "midi5",
+      "var": "m5",
+      "value": 1,
+      "default": 1,
+      "step": 0.1,
+      "knobNR": 8,
+      "range": [0, 10],
+      "keys": {
+        "up": "y",
+        "down": "Y"
+      }
+    },
+    {
+      "name": "midi6",
+      "var": "m6",
+      "value": 1,
+      "default": 1,
+      "step": 0.1,
+      "knobNR": 9,
+      "range": [0, 10],
+      "keys": {
+        "up": "y",
+        "down": "Y"
+      }
+    },
+    {
+      "name": "midi7",
+      "var": "m7",
+      "value": 1,
+      "default": 1,
+      "step": 0.1,
+      "knobNR": 10,
+      "range": [0, 10],
+      "keys": {
+        "up": "y",
+        "down": "Y"
+      }
+    },
+    {
+      "name": "midi8",
+      "var": "m8",
+      "value": 1,
+      "default": 1,
+      "step": 0.1,
+      "knobNR": 11,
+      "range": [0, 10],
+      "keys": {
+        "up": "y",
+        "down": "Y"
+      }
+    },
+
+    {
       "name": "Fontsize",
       "var": "fsz",
       "value": 1,
@@ -134,7 +187,7 @@
       "value": 0,
       "default": 0,
       "step": 1,
-      "knobNR": 11,
+      "knobNR": 12,
       "range": [-20, 20],
       "keys": {
         "up": "x",

@@ -13,6 +13,9 @@ const { WaveFile } = require("wavefile");
 // const whisper = require("whisper-node-anas23")
 
 
+const Store = require('electron-store');
+
+const store = new Store();
 
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -58,6 +61,14 @@ function createWindow() {
         console.log('printSettings', printSettings)
         print(printSettings)
     })
+
+    ipcMain.handle('getStoreValue', (event, key) => {
+        return store.get(key);
+    });
+
+    ipcMain.handle('setStoreValue', (event, key, value) => {
+        return store.set(key, value);
+    });
 
     // Emitted when the window is closed.
     mainWindow.on('closed', function () {

@@ -15,7 +15,7 @@
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
 
-	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)', '(buzzing)']
+	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)', '(buzzing)', '.']
 
 	// Only Contains the final sentences
 	let committedContent = []
@@ -45,6 +45,12 @@
 			name: 'Unifont'
 		}, {
 			name: 'OracleGM-RegularMono'
+		}, {
+			name: 'Neureal-Regular'
+		}, {
+			name: 'NIKITA-Regular'
+		}, {
+			name: 'Yorkshire'
 		}
 	]
 
@@ -168,6 +174,28 @@
 	let isSuccessfulPrint = true
 
 	let mySynth = null
+
+	async function initSave() {
+		console.log("initSave")
+		const inlineStyle = await window.electronAPI.getStoreValue('inlineStyle')
+		if (inlineStyle) {
+			console.log('found inlineStyle')
+			settings.inlineStyle = inlineStyle
+		}
+		const svgFilters = await window.electronAPI.getStoreValue('svgFilters')
+		if (svgFilters) {
+			console.log('found svgFilters')
+			svgFiltersCode = svgFilters
+		}
+	}
+	initSave()
+
+	function saveInlineStyle() {
+		window.electronAPI.setStoreValue('inlineStyle', settings.inlineStyle)
+		window.electronAPI.setStoreValue('svgFilters', svgFiltersCode)
+	}
+	window.setInterval(saveInlineStyle, 10000)
+
 
 
 	$: currentContentList = [...committedContent, currentSentence]
@@ -513,7 +541,7 @@
 			top: 0;
 			left: 0;
 			/*scale: 0.5;*/
-			/*background: none;*/
+			background: none;
 		}
 		body, page, main {
 			background: white;
