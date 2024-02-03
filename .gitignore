@@ -22,3 +22,6 @@ private
 
 # Desktop Services Store on macOS
 .DS_Store
+
+# ignore intermediate wav files
+*.wav
