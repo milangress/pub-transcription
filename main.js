@@ -221,6 +221,7 @@ setTimeout(() => {
 
 
 function print(printSettingsFrontend = {}) {
+    console.log('Trying To Print', printSettingsFrontend)
     const options = {
         margins: {
             marginType: 'custom',

@@ -194,7 +194,7 @@
 		window.electronAPI.setStoreValue('inlineStyle', settings.inlineStyle)
 		window.electronAPI.setStoreValue('svgFilters', svgFiltersCode)
 	}
-	window.setInterval(saveInlineStyle, 10000)
+	window.setInterval(saveInlineStyle, 100000)
 
 
 
@@ -541,7 +541,7 @@
 			top: 0;
 			left: 0;
 			/*scale: 0.5;*/
-			background: none;
+			/*background: none;*/
 		}
 		body, page, main {
 			background: white;
