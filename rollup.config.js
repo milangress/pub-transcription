@@ -81,7 +81,7 @@ export default [
 	},
 	// Print window config
 	{
-		input: 'src/print/print.js',
+		input: 'src/print-window/print.js',
 		output: {
 			sourcemap: true,
 			format: 'iife',

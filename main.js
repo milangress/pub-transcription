@@ -14,7 +14,7 @@ const { WaveFile } = require("wavefile");
 
 
 const Store = require('electron-store');
-const PrintQueue = require('./src/print/PrintQueue');
+const PrintQueue = require('./src/print-window/PrintQueue');
 
 const store = new Store();
 

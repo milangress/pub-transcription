@@ -1,5 +1,5 @@
 <script>
-    import Page from './page/Page.svelte';
+    import Page from './Page.svelte';
     
     // Props
     export let scale = 1;
