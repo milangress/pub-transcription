@@ -135,24 +135,21 @@
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
         }
+        page[size="A3"] {
+            background: white;
+        }
+
         #debug-info, #scale-controls {
             display: none;
         }
         .page-context {
-            width: 100%;
+            transform: none !important;
+        }
+        .page-container {
+            transform: none !important;
         }
         page[size="A3"] {
-            margin: 0;
             transform: none !important;
-            top: 0;
-            left: 0;
-        }
-        :global(body), page {
-            background: white;
-            margin: 0;
-            padding: 0;
-            box-shadow: none;
-            display: block;
         }
     }
 </style> 
