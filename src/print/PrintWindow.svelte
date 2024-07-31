@@ -13,6 +13,10 @@
     let currentPrintId = null;
     let isPrintPreview = false;
     let previewTimer;
+    let currentAttempt = 0;
+    let maxRetries = 0;
+    let queueLength = 0;
+    let isQueueProcessing = false;
     
     function addLogEntry(message, pdfUrl = null, spanCount = null, type = 'client') {
         const timestamp = new Date().toLocaleTimeString();
@@ -112,14 +116,16 @@
         console.log('IPC handlers set up. Available API:', Object.keys(window.electronAPI));
 
         // Initialize IPC listeners for print jobs
-        window.electronAPI.onPrintJob(async (_event, { content, settings }) => {
+        window.electronAPI.onPrintJob(async (_event, { content, settings, attempt, maxRetries: maxRetriesVal }) => {
             try {
+                currentAttempt = attempt || 1;
+                maxRetries = maxRetriesVal || 1;
                 currentPrintId = Date.now();
-                console.log('🖨️ New print job started with ID:', currentPrintId);
+                console.log(`🖨️ New print job started with ID: ${currentPrintId} (Attempt ${currentAttempt}/${maxRetries})`);
                 
-                status = 'Received print job';
+                status = `Received print job (Attempt ${currentAttempt}/${maxRetries})`;
                 lastJobTime = new Date().toLocaleTimeString();
-                addLogEntry('Received new print job');
+                addLogEntry(`Received new print job (Attempt ${currentAttempt}/${maxRetries})`);
                 
                 // Get the container
                 const container = document.getElementById('print-container');
@@ -191,6 +197,12 @@
             }
         });
 
+        // Add queue status listener
+        window.electronAPI.onQueueStatus((_event, status) => {
+            queueLength = status.queueLength;
+            isQueueProcessing = status.isProcessing;
+        });
+
         return () => {
             if (previewTimer) {
                 clearTimeout(previewTimer);
@@ -212,6 +224,12 @@
                 <div>Last job received: <span>{lastJobTime}</span></div>
                 <div>Styles loaded: <span>{stylesLoaded}</span></div>
                 <div>Spans: <span>{children ? children.length : 0}</span></div>
+                {#if currentAttempt > 1}
+                    <div class="retry-info">Retry attempt: <span>{currentAttempt}/{maxRetries}</span></div>
+                {/if}
+                <div class="queue-info">
+                    Queue: <span class:active={isQueueProcessing}>{queueLength} job{queueLength !== 1 ? 's' : ''} {isQueueProcessing ? '(processing)' : ''}</span>
+                </div>
             </div>
             <div class="debug-controls">
                 <PreviewButton 
@@ -287,5 +305,23 @@
         .debug-info {
             display: none;
         }
+    }
+
+    .retry-info {
+        color: #ff9800;
+        font-weight: bold;
+    }
+
+    .queue-info {
+        margin-top: 4px;
+    }
+
+    .queue-info span {
+        color: #666;
+    }
+
+    .queue-info span.active {
+        color: #2196f3;
+        font-weight: bold;
     }
 </style> 
