@@ -1,4 +1,4 @@
-<script xmlns="http://www.w3.org/1999/html">
+<script>
 	import inputJson from "../input-defaults/input.json"
 	import BlockTxt from "./components/BlockTxt.svelte"
 	import BlockImg from "./components/BlockImg.svelte"
@@ -21,6 +21,10 @@
 
 	// only Info and debug messages
 	let transInfoMessages = []
+
+	let codeEditorContentSaved = false
+	
+	let currentSentenceRef = null
 
 	let fontFamilys = [
 		{
@@ -186,11 +190,24 @@
 	}
 	initSave()
 
-	function saveInlineStyle() {
-		window.electronAPI.setStoreValue('inlineStyle', settings.inlineStyle)
-		window.electronAPI.setStoreValue('svgFilters', svgFiltersCode)
+	async function saveInlineStyle() {
+		await window.electronAPI.setStoreValue('inlineStyle', settings.inlineStyle)
+		await window.electronAPI.setStoreValue('svgFilters', svgFiltersCode)
+		codeEditorContentSaved = true
+		console.log("codeEditorContentSaved", codeEditorContentSaved)
 	}
-	window.setInterval(saveInlineStyle, 100000)
+
+	function debounce(func, delay) {
+		let timeout;
+		return function(...args) {
+			clearTimeout(timeout);
+			timeout = setTimeout(() => func.apply(this, args), delay);
+		};
+	}
+	const debouncedSave = debounce(() => {
+    console.log("debounced")
+    saveInlineStyle()
+}, 1000)
 
 
 
@@ -290,10 +307,13 @@
 	setupControllers()
 
 	function onKeyDown(e) {
+		codeEditorContentSaved = false
+		console.log("codeEditorContentSaved", codeEditorContentSaved)
 		const inputSettings = inputJson.keys[e.key]
 		if (inputSettings) {
 			eval(`${inputSettings.function}()`)
 		}
+		debouncedSave()
 	}
 	function increaseFontSize() {
 		const newFontSize = settings.fontSize + 0.1
@@ -342,13 +362,17 @@
 
 	function isPageFull() {
 		let page = document.getElementsByTagName('page')[0]
+		if (!page) return;
+		
+		const currentElement = document.getElementsByClassName('current')[0]
+		if (!currentElement) return;
+
 		const {height: pageHeight, y: pageY} = page.getBoundingClientRect()
 		const pageBottom = pageHeight + pageY
-		const {height: contentHeight, y: contentY} = document.getElementsByClassName('current')[0].getBoundingClientRect()
+		const {height: contentHeight, y: contentY} = currentElement.getBoundingClientRect()
 		const contentBottom = contentHeight + contentY
 		const distance = pageBottom - contentBottom
 		const percent = (distance / pageHeight) * 100
-		// console.log("distance", distance, percent)
 
 		if (percent < 10) {
 			console.log("page full")
@@ -398,7 +422,7 @@
 				{#each committedContent as item (item.id)}
 					<svelte:component this={item.type} content={item.content} settings="{item.settings}"/>
 				{/each}
-					<svelte:component this={currentSentence.type} content={currentSentence.content} settings="{settings}" isCurrent/>
+					<svelte:component bind:this={currentSentenceRef} this={currentSentence.type} content={currentSentence.content} settings="{settings}" isCurrent/>
 				</div>
 			</page>
 		</div>
@@ -406,6 +430,7 @@
 
 	<div class="print-non" class:printFailed={!isSuccessfulPrint}>
 		<div class="infobox">
+			<div class="dot" class:greenDot={codeEditorContentSaved}></div>
 			<CodeEditor 
 				bind:value={settings.inlineStyle} 
 				language="css"
@@ -533,6 +558,16 @@
 	}
 	.printFailed {
 		background: red;
+	}
+	
+	.dot {
+		background: red;
+		width: 0.5em;
+		height: 0.5em;
+		border-radius: 50%;
+	}
+	.greenDot {
+		background: green;
 	}
 
 	@media print {
