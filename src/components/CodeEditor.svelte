@@ -126,117 +126,57 @@
         try {
             const diagnostics = [];
             const properties = new Map();
-            
-            console.log("Starting CSS property analysis...");
-            
             let currentRule = null;
-            let tree = syntaxTree(view.state);
             
-            // Helper to check if a line is commented
-            function isCommentedLine(text) {
-                return text.trim().startsWith('//');
-            }
-            
-            tree.iterate({
+            syntaxTree(view.state).iterate({
                 enter: (node) => {
-                    try {
-                        // Track when we enter a CSS rule
-                        if (node?.type?.name === "RuleSet") {
-                            currentRule = node;
+                    if (node?.type?.name === "RuleSet") {
+                        currentRule = node;
+                    }
+                    
+                    if (node?.type?.name === "PropertyName") {
+                        const property = view.state.doc.sliceString(node.from, node.to).trim();
+                        if (!property) return;
+                        
+                        const line = view.state.doc.lineAt(node.from);
+                        if (line.text.trim().startsWith('//')) return;
+                        
+                        const ruleKey = currentRule ? currentRule.from : 'global';
+                        if (!properties.has(ruleKey)) {
+                            properties.set(ruleKey, new Map());
                         }
                         
-                        if (node?.type?.name === "PropertyName") {
-                            const property = view.state.doc.sliceString(node.from, node.to).trim();
+                        const ruleProperties = properties.get(ruleKey);
+                        if (!ruleProperties.has(property)) {
+                            ruleProperties.set(property, [{ node, line }]);
+                        } else {
+                            const existing = ruleProperties.get(property);
+                            existing.push({ node, line });
+                            console.log(`Found duplicate '${property}' on line ${line.number} (first used on line ${existing[0].line.number})`);
                             
-                            // Skip if property is empty
-                            if (!property) return;
-                            
-                            const line = view.state.doc.lineAt(node.from);
-                            const lineContent = line.text;
-                            
-                            // Skip if line is already commented
-                            if (isCommentedLine(lineContent)) return;
-                            
-                            // Store properties per rule
-                            const ruleKey = currentRule ? currentRule.from : 'global';
-                            if (!properties.has(ruleKey)) {
-                                properties.set(ruleKey, new Map());
-                            }
-                            const ruleProperties = properties.get(ruleKey);
-                            
-                            // Get the exact property name range
-                            const propertyStart = node.from;
-                            const propertyEnd = node.to;
-                            
-                            if (!ruleProperties.has(property)) {
-                                ruleProperties.set(property, [{ 
-                                    node,
-                                    line,
-                                    from: propertyStart,
-                                    to: propertyEnd
-                                }]);
-                            } else {
-                                const existing = ruleProperties.get(property);
-                                existing.push({ 
-                                    node,
-                                    line,
-                                    from: propertyStart,
-                                    to: propertyEnd
-                                });
-                                console.log(`Found duplicate '${property}' on line ${line.number} (first used on line ${existing[0].line.number})`);
-                            }
-                        }
-                    } catch (err) {
-                        console.error("Error in node processing:", err);
-                    }
-                },
-                leave: (node) => {
-                    if (node === currentRule) {
-                        currentRule = null;
-                    }
-                }
-            });
-
-            // Create diagnostics for duplicates within each rule
-            for (const [ruleKey, ruleProperties] of properties) {
-                for (const [prop, occurrences] of ruleProperties) {
-                    if (occurrences.length > 1) {
-                        // Mark all occurrences after the first one
-                        for (let i = 1; i < occurrences.length; i++) {
-                            const { node, line, from, to } = occurrences[i];
-                            const lineStart = line.from;
-                            const indent = line.text.match(/^\s*/)[0];
-                            const propertyLineStart = lineStart + indent.length;
-                            
-                            console.log("Duplicate property:", {
-                                property: prop,
-                                from,
-                                to,
-                                line: line.number,
-                                content: view.state.doc.sliceString(from, to)
-                            });
-                            
+                            // Create diagnostic immediately for this duplicate
                             diagnostics.push({
-                                from,
-                                to,
+                                from: node.from,
+                                to: node.to,
                                 severity: "warning",
-                                message: `Duplicate CSS property '${prop}' (first used on line ${occurrences[0].line.number})`,
+                                message: `Duplicate '${property}' (-> ${existing[0].line.number})`,
                                 actions: [{
-                                    name: "Comment out line",
+                                    name: "// Comment",
                                     apply(view, from, to) {
+                                        const lineStart = line.from + line.text.match(/^\s*/)[0].length;
                                         view.dispatch({
-                                            changes: {
-                                                from: propertyLineStart,
-                                                insert: "// "
-                                            }
+                                            changes: { from: lineStart, insert: "// " }
                                         });
                                     }
                                 }]
                             });
                         }
                     }
+                },
+                leave: (node) => {
+                    if (node === currentRule) currentRule = null;
                 }
-            }
+            });
 
             return diagnostics;
         } catch (err) {
@@ -248,16 +188,16 @@
     // Custom theme for lint diagnostics
     const lintTheme = EditorView.baseTheme({
         '.cm-diagnostic': {
-            padding: 0,
+            padding: '0.5em',
             '& .cm-diagnosticText': {
-                padding: 0
+                padding: '0.5em'
             }
         },
         '.cm-diagnostic-warning': {
-            borderBottom: '2px wavy #f44336'
+            borderLeft: '5px solid blue'
         },
         '.cm-diagnostic-error': {
-            borderBottom: '2px wavy #f44336'
+            borderLeft: '5px solid red'
         }
     });
 
