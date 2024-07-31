@@ -11,7 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openPDFFolder: () => ipcRenderer.invoke('open-pdf-folder'),
     onPrintJob: (callback) => ipcRenderer.on('print-job', callback),
     executePrint: (data) => ipcRenderer.invoke('execute-print', data),
-    sendPrintStatus: (status) => ipcRenderer.send('print-status', status)
+    sendPrintStatus: (status) => ipcRenderer.send('print-status', status),
+    togglePrintPreview: (enable) => ipcRenderer.invoke('toggle-print-preview', enable)
 })
 
 
