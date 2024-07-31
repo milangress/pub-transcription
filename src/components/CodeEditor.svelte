@@ -1,6 +1,6 @@
 <script>
     import { onMount, createEventDispatcher } from 'svelte';
-    import { EditorView, keymap } from "@codemirror/view";
+    import { EditorView, keymap, WidgetType, ViewPlugin, Decoration } from "@codemirror/view";
     import { EditorState } from "@codemirror/state";
     import { defaultKeymap, toggleComment, toggleLineComment } from "@codemirror/commands";
     import { sass, sassLanguage } from "@codemirror/lang-sass";
@@ -185,26 +185,122 @@
         }
     });
 
-    // Custom theme for lint diagnostics
-    const lintTheme = EditorView.baseTheme({
-        '.cm-diagnostic': {
-            padding: '0.5em',
-            '& .cm-diagnosticText': {
-                padding: '0.5em'
+
+    // Helper to transform SASS values
+    function transformSassValue(str, settings) {
+        if (!settings || !Array.isArray(settings) || settings.length === 0) return null;
+        
+        const values = [];
+        let foundAny = false;
+        
+        // Find all $variables in the string
+        const regex = /\$(\w+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g;
+        let match;
+        
+        while ((match = regex.exec(str)) !== null) {
+            const [_, varName, number, unit] = match;
+            const setting = settings.find(s => s.var === varName);
+            
+            if (setting) {
+                foundAny = true;
+                if (number) {
+                    const result = setting.value * parseFloat(number);
+                    values.push(unit ? result + unit : result);
+                } else {
+                    values.push(setting.value);
+                }
             }
-        },
-        '.cm-diagnostic-warning': {
-            borderLeft: '5px solid blue'
-        },
-        '.cm-diagnostic-error': {
-            borderLeft: '5px solid red'
+        }
+        
+        return foundAny ? values.join(', ') : null;
+    }
+
+    class ValueWidget extends WidgetType {
+        constructor(value) {
+            super();
+            this.value = value;
+        }
+
+        eq(other) {
+            return other.value === this.value;
+        }
+
+        toDOM() {
+            const span = document.createElement("span");
+            span.className = "cm-sass-value";
+            span.style.cssText = `
+                display: inline-block;
+                color: #888;
+                pointer-events: none;
+                user-select: none;
+                white-space: pre;
+                padding-left: 1ch;
+            `;
+            span.textContent = `→ ${this.value}`;
+            return span;
+        }
+
+        ignoreEvent() { return true; }
+    }
+
+    function createValueDecorations(view) {
+        const widgets = [];
+        const settings = controllerSettings;
+
+        for (let {from, to} of view.visibleRanges) {
+            syntaxTree(view.state).iterate({
+                from, to,
+                enter: (node) => {
+                    if (node.type.name === "Declaration") {
+                        const line = view.state.doc.lineAt(node.from);
+                        const lineContent = line.text;
+                        
+                        if (lineContent.includes('$') && !lineContent.trim().startsWith('//')) {
+                            const value = transformSassValue(lineContent, settings);
+                            if (value !== null) {
+                                widgets.push(Decoration.widget({
+                                    widget: new ValueWidget(value),
+                                    side: 1
+                                }).range(line.to));
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        return Decoration.set(widgets);
+    }
+
+    const EditorTheme = EditorView.theme({
+        '.ͼk': {
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            // outline: '1px solid lightblue',
+            // borderRadius: '0.2em',
+            // padding: '0em 0.2em'
         }
     });
 
+    const sassValuePlugin = ViewPlugin.fromClass(class {
+        decorations;
+
+        constructor(view) {
+            this.decorations = createValueDecorations(view);
+        }
+
+        update(update) {
+            this.decorations = createValueDecorations(update.view);
+        }
+    }, {
+        decorations: v => v.decorations
+    });
+
+    // Add reactive statement to force plugin update when settings change
+    $: if (view && controllerSettings) {
+        view.dispatch(view.state.update());
+    }
+
     onMount(() => {
         const languageSupport = language === 'css' ? sass() : html();
-        
-        console.log('Setting up editor with fonts:', fontFamilys);
         
         const state = EditorState.create({
             doc: value,
@@ -214,8 +310,9 @@
                 closeBrackets(),
                 autocompletion(),
                 lintGutter(),
-                lintTheme,
+                EditorTheme,
                 duplicatePropertiesLinter,
+                sassValuePlugin,
                 sassLanguage.data.of({
                     autocomplete: createCompletions
                 }),
