@@ -4,6 +4,8 @@
 	import BlockImg from "./components/BlockImg.svelte"
 	import ControllerManager from "./components/ControllerManager.svelte"
 	import CodeEditor from "./components/CodeEditor.svelte"
+	import PrintStatusBar from './print/PrintStatusBar.svelte'
+	import { onMount } from 'svelte'
 
 	console.log(inputJson)
 
@@ -175,6 +177,8 @@
 
 	let mySynth = null
 
+	let printStatusBar;
+
 	async function initSave() {
 		console.log("initSave")
 		const inlineStyle = await window.electronAPI.getStoreValue('inlineStyle')
@@ -213,8 +217,8 @@
 
 	$: currentContentList = [...committedContent, currentSentence]
 
-	window.electronAPI.onTransData((event, value) => {
-		console.log("New Trans Data: ", value, window.performance.now())
+	window.electronAPI.onTranscriptionData((event, value) => {
+		// console.log("New Trans Data: ", value, window.performance.now())
 		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
 		if (String(value).endsWith('NEW')) {
 			currentSentence = formatTTSasTxtObject(value)
@@ -228,30 +232,6 @@
 		// console.log("list", committedContent)
 	})
 
-	function commitFinalSentence() {
-		if (!dontSave.some(x => x.toLowerCase() === currentSentence.content.toLowerCase().trim())) {
-			committedContent = [...committedContent, currentSentence]
-		}
-		// currentSentence = ''
-	}
-
-	window.electronAPI.onTransInfo((event, value) => {
-		transInfoMessages = [value, ...transInfoMessages]
-	})
-
-	window.electronAPI.printSuccess((event, value) => {
-		console.log("printSuccess", value)
-		if (value === 'pdf' || value=== 'print') {
-			clearAll()
-			setTimeout(() => {
-				isSuccessfulPrint = true
-			}, 2000)
-		} else if (value === false) {
-			console.error("print failed")
-			isSuccessfulPrint = false
-		}
-	})
-
 	function formatTTSasTxtObject(tts) {
 		const removeNEWKeyword = String(tts).replace('NEW', '').trim()
 		return {
@@ -260,8 +240,18 @@
 			settings: JSON.parse(JSON.stringify(settings)),
 			id: Math.random()
 		}
-
 	}
+
+	function commitFinalSentence() {
+		if (!dontSave.some(x => x.toLowerCase() === currentSentence.content.toLowerCase().trim())) {
+			committedContent = [...committedContent, currentSentence]
+		}
+		// currentSentence = ''
+	}
+
+	window.electronAPI.onTranscriptionStatus((event, value) => {
+		transInfoMessages = [value, ...transInfoMessages]
+	})
 
 	const mapRange = (value, x1, y1, x2, y2) => (value - x1) * (y2 - x2) / (y1 - x1) + x2;
 
@@ -306,40 +296,35 @@
 	}
 	setupControllers()
 
-	function onKeyDown(e) {
-		codeEditorContentSaved = false
-		console.log("codeEditorContentSaved", codeEditorContentSaved)
-		const inputSettings = inputJson.keys[e.key]
-		if (inputSettings) {
-			eval(`${inputSettings.function}()`)
-		}
-		debouncedSave()
-	}
-	function increaseFontSize() {
-		const newFontSize = settings.fontSize + 0.1
-		settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
-	}
-	function decreaseFontSize() {
-		const newFontSize = settings.fontSize - 0.1
-		settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
-	}
-	function addImage() {
-		console.log("addImage")
-		committedContent = [...committedContent, {
-			type: BlockImg,
-			content: 'https://picsum.photos/200/300',
-			id: Math.random()
-		}]
-	}
+	
 
-	function printFile() {
-		const pageContent = document.querySelector('page').innerHTML;
-		window.electronAPI.print({
-			content: pageContent,
-			settings: {
+	async function printFile() {
+		console.log("🖨️ Starting print process");
+		const pageElement = document.querySelector('page');
+		if (!pageElement) {
+			console.error('❌ No page element found');
+			isSuccessfulPrint = false;
+			return;
+		}
+
+		const pageContent = pageElement.innerHTML;
+		if (!pageContent || typeof pageContent !== 'string') {
+			console.error('❌ Invalid page content');
+			isSuccessfulPrint = false;
+			return;
+		}
+
+		try {
+			// First create a print request in the status bar
+			const printId = printStatusBar.addPrintRequest();
+			console.log(`📝 Created print request with ID: ${printId}`);
+			
+			console.log("pageContent", pageContent);
+
+			const printSettings = {
 				...printerSettings,
-				silent: true,  // Ensure silent printing
-				printBackground: true, // Enable background printing
+				silent: true,
+				printBackground: true,
 				printSelectionOnly: false,
 				landscape: false,
 				pageSize: 'A3',
@@ -350,15 +335,24 @@
 					left: 0,
 					right: 0
 				},
-				// Send additional style information
 				inlineStyle: settings.inlineStyle,
-				svgFiltersCode: svgFiltersCode
-			}
-		});
+				svgFiltersCode: svgFiltersCode,
+				printId
+			};
+			
+			await window.electronAPI.print(pageContent, printSettings);
+
+			// Clear the content immediately after queuing the print job
+			// This prevents double printing and overflow
+			console.log("🗑️ Clearing content after print queue");
+			clearAll();
+
+		} catch (error) {
+			console.error('❌ Print error:', error);
+			isSuccessfulPrint = false;
+		}
 	}
-	function clearAll() {
-		committedContent = []
-	}
+
 
 	function isPageFull() {
 		let page = document.getElementsByTagName('page')[0]
@@ -374,16 +368,55 @@
 		const distance = pageBottom - contentBottom
 		const percent = (distance / pageHeight) * 100
 
+		console.log("Page space check:", { percent, distance, pageBottom, contentBottom });
+
 		if (percent < 10) {
-			console.log("page full")
+			console.log("🖨️ Page is full! Triggering print...");
 			printFile()
-			setTimeout(() => {
-				clearAll()
-			}, 0)
 		}
 	}
-	window.setInterval(isPageFull, 3000)
 
+	// Check page fullness every 3 seconds
+	onMount(() => {
+		const pageCheckInterval = setInterval(isPageFull, 3000);
+		
+		return () => {
+			clearInterval(pageCheckInterval);
+		};
+	});
+
+	function clearAll() {
+		console.log("🗑️ Clearing all content");
+		committedContent = []
+	}
+
+	function onKeyDown(e) {
+		codeEditorContentSaved = false
+		const inputSettings = inputJson.keys[e.key]
+		if (inputSettings) {
+			eval(`${inputSettings.function}()`)
+		}
+		debouncedSave()
+	}
+
+	function increaseFontSize() {
+		const newFontSize = settings.fontSize + 0.1
+		settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
+	}
+
+	function decreaseFontSize() {
+		const newFontSize = settings.fontSize - 0.1
+		settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
+	}
+
+	function addImage() {
+		console.log("addImage")
+		committedContent = [...committedContent, {
+			type: BlockImg,
+			content: 'https://picsum.photos/200/300',
+			id: Math.random()
+		}]
+	}
 
 	WebMidi
 			.enable()
@@ -482,6 +515,8 @@
 	{/each}
 		</div>
 	</div>
+
+	<PrintStatusBar bind:this={printStatusBar} />
 
 </main>
 

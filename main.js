@@ -164,15 +164,30 @@ function createWindow() {
     // mainWindow.webContents.openDevTools();
 
     ipcMain.on('print', async (event, { content, settings }) => {
+        debugger;
         try {
             if (!printQueue) {
                 printQueue = new PrintQueue(printWindow, createPrintWindow);
             }
+
+
+            if (!content || typeof content !== 'string') {
+                throw new Error('Invalid content format');
+            }
+            if (!settings || !settings.printId) {
+                throw new Error('Print settings or ID missing');
+            }
+
+            console.log('📝 Print request received:', { 
+                contentLength: content.length,
+                settings: settings.printId,
+            });
+
             await printQueue.add(content, settings);
-            event.reply('print-queued', { success: true });
+            event.reply('print-queued', { success: true, printId: settings.printId });
         } catch (error) {
             console.error('Print queue error:', error);
-            event.reply('print-queued', { success: false, error: error.message });
+            event.reply('print-queued', { success: false, error: error.message, printId: settings?.printId });
         }
     });
 
@@ -204,9 +219,29 @@ function createWindow() {
         });
     }
 
+    // Helper to create structured messages
+    function createMessage(printId, action, status, details = {}) {
+        return {
+            id: printId,
+            timestamp: Date.now(),
+            action: action,      // 'PRINT_START', 'PRINT_COMPLETE', 'PDF_SAVE', etc.
+            status: status,      // 'SUCCESS', 'ERROR', 'INFO'
+            ...details
+        };
+    }
+
     // Modify the execute-print handler
     ipcMain.handle('execute-print', async (event, { content, settings = {} }) => {
         try {
+            console.log('📝 Execute print request:', { 
+                contentLength: content?.length,
+                settings
+            });
+
+            if (!settings || !settings.printId) {
+                throw new Error('Print ID is required');
+            }
+
             const options = {
                 margins: {
                     marginType: 'custom',
@@ -221,21 +256,39 @@ function createWindow() {
                 printSelectionOnly: false,
                 landscape: false,
                 silent: true,
-                ...settings
+                ...settings,
+                printId: settings.printId  // Ensure printId is explicitly set
             };
 
-            sendToAllWindows('trans-info', '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥');
+            sendToAllWindows('print-status', createMessage(
+                settings.printId,
+                'PRINT_START',
+                'INFO',
+                { message: '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥' }
+            ));
 
             // Handle direct printing
             if (settings?.forcePrint === true) {
                 const printResult = await new Promise((resolve, reject) => {
                     printWindow.webContents.print(options, (success, errorType) => {
                         if (!success) {
-                            sendToAllWindows('trans-info', '�� Printing failed');
-                            sendToAllWindows('trans-info', errorType);
+                            sendToAllWindows('print-status', createMessage(
+                                settings.printId,
+                                'PRINT_COMPLETE',
+                                'ERROR',
+                                { 
+                                    message: 'Printing failed',
+                                    error: errorType
+                                }
+                            ));
                             reject(new Error(errorType));
                         } else {
-                            sendToAllWindows('trans-info', '🖨️ Printed successfully');
+                            sendToAllWindows('print-status', createMessage(
+                                settings.printId,
+                                'PRINT_COMPLETE',
+                                'SUCCESS',
+                                { message: '🖨️ Printed successfully' }
+                            ));
                             resolve(true);
                         }
                     });
@@ -256,19 +309,49 @@ function createWindow() {
             
             await fs.promises.writeFile(pdfPath, pdfData);
             console.log(`Wrote PDF successfully to ${pdfPath}`);
-            sendToAllWindows('trans-info', `💦 Wrote PDF successfully to ${pdfPath}`);
+            sendToAllWindows('print-status', createMessage(
+                settings.printId,
+                'PDF_SAVE',
+                'SUCCESS',
+                { 
+                    message: `💦 Wrote PDF successfully to ${pdfPath}`,
+                    path: pdfPath
+                }
+            ));
             
             return true;
         } catch (error) {
             console.error('Print/PDF error:', error);
-            sendToAllWindows('trans-info', `🥵 Error: ${error.message}`);
+            sendToAllWindows('print-status', createMessage(
+                settings.printId,
+                'PRINT_ERROR',
+                'ERROR',
+                { 
+                    message: `🥵 Error: ${error.message}`,
+                    error: error.message
+                }
+            ));
             throw error;
         }
     });
 
     // Handle print status updates
     ipcMain.on('print-status', (event, status) => {
-        mainWindow.webContents.send('print-success', status.success);
+        if (!status.printId) {
+            console.error('❌ Print status received without printId:', status);
+            return;
+        }
+        
+        // Send the status to all windows
+        sendToAllWindows('print-status', createMessage(
+            status.printId,
+            status.success ? 'PRINT_COMPLETE' : 'PRINT_ERROR',
+            status.success ? 'SUCCESS' : 'ERROR',
+            { 
+                message: status.error || (status.success ? '🖨️ Print completed' : '❌ Print failed'),
+                error: status.error
+            }
+        ));
     });
 
     // Emitted when the window is closed.
@@ -393,21 +476,20 @@ function spawnStreamProcess() {
         ])
 //-t 6 --step 0 --length 30000 -vth 0.6
     ls.stdout.on("data", data => {
-        // console.log(`stdout: ${data}`);
         let string = new TextDecoder().decode(data);
-        mainWindow.webContents.send('trans-data', string)
+        mainWindow.webContents.send('transcription-data', string)
     });
 
     ls.stderr.on("data", info => {
         console.log(`stderr: ${info}`);
         let string = new TextDecoder().decode(info);
-        mainWindow.webContents.send('trans-info', string)
+        mainWindow.webContents.send('transcription-status', string)
     });
 
     ls.on('error', (error) => {
         console.log(`error: ${error.message}`);
         if(mainWindow){
-            mainWindow.webContents.send('trans-info', error.message)
+            mainWindow.webContents.send('transcription-status', error.message)
         }
     });
 
@@ -466,11 +548,11 @@ function generateSimulatedTranscript() {
             
             // Every 3-5 messages, send a NEW message
             if (Math.random() < 0.25) {
-                mainWindow.webContents.send('trans-data', `${message}NEW`);
+                mainWindow.webContents.send('transcription-data', `${message}NEW`);
             } else {
-                mainWindow.webContents.send('trans-data', message);
+                mainWindow.webContents.send('transcription-data', message);
             }
-        }, 800); // Send message every 800ms
+        }, 800);
 
         // Clean up interval when window is closed or reloaded
         mainWindow.on('closed', () => {

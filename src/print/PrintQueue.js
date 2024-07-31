@@ -95,6 +95,13 @@ class PrintQueue {
                     if (!this.printWindow || this.printWindow.isDestroyed()) {
                         throw new Error('Print window is not available');
                     }
+                    // Ensure content is a string and settings has printId
+                    if (typeof job.content !== 'string') {
+                        throw new Error('Print content must be a string');
+                    }
+                    if (!job.settings?.printId) {
+                        throw new Error('Print ID is required in settings');
+                    }
                     this.printWindow.webContents.send('print-job', { 
                         content: job.content, 
                         settings: job.settings,
