@@ -34,7 +34,7 @@
     "start": "sirv public --no-clear",
     "electron": "wait-on http://localhost:8080 && electron .",
     "electron-dev": "concurrently \"yarn run dev\" \"yarn run electron\"",
-    "electron-dev-simulate": "concurrently \"yarn run dev\" \"wait-on http://localhost:8080 && electron . --simulate\"",
+    "electron-dev-simulate": "concurrently \"yarn run dev\" \"wait-on http://localhost:8080 && electron . --simulate --inspect\"",
     "preelectron-pack": "yarn run build",
     "electron-pack": "electron-builder"
   },

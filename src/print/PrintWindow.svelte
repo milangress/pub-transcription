@@ -88,74 +88,166 @@
         }
     }
 
-    onMount(() => {
-        // Debug IPC setup
-        console.log('Setting up IPC listeners...');
+    function sendPrintStatus(success, error = null) {
+        if (!currentPrintId) {
+            console.error('❌ Attempting to send print status without printId');
+            return;
+        }
+        window.electronAPI.sendPrintStatus({
+            printId: currentPrintId,
+            success,
+            error
+        });
+    }
+
+    async function executePrint(content, settings) {
+        if (!settings?.printId) {
+            throw new Error('Print ID is required');
+        }
         
-        // Listen for server messages
-        window.electronAPI.onTransInfo((_event, message) => {
-            console.log('🔍 trans-info received:', { event: _event, message, type: typeof message });
+        currentPrintId = settings.printId;
+        console.log('📝 Executing print with ID:', currentPrintId);
+
+        try {
+            await window.electronAPI.executePrint(content, settings);
+            sendPrintStatus(true);
+        } catch (error) {
+            console.error('❌ Print error:', error);
+            sendPrintStatus(false, error.message);
+        }
+    }
+
+    onMount(() => {
+        console.log('🖨️ Print window initialized');
+        
+        // Listen for print status updates
+        window.electronAPI.onPrintStatus((_event, data) => {
+            console.log('📥 Print status update:', data);
             
-            // Check if the message contains a PDF path
-            if (typeof message === 'string') {
-                const pdfMatch = message.match(/Wrote PDF successfully to (.+)$/);
-                if (pdfMatch) {
-                    console.log('📄 PDF path found:', pdfMatch[1]);
-                    const pdfPath = pdfMatch[1];
-                    updateLogEntryWithPdfUrl(currentPrintId, `file://${pdfPath}`);
-                }
-                
-                // Log all server messages for debugging
-                console.log('📨 Server message:', message);
-                addLogEntry(message, null, null, 'server');
-            } else {
-                console.log('⚠️ Received non-string message:', message);
+            if (!data?.id) {
+                console.warn('⚠️ Received print status without ID:', data);
+                return;
+            }
+
+            const { action, status: printStatus, message, id } = data;
+            currentPrintId = id;
+
+            // Update status based on action and status
+            switch (action) {
+                case 'PRINT_START':
+                    status = message || 'Starting print job...';
+                    lastJobTime = new Date().toLocaleTimeString();
+                    addLogEntry(message || 'Print job started', null, null, 'server');
+                    break;
+                    
+                case 'PRINT_COMPLETE':
+                    if (printStatus === 'SUCCESS') {
+                        const duration = ((Date.now() - printStartTime) / 1000).toFixed(2);
+                        status = message || `🖨️ Print completed successfully (${duration}s)`;
+                        addLogEntry(message || `Print completed successfully (${duration}s)`, null, children?.length, 'server');
+                    } else {
+                        status = message || '❌ Print failed';
+                        addLogEntry(message || 'Print failed', null, null, 'server');
+                    }
+                    printStartTime = null;
+                    break;
+                    
+                case 'PDF_SAVE':
+                    if (printStatus === 'SUCCESS' && message) {
+                        const pdfPath = message.match(/to (.+)$/)?.[1];
+                        if (pdfPath) {
+                            updateLogEntryWithPdfUrl(id, `file://${pdfPath}`);
+                            addLogEntry('PDF saved successfully', `file://${pdfPath}`, null, 'server');
+                        }
+                    }
+                    break;
+                    
+                case 'PRINT_ERROR':
+                    status = message || '❌ Print error occurred';
+                    addLogEntry(message || 'Print error occurred', null, null, 'server');
+                    printStartTime = null;
+                    break;
             }
         });
 
-        // Test if IPC is working
-        console.log('IPC handlers set up. Available API:', Object.keys(window.electronAPI));
+        // Also add back server message handling for transcription status
+        window.electronAPI.onTranscriptionStatus((_event, message) => {
+            if (typeof message === 'string') {
+                addLogEntry(message, null, null, 'server');
+            }
+        });
 
-        // Initialize IPC listeners for print jobs
-        window.electronAPI.onPrintJob(async (_event, { content, settings, attempt, maxRetries: maxRetriesVal }) => {
+        // Handle print job setup
+        window.electronAPI.onPrintJob(async (_event, { content, settings = {}, attempt, maxRetries: maxRetriesVal }) => {
             try {
+                console.log("onPrintJob", { content, settings, attempt, maxRetriesVal });
+                debugger;
+                // Validate essential data
+                if (!settings?.printId) {
+                    console.error('❌ Print job received without printId:', settings);
+                    throw new Error('Print job received without printId');
+                }
+
+                // Set current print ID first
+                currentPrintId = settings.printId;
                 currentAttempt = attempt || 1;
                 maxRetries = maxRetriesVal || 1;
-                currentPrintId = Date.now();
                 printStartTime = Date.now();
-                console.log(`🖨️ New print job started with ID: ${currentPrintId} (Attempt ${currentAttempt}/${maxRetries})`);
-                
-                status = `Received print job (Attempt ${currentAttempt}/${maxRetries})`;
+
+                if (!content) {
+                    const error = new Error('Print job received without content');
+                    console.error('❌', error.message);
+                    addLogEntry(error.message, null, null, 'error');
+                    throw error;
+                }
+
+                console.log(`🖨️ Processing print job with ID: ${currentPrintId} (Attempt ${currentAttempt}/${maxRetries})`);
+                status = `Processing print job (Attempt ${currentAttempt}/${maxRetries})`;
                 lastJobTime = new Date().toLocaleTimeString();
-                addLogEntry(`Received new print job (Attempt ${currentAttempt}/${maxRetries})`);
+                addLogEntry(`Processing print job (Attempt ${currentAttempt}/${maxRetries})`);
                 
                 // Get the container
                 const container = document.getElementById('print-container');
                 container.innerHTML = '';
                 
                 // Inject any dynamic styles
-                const styleSheet = document.createElement('style');
-                styleSheet.textContent = settings?.inlineStyle || '';
-                document.head.appendChild(styleSheet);
-                
-                // Update styles loaded status
-                const styleLength = settings?.inlineStyle?.length;
-                stylesLoaded = `Yes - ${styleLength} - ${new Date().toLocaleTimeString()}`;
-                addLogEntry(`Styles loaded (${styleLength} bytes)`);
+                if (settings?.inlineStyle) {
+                    const styleSheet = document.createElement('style');
+                    styleSheet.textContent = settings.inlineStyle;
+                    document.head.appendChild(styleSheet);
+                    
+                    // Update styles loaded status
+                    const styleLength = settings.inlineStyle.length;
+                    stylesLoaded = `Yes - ${styleLength} - ${new Date().toLocaleTimeString()}`;
+                    addLogEntry(`Styles loaded (${styleLength} bytes)`);
+                } else {
+                    console.warn('⚠️ No inline styles provided for print job');
+                    stylesLoaded = 'No';
+                }
 
                 // Inject SVG filters if they exist
                 if (settings?.svgFiltersCode) {
-                    const filtersDiv = document.createElement('div');
-                    filtersDiv.style.display = 'none';
+                    console.log('🎨 Adding SVG filters');
+                    // reuse the same div for all svg filters
+                    let filtersDiv = document.getElementById('svg-filters');
+                    if (!filtersDiv) {
+                        filtersDiv = document.createElement('div');
+                        filtersDiv.id = 'svg-filters';
+                        filtersDiv.style.display = 'none';
+                        document.body.appendChild(filtersDiv);
+                    }
                     filtersDiv.innerHTML = settings.svgFiltersCode;
-                    document.body.appendChild(filtersDiv);
+                } else {
+                    console.warn('⚠️ No SVG filters provided for print job');
                 }
                 
                 // Set the content
                 container.innerHTML = content;
-
-                // count spans inside container
                 children = container.querySelectorAll('span');
+                
+                if (children.length === 0) {
+                    console.warn('⚠️ Print content contains no text spans');
+                }
                 
                 status = 'Content loaded, waiting 5 seconds before print...';
                 addLogEntry('Content loaded, preparing to print', null, children.length);
@@ -166,48 +258,34 @@
                 status = 'Printing...';
                 addLogEntry('Starting print process...', null, children.length);
                 
-                try {
-                    console.log('📤 Sending print request to main process...');
-                    // Print
-                    await window.electronAPI.executePrint({
-                        content: container.innerHTML,
-                        settings: settings
-                    });
-                    
-                    const duration = ((Date.now() - printStartTime) / 1000).toFixed(2);
-                    console.log('📥 Print request completed');
-                    // Send success status back
-                    window.electronAPI.sendPrintStatus({ success: true });
-                    status = 'Print complete, waiting for next job';
-                    addLogEntry(`Print completed successfully (${duration}s)`, null, children.length);
-                } catch (error) {
-                    const duration = ((Date.now() - printStartTime) / 1000).toFixed(2);
-                    console.error('❌ Print error:', error);
-                    status = 'Error: ' + error.message;
-                    addLogEntry(`Print failed after ${duration}s: ${error.message}`, null, children.length);
-                    window.electronAPI.sendPrintStatus({ 
-                        success: false, 
-                        error: error.message 
-                    });
-                } finally {
-                    printStartTime = null;
-                }
+                console.log("Executing print with settings:", { ...settings, printId: currentPrintId });
+                
+                // Execute print with the same settings including printId
+                await executePrint(container.innerHTML, settings);
+
             } catch (error) {
                 console.error('❌ Print job error:', error);
-                status = 'Error: ' + error.message;
-                addLogEntry(`Error: ${error.message}`);
-                window.electronAPI.sendPrintStatus({ 
-                    success: false, 
-                    error: error.message 
-                });
-                printStartTime = null;
+                status = `Error: ${error.message}`;
+                addLogEntry(`Error: ${error.message}`, null, null, 'error');
             }
         });
 
-        // Add queue status listener
+        // Handle queue status updates
         window.electronAPI.onQueueStatus((_event, status) => {
-            queueLength = status.queueLength;
+            console.log('📊 Queue status update:', status);
+            queueLength = status.queueLength || 0;
             isQueueProcessing = status.isProcessing;
+            
+            // Update status message based on queue state
+            if (queueLength > 0) {
+                if (isQueueProcessing) {
+                    addLogEntry(`Processing print queue (${queueLength} remaining)`, null, null, 'server');
+                } else {
+                    addLogEntry(`Print queue paused (${queueLength} pending)`, null, null, 'server');
+                }
+            } else if (queueLength === 0 && !isQueueProcessing) {
+                addLogEntry('Print queue empty', null, null, 'server');
+            }
         });
 
         return () => {
@@ -215,7 +293,6 @@
                 clearTimeout(previewTimer);
                 previewTimer = null;
             }
-            // Make sure to disable print media when component unmounts
             window.electronAPI.togglePrintPreview(false).catch(error => {
                 console.error('Failed to disable print preview on unmount:', error);
             });

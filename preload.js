@@ -2,19 +2,26 @@ console.log('Hello from preload.js file!');
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
-    onTransData: (callback) => ipcRenderer.on('trans-data', callback),
-    onTransInfo: (callback) => ipcRenderer.on('trans-info', callback),
-    printSuccess: (callback) => ipcRenderer.on('print-success', callback),
-    getStoreValue: (key) => ipcRenderer.invoke('getStoreValue', key),
-    setStoreValue: (key, value) => ipcRenderer.invoke('setStoreValue', key, value),
-    print: (data) => ipcRenderer.send('print', data),
-    openPDFFolder: () => ipcRenderer.invoke('open-pdf-folder'),
+    // Transcription-related channels
+    onTranscriptionData: (callback) => ipcRenderer.on('transcription-data', callback),
+    onTranscriptionStatus: (callback) => ipcRenderer.on('transcription-status', callback),
+    
+    // Print-related channels
+    onPrintStatus: (callback) => ipcRenderer.on('print-status', callback),
     onPrintQueued: (callback) => ipcRenderer.on('print-queued', callback),
     onPrintJob: (callback) => ipcRenderer.on('print-job', callback),
-    executePrint: (data) => ipcRenderer.invoke('execute-print', data),
+    onQueueStatus: (callback) => ipcRenderer.on('queue-status', callback),
+    print: (content, settings) => ipcRenderer.send('print', { content, settings }),
+    executePrint: (content, settings) => ipcRenderer.invoke('execute-print', { content, settings }),
     sendPrintStatus: (status) => ipcRenderer.send('print-status', status),
     togglePrintPreview: (enable) => ipcRenderer.invoke('toggle-print-preview', enable),
-    onQueueStatus: (callback) => ipcRenderer.on('queue-status', callback)
-})
+    
+    // Store-related functions
+    getStoreValue: (key) => ipcRenderer.invoke('getStoreValue', key),
+    setStoreValue: (key, value) => ipcRenderer.invoke('setStoreValue', key, value),
+    
+    // Other utilities
+    openPdfFolder: () => ipcRenderer.invoke('open-pdf-folder'),
+});
 
 
