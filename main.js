@@ -236,7 +236,7 @@ function createWindow() {
         try {
             console.log('📝 Execute print request:', { 
                 contentLength: content?.length,
-                settings
+                settings: settings.printId
             });
 
             if (!settings || !settings.printId) {
