@@ -3,11 +3,11 @@
 	import defaultSvgFilters from "../input-defaults/svgFilters.js"
 	import defaultInlineStyle from "../input-defaults/inlineStyle.js"
 	
-	import BlockTxt from "./components/BlockTxt.svelte"
-	import BlockImg from "./components/BlockImg.svelte"
-	import ControllerManager from "./components/ControllerManager.svelte"
+	import BlockTxt from "./components/pageElement/BlockTxt.svelte"
+	import BlockImg from "./components/pageElement/BlockImg.svelte"
+	import ControllerManager from "./components/midi/ControllerManager.svelte"
 	import CodeEditor from "./components/CodeEditor.svelte"
-	import PrintStatusBar from './print/PrintStatusBar.svelte'
+	import PrintStatusBar from './components/PrintStatusBar.svelte'
 	import { onMount } from 'svelte'
 
 	console.log(inputJson)
