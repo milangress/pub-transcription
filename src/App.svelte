@@ -386,6 +386,8 @@
 			<CodeEditor 
 				bind:value={settings.inlineStyle} 
 				language="css"
+				controllerSettings={settings.controllerSettings}
+				svgFiltersCode={svgFiltersCode}
 			/>
 
 			<hr>
@@ -415,6 +417,8 @@
 			<CodeEditor 
 				bind:value={svgFiltersCode} 
 				language="html"
+				controllerSettings={settings.controllerSettings}
+				svgFiltersCode={svgFiltersCode}
 			/>
 			<div style="display: none">
 				{@html svgFiltersCode}
