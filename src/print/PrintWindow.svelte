@@ -7,7 +7,7 @@
     let status = 'Waiting for print job...';
     let lastJobTime = 'Never';
     let stylesLoaded = 'No';
-    let currentScale = 0.25;
+    let currentScale = 1;
     let children = 0;
     let printLogs = [];
     let currentPrintId = null;
