@@ -12,7 +12,8 @@
     let copySuccess = false
     const copyContent = async (text) => {
         try {
-            await navigator.clipboard.writeText(text);
+            const varNameAsSass = "$" + text
+            await navigator.clipboard.writeText(varNameAsSass);
             console.log('Content copied to clipboard');
             copySuccess = true
             setTimeout(() => {

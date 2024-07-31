@@ -2,8 +2,8 @@
     import { onMount, createEventDispatcher } from 'svelte';
     import { EditorView, keymap } from "@codemirror/view";
     import { EditorState } from "@codemirror/state";
-    import { defaultKeymap, toggleComment } from "@codemirror/commands";
-    import { css } from "@codemirror/lang-css";
+    import { defaultKeymap, toggleComment, toggleLineComment } from "@codemirror/commands";
+    import { sass } from "@codemirror/lang-sass";
     import { html } from "@codemirror/lang-html";
     import { basicSetup } from "codemirror";
 
@@ -25,7 +25,7 @@
     }
 
     onMount(() => {
-        const languageSupport = language === 'css' ? css() : html();
+        const languageSupport = language === 'css' ? sass() : html();
         
         const state = EditorState.create({
             doc: value,
@@ -34,7 +34,7 @@
                 languageSupport,
                 keymap.of([
                     ...defaultKeymap,
-                    { key: "Mod-/", run: toggleComment },
+                    { key: "Mod-/", run: toggleLineComment },
                     { key: "Shift-Alt-a", run: toggleComment }
                 ]),
                 EditorView.updateListener.of((update) => {

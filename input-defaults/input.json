@@ -170,7 +170,7 @@
 
     {
       "name": "Fontsize",
-      "var": "fsz",
+      "var": "fs",
       "value": 1,
       "default": 1,
       "step": 0.1,
