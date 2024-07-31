@@ -21,14 +21,14 @@
     
     function addLogEntry(message, pdfUrl = null, spanCount = null, type = 'client') {
         const timestamp = new Date().toLocaleTimeString();
-        printLogs = [...printLogs, { 
+        printLogs = [{ 
             timestamp,
             message,
             pdfUrl,
             spanCount,
             type,
             printId: currentPrintId
-        }];
+        }, ...printLogs];
     }
 
     function updateLogEntryWithPdfUrl(printId, pdfUrl) {
