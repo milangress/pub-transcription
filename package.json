@@ -1,6 +1,6 @@
 {
   "name": "pub-transcriptions",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Pub Transcriptions",
   "private": false,
   "license": "MIT",
@@ -35,32 +35,24 @@
     "electron": "wait-on http://localhost:8080 && electron .",
     "electron-dev": "concurrently \"yarn run dev\" \"yarn run electron\"",
     "preelectron-pack": "yarn run build",
-    "electron-pack": "electron-builder",
-    "electron-rebuild": "./node_modules/.bin/electron-rebuild"
+    "electron-pack": "electron-builder"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.11.1",
     "@codemirror/commands": "^6.8.0",
-    "@codemirror/lang-css": "^6.2.1",
     "@codemirror/lang-html": "^6.4.7",
     "@codemirror/lang-sass": "^6.0.2",
     "@codemirror/language": "^6.10.8",
     "@codemirror/lint": "^6.8.4",
-    "@codemirror/search": "^6.5.8",
     "@codemirror/state": "^6.5.1",
     "@codemirror/view": "^6.36.2",
     "@picovoice/pvrecorder-node": "^1.2.1",
-    "@replit/codemirror-vscode-keymap": "^6.0.2",
     "codemirror": "^6.0.1",
     "electron-serve": "^1.1.0",
     "electron-store": "^8.1.0",
-    "prismjs": "^1.29.0",
-    "svelte-codemirror-editor": "^1.2.0",
-    "svelte-simple-code-editor": "^0.0.2",
     "wavefile": "^11.0.0"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.3.0",
     "@rollup/plugin-commonjs": "^23.0.2",
     "@rollup/plugin-json": "^6.0.1",
     "@rollup/plugin-node-resolve": "^15.0.1",
