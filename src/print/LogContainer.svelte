@@ -323,4 +323,9 @@
     .session-divider .log-message {
         text-align: center;
     }
+    @media print {
+        .log-container {
+            display: none;
+        }
+    }
 </style> 

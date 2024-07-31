@@ -44,4 +44,10 @@
         justify-content: flex-start;
         padding-left: 2rem;
     }
+
+    @media print {
+        .page-wrapper {
+            transform: none !important;
+        }
+    }
 </style> 
