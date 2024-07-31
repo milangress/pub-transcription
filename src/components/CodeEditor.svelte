@@ -8,6 +8,8 @@
     import { basicSetup } from "codemirror";
     import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
     import { closeBrackets } from "@codemirror/autocomplete";
+    import { syntaxTree } from "@codemirror/language";
+    import { linter, lintGutter } from "@codemirror/lint";
 
     export let value = "";
     export let language = "css";
@@ -41,7 +43,7 @@
 
             const options = fontFamilys.map(font => ({
                 label: font.name,
-                type: 'keyword',
+                type: 'class',
                 boost: 1
             }));
 
@@ -119,6 +121,146 @@
         });
     }
 
+    // Remove all decoration-related code and keep only the linter
+    const duplicatePropertiesLinter = linter(view => {
+        try {
+            const diagnostics = [];
+            const properties = new Map();
+            
+            console.log("Starting CSS property analysis...");
+            
+            let currentRule = null;
+            let tree = syntaxTree(view.state);
+            
+            // Helper to check if a line is commented
+            function isCommentedLine(text) {
+                return text.trim().startsWith('//');
+            }
+            
+            tree.iterate({
+                enter: (node) => {
+                    try {
+                        // Track when we enter a CSS rule
+                        if (node?.type?.name === "RuleSet") {
+                            currentRule = node;
+                        }
+                        
+                        if (node?.type?.name === "PropertyName") {
+                            const property = view.state.doc.sliceString(node.from, node.to).trim();
+                            
+                            // Skip if property is empty
+                            if (!property) return;
+                            
+                            const line = view.state.doc.lineAt(node.from);
+                            const lineContent = line.text;
+                            
+                            // Skip if line is already commented
+                            if (isCommentedLine(lineContent)) return;
+                            
+                            // Store properties per rule
+                            const ruleKey = currentRule ? currentRule.from : 'global';
+                            if (!properties.has(ruleKey)) {
+                                properties.set(ruleKey, new Map());
+                            }
+                            const ruleProperties = properties.get(ruleKey);
+                            
+                            // Get the exact property name range
+                            const propertyStart = node.from;
+                            const propertyEnd = node.to;
+                            
+                            if (!ruleProperties.has(property)) {
+                                ruleProperties.set(property, [{ 
+                                    node,
+                                    line,
+                                    from: propertyStart,
+                                    to: propertyEnd
+                                }]);
+                            } else {
+                                const existing = ruleProperties.get(property);
+                                existing.push({ 
+                                    node,
+                                    line,
+                                    from: propertyStart,
+                                    to: propertyEnd
+                                });
+                                console.log(`Found duplicate '${property}' on line ${line.number} (first used on line ${existing[0].line.number})`);
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Error in node processing:", err);
+                    }
+                },
+                leave: (node) => {
+                    if (node === currentRule) {
+                        currentRule = null;
+                    }
+                }
+            });
+
+            // Create diagnostics for duplicates within each rule
+            for (const [ruleKey, ruleProperties] of properties) {
+                for (const [prop, occurrences] of ruleProperties) {
+                    if (occurrences.length > 1) {
+                        // Mark all occurrences after the first one
+                        for (let i = 1; i < occurrences.length; i++) {
+                            const { node, line, from, to } = occurrences[i];
+                            const lineStart = line.from;
+                            const indent = line.text.match(/^\s*/)[0];
+                            const propertyLineStart = lineStart + indent.length;
+                            
+                            console.log("Duplicate property:", {
+                                property: prop,
+                                from,
+                                to,
+                                line: line.number,
+                                content: view.state.doc.sliceString(from, to)
+                            });
+                            
+                            diagnostics.push({
+                                from,
+                                to,
+                                severity: "warning",
+                                message: `Duplicate CSS property '${prop}' (first used on line ${occurrences[0].line.number})`,
+                                actions: [{
+                                    name: "Comment out line",
+                                    apply(view, from, to) {
+                                        view.dispatch({
+                                            changes: {
+                                                from: propertyLineStart,
+                                                insert: "// "
+                                            }
+                                        });
+                                    }
+                                }]
+                            });
+                        }
+                    }
+                }
+            }
+
+            return diagnostics;
+        } catch (err) {
+            console.error("Error in linter:", err);
+            return [];
+        }
+    });
+
+    // Custom theme for lint diagnostics
+    const lintTheme = EditorView.baseTheme({
+        '.cm-diagnostic': {
+            padding: 0,
+            '& .cm-diagnosticText': {
+                padding: 0
+            }
+        },
+        '.cm-diagnostic-warning': {
+            borderBottom: '2px wavy #f44336'
+        },
+        '.cm-diagnostic-error': {
+            borderBottom: '2px wavy #f44336'
+        }
+    });
+
     onMount(() => {
         const languageSupport = language === 'css' ? sass() : html();
         
@@ -131,6 +273,9 @@
                 languageSupport,
                 closeBrackets(),
                 autocompletion(),
+                lintGutter(),
+                lintTheme,
+                duplicatePropertiesLinter,
                 sassLanguage.data.of({
                     autocomplete: createCompletions
                 }),
