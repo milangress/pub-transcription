@@ -14,6 +14,7 @@ const { WaveFile } = require("wavefile");
 
 
 const Store = require('electron-store');
+const PrintQueue = require('./src/print/PrintQueue');
 
 const store = new Store();
 
@@ -24,6 +25,7 @@ let mainWindow;
 let printWindow = null;
 let debuggerAttached = false;
 let simulationInterval = null;
+let printQueue;
 
 function isDev() {
     return !app.isPackaged;
@@ -102,7 +104,25 @@ function createPrintWindow() {
             debuggerAttached = false;
         }
         printWindow = null;
+        
+        // Update print queue with new window reference
+        if (printQueue) {
+            printQueue.setPrintWindow(null);
+        }
     });
+
+    // Initialize print queue if it doesn't exist
+    if (!printQueue) {
+        printQueue = new PrintQueue(printWindow, () => {
+            if (!printWindow) {
+                createPrintWindow();
+            }
+            return printWindow;
+        });
+    } else {
+        // Update existing print queue with new window reference
+        printQueue.setPrintWindow(printWindow);
+    }
 }
 
 function createWindow() {
@@ -143,13 +163,17 @@ function createWindow() {
     // process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = true;
     // mainWindow.webContents.openDevTools();
 
-    ipcMain.on('print', (event, { content, settings }) => {
-        if (!printWindow) {
-            createPrintWindow();
+    ipcMain.on('print', async (event, { content, settings }) => {
+        try {
+            if (!printQueue) {
+                printQueue = new PrintQueue(printWindow, createPrintWindow);
+            }
+            await printQueue.add(content, settings);
+            event.reply('print-queued', { success: true });
+        } catch (error) {
+            console.error('Print queue error:', error);
+            event.reply('print-queued', { success: false, error: error.message });
         }
-        
-        // Send content to print window
-        printWindow.webContents.send('print-job', { content, settings });
     });
 
     ipcMain.handle('getStoreValue', (event, key) => {
@@ -476,6 +500,9 @@ app.on('before-quit', () => {
     if (simulationInterval) {
         clearInterval(simulationInterval);
         simulationInterval = null;
+    }
+    if (printQueue) {
+        printQueue.cleanup();
     }
 });
 

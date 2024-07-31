@@ -9,10 +9,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setStoreValue: (key, value) => ipcRenderer.invoke('setStoreValue', key, value),
     print: (data) => ipcRenderer.send('print', data),
     openPDFFolder: () => ipcRenderer.invoke('open-pdf-folder'),
+    onPrintQueued: (callback) => ipcRenderer.on('print-queued', callback),
     onPrintJob: (callback) => ipcRenderer.on('print-job', callback),
     executePrint: (data) => ipcRenderer.invoke('execute-print', data),
     sendPrintStatus: (status) => ipcRenderer.send('print-status', status),
-    togglePrintPreview: (enable) => ipcRenderer.invoke('toggle-print-preview', enable)
+    togglePrintPreview: (enable) => ipcRenderer.invoke('toggle-print-preview', enable),
+    onQueueStatus: (callback) => ipcRenderer.on('queue-status', callback)
 })
 
 
