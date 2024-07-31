@@ -197,7 +197,7 @@
 	$: currentContentList = [...committedContent, currentSentence]
 
 	window.electronAPI.onTransData((event, value) => {
-		console.log("New Trans Data: ", value)
+		// console.log("New Trans Data: ", value)
 		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
 		if (String(value).endsWith('NEW')) {
 			currentSentence = formatTTSasTxtObject(value)
