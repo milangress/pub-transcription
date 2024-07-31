@@ -29,50 +29,83 @@ function serve() {
 	};
 }
 
-export default {
-	input: 'src/main.js',
-	output: {
-		sourcemap: true,
-		format: 'iife',
-		name: 'app',
-		file: 'public/build/bundle.js'
+// Export array of configs
+export default [
+	// Main window config (unchanged)
+	{
+		input: 'src/main.js',
+		output: {
+			sourcemap: true,
+			format: 'iife',
+			name: 'app',
+			file: 'public/build/bundle.js'
+		},
+		plugins: [
+			svelte({
+				compilerOptions: {
+					// enable run-time checks when not in production
+					dev: !production
+				}
+			}),
+			// we'll extract any component CSS out into
+			// a separate file - better for performance
+			css({ output: 'bundle.css' }),
+
+			// If you have external dependencies installed from
+			// npm, you'll most likely need these plugins. In
+			// some cases you'll need additional configuration -
+			// consult the documentation for details:
+			// https://github.com/rollup/plugins/tree/master/packages/commonjs
+			resolve({
+				browser: true,
+				dedupe: ['svelte']
+			}),
+			commonjs(),
+
+			// In dev mode, call `npm run start` once
+			// the bundle has been generated
+			!production && serve(),
+
+			// Watch the `public` directory and refresh the
+			// browser on changes when not in production
+			!production && livereload('public'),
+
+			// If we're building for production (npm run build
+			// instead of npm run dev), minify
+			production && terser(),
+			json()
+		],
+		watch: {
+			clearScreen: false
+		}
 	},
-	plugins: [
-		svelte({
-			compilerOptions: {
-				// enable run-time checks when not in production
-				dev: !production
-			}
-		}),
-		// we'll extract any component CSS out into
-		// a separate file - better for performance
-		css({ output: 'bundle.css' }),
-
-		// If you have external dependencies installed from
-		// npm, you'll most likely need these plugins. In
-		// some cases you'll need additional configuration -
-		// consult the documentation for details:
-		// https://github.com/rollup/plugins/tree/master/packages/commonjs
-		resolve({
-			browser: true,
-			dedupe: ['svelte']
-		}),
-		commonjs(),
-
-		// In dev mode, call `npm run start` once
-		// the bundle has been generated
-		!production && serve(),
-
-		// Watch the `public` directory and refresh the
-		// browser on changes when not in production
-		!production && livereload('public'),
-
-		// If we're building for production (npm run build
-		// instead of npm run dev), minify
-		production && terser(),
-		json()
-	],
-	watch: {
-		clearScreen: false
+	// Print window config
+	{
+		input: 'src/print/print.js',
+		output: {
+			sourcemap: true,
+			format: 'iife',
+			name: 'printApp',
+			file: 'public/build/print/print.js'
+		},
+		plugins: [
+			svelte({
+				compilerOptions: {
+					dev: !production
+				}
+			}),
+			css({ output: 'print.css' }),
+			resolve({
+				browser: true,
+				dedupe: ['svelte']
+			}),
+			commonjs(),
+			!production && livereload('public'),
+			production && terser(),
+			json()
+		],
+		watch: {
+			clearScreen: false
+		}
 	}
-};
+];

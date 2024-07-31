@@ -7,7 +7,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     printSuccess: (callback) => ipcRenderer.on('print-success', callback),
     getStoreValue: (key) => ipcRenderer.invoke('getStoreValue', key),
     setStoreValue: (key, value) => ipcRenderer.invoke('setStoreValue', key, value),
-    print: (printSettings) => ipcRenderer.send('print', printSettings)
+    print: (data) => ipcRenderer.send('print', data),
+    openPDFFolder: () => ipcRenderer.invoke('open-pdf-folder'),
+    onPrintJob: (callback) => ipcRenderer.on('print-job', callback),
+    executePrint: (data) => ipcRenderer.invoke('execute-print', data),
+    sendPrintStatus: (status) => ipcRenderer.send('print-status', status)
 })
 
 
