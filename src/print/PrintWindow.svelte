@@ -17,6 +17,7 @@
     let maxRetries = 0;
     let queueLength = 0;
     let isQueueProcessing = false;
+    let printStartTime = null;
     
     function addLogEntry(message, pdfUrl = null, spanCount = null, type = 'client') {
         const timestamp = new Date().toLocaleTimeString();
@@ -121,6 +122,7 @@
                 currentAttempt = attempt || 1;
                 maxRetries = maxRetriesVal || 1;
                 currentPrintId = Date.now();
+                printStartTime = Date.now();
                 console.log(`🖨️ New print job started with ID: ${currentPrintId} (Attempt ${currentAttempt}/${maxRetries})`);
                 
                 status = `Received print job (Attempt ${currentAttempt}/${maxRetries})`;
@@ -172,19 +174,23 @@
                         settings: settings
                     });
                     
+                    const duration = ((Date.now() - printStartTime) / 1000).toFixed(2);
                     console.log('📥 Print request completed');
                     // Send success status back
                     window.electronAPI.sendPrintStatus({ success: true });
                     status = 'Print complete, waiting for next job';
-                    addLogEntry('Print completed successfully', null, children.length);
+                    addLogEntry(`Print completed successfully (${duration}s)`, null, children.length);
                 } catch (error) {
+                    const duration = ((Date.now() - printStartTime) / 1000).toFixed(2);
                     console.error('❌ Print error:', error);
                     status = 'Error: ' + error.message;
-                    addLogEntry(`Print failed: ${error.message}`, null, children.length);
+                    addLogEntry(`Print failed after ${duration}s: ${error.message}`, null, children.length);
                     window.electronAPI.sendPrintStatus({ 
                         success: false, 
                         error: error.message 
                     });
+                } finally {
+                    printStartTime = null;
                 }
             } catch (error) {
                 console.error('❌ Print job error:', error);
@@ -194,6 +200,7 @@
                     success: false, 
                     error: error.message 
                 });
+                printStartTime = null;
             }
         });
 

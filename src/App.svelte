@@ -169,7 +169,7 @@
 `
 	let printerSettings = {
 		deviceName: 'Xerox_Phaser_5550N',
-		forcePrint: true
+		forcePrint: false
 	}
 	let isSuccessfulPrint = true
 
