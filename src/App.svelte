@@ -2,14 +2,8 @@
 	import inputJson from "../input-defaults/input.json"
 	import BlockTxt from "./components/BlockTxt.svelte"
 	import BlockImg from "./components/BlockImg.svelte"
-	import { SimpleCodeEditor } from 'svelte-simple-code-editor';
-	import Prism from 'prismjs';
 	import ControllerManager from "./components/ControllerManager.svelte"
-
-	import CodeMirror from "svelte-codemirror-editor";
-	import { css } from "@codemirror/lang-css";
-	import { html } from "@codemirror/lang-html";
-
+	import CodeEditor from "./components/CodeEditor.svelte"
 
 	console.log(inputJson)
 
@@ -280,9 +274,6 @@
 				if (mySynth) {
 					mySynth.channels[1].addListener("controlchange", e => {
 						if (e.controller.number === controller.knobNR) {
-							// console.log("e", e)
-							// console.log("controller", controller)
-							// console.log("settings", settings.controllerSettings)
 							const sett = settings.controllerSettings.find((elm) => elm.name === controller.name)
 							// console.log(e.value, controller.range[1])
 							const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1])
@@ -362,16 +353,6 @@
 			});
 			mySynth = WebMidi.inputs[0];
 		}
-
-		// const mySynth = WebMidi.getInputByName("TYPE NAME HERE!")
-
-		// mySynth.channels[1].addListener("noteon", e => {
-		// 	console.log(`${e.note.name}`)
-		// });
-		// mySynth.channels[1].addListener("controlchange", e => {
-		// 	console.log(e)
-		// });
-
 	}
 
 </script>
@@ -402,14 +383,10 @@
 
 	<div class="print-non" class:printFailed={!isSuccessfulPrint}>
 		<div class="infobox">
-			<CodeMirror bind:value={settings.inlineStyle} lang={css()}/>
-
-<!--			<SimpleCodeEditor-->
-<!--					bind:value="{settings.inlineStyle}"-->
-<!--					highlight={(code) => Prism.highlight(code, Prism.languages.javascript, 'javascript')}-->
-<!--			/>-->
-
-			<!--			<textarea id="positionX"  rows="10" cols="50" bind:value="{settings.inlineStyle}" ></textarea>-->
+			<CodeEditor 
+				bind:value={settings.inlineStyle} 
+				language="css"
+			/>
 
 			<hr>
 
@@ -435,7 +412,10 @@
 			<label><input bind:checked={printerSettings.forcePrint} type="checkbox">Force Print</label>
 			</div>
 			<hr>
-			<CodeMirror bind:value={svgFiltersCode} lang={html()}/>
+			<CodeEditor 
+				bind:value={svgFiltersCode} 
+				language="html"
+			/>
 			<div style="display: none">
 				{@html svgFiltersCode}
 			</div>
