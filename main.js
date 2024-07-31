@@ -30,9 +30,10 @@ function isDev() {
 function createPrintWindow() {
     printWindow = new BrowserWindow({
         width: 800,
-        height: 600,
+        height: 900,
         show: isDev(),
         webPreferences: {
+            scrollBounce: true,
             nodeIntegration: false,
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js')
@@ -40,7 +41,7 @@ function createPrintWindow() {
     });
 
     if (isDev()) {
-        printWindow.webContents.openDevTools();
+        // printWindow.webContents.openDevTools();
     }
 
     if (isDev()) {
@@ -65,6 +66,10 @@ function createWindow() {
         show: false,
         // titleBarStyle: 'hidden',
     });
+
+    if (isDev()) {
+        createPrintWindow();
+    }
 
     // This block of code is intended for development purpose only.
     // Delete this entire block of code when you are ready to package the application.
@@ -109,7 +114,16 @@ function createWindow() {
         return true;
     });
 
-    // Add new print execution handler
+    // Add helper function to send messages to all windows
+    function sendToAllWindows(channel, ...args) {
+        [mainWindow, printWindow].forEach(window => {
+            if (window && !window.isDestroyed()) {
+                window.webContents.send(channel, ...args);
+            }
+        });
+    }
+
+    // Modify the execute-print handler
     ipcMain.handle('execute-print', async (event, { content, settings = {} }) => {
         try {
             const options = {
@@ -129,18 +143,18 @@ function createWindow() {
                 ...settings
             };
 
-            mainWindow.webContents.send('trans-info', '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥');
+            sendToAllWindows('trans-info', '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥');
 
             // Handle direct printing
             if (settings?.forcePrint === true) {
                 const printResult = await new Promise((resolve, reject) => {
                     printWindow.webContents.print(options, (success, errorType) => {
                         if (!success) {
-                            mainWindow.webContents.send('trans-info', '🥵 Printing failed');
-                            mainWindow.webContents.send('trans-info', errorType);
+                            sendToAllWindows('trans-info', '🥵 Printing failed');
+                            sendToAllWindows('trans-info', errorType);
                             reject(new Error(errorType));
                         } else {
-                            mainWindow.webContents.send('trans-info', '🖨️ Printed successfully');
+                            sendToAllWindows('trans-info', '🖨️ Printed successfully');
                             resolve(true);
                         }
                     });
@@ -161,12 +175,12 @@ function createWindow() {
             
             await fs.promises.writeFile(pdfPath, pdfData);
             console.log(`Wrote PDF successfully to ${pdfPath}`);
-            mainWindow.webContents.send('trans-info', `💦 Wrote PDF successfully to ${pdfPath}`);
+            sendToAllWindows('trans-info', `💦 Wrote PDF successfully to ${pdfPath}`);
             
             return true;
         } catch (error) {
             console.error('Print/PDF error:', error);
-            mainWindow.webContents.send('trans-info', `🥵 Error: ${error.message}`);
+            sendToAllWindows('trans-info', `🥵 Error: ${error.message}`);
             throw error;
         }
     });
