@@ -202,6 +202,7 @@ function createWindow() {
     ipcMain.handle('open-pdf-folder', async () => {
         const pdfDir = path.join(app.getPath('userData'), 'pdfs');
         // Create directory if it doesn't exist
+        console.log(pdfDir)
         if (!fs.existsSync(pdfDir)) {
             await fs.promises.mkdir(pdfDir, { recursive: true });
         }

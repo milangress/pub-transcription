@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     setStoreValue: (key, value) => ipcRenderer.invoke('setStoreValue', key, value),
     
     // Other utilities
-    openPdfFolder: () => ipcRenderer.invoke('open-pdf-folder'),
+    openPDFFolder: () => ipcRenderer.invoke('open-pdf-folder'),
 });
 
 
