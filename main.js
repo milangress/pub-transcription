@@ -21,7 +21,9 @@ const store = new Store();
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
-let printWindow;
+let printWindow = null;
+let debuggerAttached = false;
+let simulationInterval = null;
 
 function isDev() {
     return !app.isPackaged;
@@ -49,6 +51,58 @@ function createPrintWindow() {
     } else {
         printWindow.loadFile(path.join(__dirname, 'public/print.html'));
     }
+
+    // Initialize debugger
+    debuggerAttached = false;
+
+    // Add CDP handlers
+    ipcMain.handle('toggle-print-preview', async (event, enable) => {
+        try {
+            const webContents = event.sender;
+            
+            if (enable && !debuggerAttached) {
+                await webContents.debugger.attach('1.3');
+                debuggerAttached = true;
+            }
+            
+            if (debuggerAttached) {
+                await webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { media: enable ? 'print' : 'screen' });
+                // Force a repaint to ensure changes take effect
+                await webContents.invalidate();
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('CDP error:', error);
+            // If debugger is already attached, we can still try to set the media
+            if (error.message.includes('Debugger is already attached')) {
+                try {
+                    debuggerAttached = true;
+                    const webContents = event.sender;
+                    await webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { media: enable ? 'print' : 'screen' });
+                    await webContents.invalidate();
+                    return true;
+                } catch (innerError) {
+                    console.error('CDP inner error:', innerError);
+                    return false;
+                }
+            }
+            return false;
+        }
+    });
+
+    // Clean up debugger on window close
+    printWindow.on('closed', () => {
+        if (debuggerAttached) {
+            try {
+                printWindow.webContents.debugger.detach();
+            } catch (error) {
+                console.error('Failed to detach debugger:', error);
+            }
+            debuggerAttached = false;
+        }
+        printWindow = null;
+    });
 }
 
 function createWindow() {
@@ -57,6 +111,9 @@ function createWindow() {
         width: 1100,
         height: 800,
         webPreferences: {
+            titleBarStyle:{
+                hiddenInset: true,
+            },
             nodeIntegration: true,
             preload: path.join(__dirname, 'preload.js'),
             // enableRemoteModule: true,
@@ -150,7 +207,7 @@ function createWindow() {
                 const printResult = await new Promise((resolve, reject) => {
                     printWindow.webContents.print(options, (success, errorType) => {
                         if (!success) {
-                            sendToAllWindows('trans-info', '🥵 Printing failed');
+                            sendToAllWindows('trans-info', '�� Printing failed');
                             sendToAllWindows('trans-info', errorType);
                             reject(new Error(errorType));
                         } else {
@@ -365,12 +422,18 @@ function generateSimulatedTranscript() {
     }
 
     function simulateStream() {
-        let baseTime = Date.now();
-        let messageCount = 0;
+        // Clear any existing interval
+        if (simulationInterval) {
+            clearInterval(simulationInterval);
+            simulationInterval = null;
+        }
 
-        const interval = setInterval(() => {
-            if (!mainWindow || messageCount > 100) {
-                clearInterval(interval);
+        let baseTime = Date.now();
+
+        simulationInterval = setInterval(() => {
+            if (!mainWindow || mainWindow.isDestroyed()) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
                 return;
             }
 
@@ -378,14 +441,20 @@ function generateSimulatedTranscript() {
             const message = getRandomMessage();
             
             // Every 3-5 messages, send a NEW message
-            if (messageCount % (Math.floor(Math.random() * 3) + 3) === 0) {
+            if (Math.random() < 0.25) {
                 mainWindow.webContents.send('trans-data', `${message}NEW`);
             } else {
                 mainWindow.webContents.send('trans-data', message);
             }
-
-            messageCount++;
         }, 800); // Send message every 800ms
+
+        // Clean up interval when window is closed or reloaded
+        mainWindow.on('closed', () => {
+            if (simulationInterval) {
+                clearInterval(simulationInterval);
+                simulationInterval = null;
+            }
+        });
     }
 
     return simulateStream;
@@ -402,70 +471,11 @@ setTimeout(() => {
     }
 }, 3000);
 
-
-
-function print(printSettingsFrontend = {}) {
-    console.log('Trying To Print', printSettingsFrontend)
-    const options = {
-        margins: {
-            marginType: 'custom',
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0
-        },
-        // deviceName: 'Xerox_Phaser_5550N',
-        pageSize: 'A3',
-        scaleFactor: 100,
-        printBackground: false,
-        printSelectionOnly: false,
-        landscape: false,
-        silent: true,
-        ...printSettingsFrontend
+// Add cleanup for app quit
+app.on('before-quit', () => {
+    if (simulationInterval) {
+        clearInterval(simulationInterval);
+        simulationInterval = null;
     }
-    mainWindow.webContents.send('trans-info', '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥')
-    if (printSettingsFrontend.forcePrint === true) {
-        try {
-            mainWindow.webContents.print(options, (success, errorType) => {
-                if (!success) {
-                    console.log(errorType)
-                    mainWindow.webContents.send('trans-info', '🥵 Printing failed')
-                    mainWindow.webContents.send('trans-info', errorType)
-                    mainWindow.webContents.send('print-success', false)
-                } else {
-                    mainWindow.webContents.send('trans-info', '🖨️ Printed successfully')
-                    mainWindow.webContents.send('print-success', 'print')
-                }
-            })
-        } catch (e) {
-            console.error('PRINT FAILED', e)
-            mainWindow.webContents.send('trans-info', `🥵 Printing failed: ${e}`)
-        }
-    } else {
-        console.info('Printing is disabled. Set forcePrint to true to override this.')
-        mainWindow.webContents.send('trans-info', `⚠️🔗 Printing is disabled. Set forcePrint to true to override this.`)
-    }
+});
 
-    try {
-
-        const dateString = new Date().toISOString().replace(/:/g, '-') + 'temp.pdf'
-        const pdfPath = path.join(os.homedir(), 'Desktop', dateString)
-        mainWindow.webContents.printToPDF(options).then(data => {
-            fs.writeFile(pdfPath, data, (error) => {
-                if (error) throw error
-                console.log(`Wrote PDF successfully to ${pdfPath}`)
-                mainWindow.webContents.send('trans-info', `💦 Wrote PDF successfully to ${pdfPath}`)
-                mainWindow.webContents.send('print-success', 'pdf')
-            })
-        }).catch(error => {
-            console.log(`Failed to write PDF to ${pdfPath}: `, error)
-            mainWindow.webContents.send('trans-info', `🥵 Failed to write PDF to ${pdfPath}: ${JSON.stringify(error)}`)
-            mainWindow.webContents.send('print-success', false)
-
-        })
-
-    } catch (e) {
-        console.error('PDF FAILED', e)
-        mainWindow.webContents.send('trans-info', `🥵 Failed to write PDF: ${JSON.stringify(e)}`)
-    }
-}

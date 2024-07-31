@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import PageWrapper from '../components/PageWrapper.svelte';
     import LogContainer from './LogContainer.svelte';
+    import PreviewButton from './PreviewButton.svelte';
     
     let status = 'Waiting for print job...';
     let lastJobTime = 'Never';
@@ -10,6 +11,8 @@
     let children = 0;
     let printLogs = [];
     let currentPrintId = null;
+    let isPrintPreview = false;
+    let previewTimer;
     
     function addLogEntry(message, pdfUrl = null, spanCount = null, type = 'client') {
         const timestamp = new Date().toLocaleTimeString();
@@ -32,6 +35,54 @@
         });
     }
     
+    async function togglePrintPreview() {
+        try {
+            isPrintPreview = true;
+            addLogEntry('Print preview started');
+            
+            // Clear any existing timer
+            if (previewTimer) {
+                clearTimeout(previewTimer);
+                previewTimer = null;
+            }
+            
+            // Enable print media emulation
+            const success = await window.electronAPI.togglePrintPreview(true);
+            if (!success) {
+                addLogEntry('Failed to start print preview', null, null, 'server');
+                isPrintPreview = false;
+                return;
+            }
+            
+            // Set new timer
+            previewTimer = setTimeout(async () => {
+                try {
+                    // Disable print media emulation
+                    const disableSuccess = await window.electronAPI.togglePrintPreview(false);
+                    if (!disableSuccess) {
+                        addLogEntry('Failed to end print preview', null, null, 'server');
+                    } else {
+                        addLogEntry('Print preview ended');
+                    }
+                } catch (error) {
+                    console.error('Preview end error:', error);
+                    addLogEntry(`Preview end error: ${error.message}`, null, null, 'server');
+                } finally {
+                    isPrintPreview = false;
+                    previewTimer = null;
+                }
+            }, 5000);
+        } catch (error) {
+            console.error('Preview error:', error);
+            addLogEntry(`Preview error: ${error.message}`, null, null, 'server');
+            isPrintPreview = false;
+            if (previewTimer) {
+                clearTimeout(previewTimer);
+                previewTimer = null;
+            }
+        }
+    }
+
     onMount(() => {
         // Debug IPC setup
         console.log('Setting up IPC listeners...');
@@ -139,22 +190,43 @@
                 });
             }
         });
+
+        return () => {
+            if (previewTimer) {
+                clearTimeout(previewTimer);
+                previewTimer = null;
+            }
+            // Make sure to disable print media when component unmounts
+            window.electronAPI.togglePrintPreview(false).catch(error => {
+                console.error('Failed to disable print preview on unmount:', error);
+            });
+        };
     });
 </script>
 
 <div id="print-window-wrapper">
-    <div id="print-debug-info">
-        <div>Status: <span>{status}</span></div>
-        <div>Last job received: <span>{lastJobTime}</span></div>
-        <div>Styles loaded: <span>{stylesLoaded}</span></div>
-        <div>Spans: <span>{children ? children.length : 0}</span></div>
+    <div id="print-debug-info" class="debug-info">
+        <div class="debug-row">
+            <div class="debug-info-left">
+                <div>Status: <span>{status}</span></div>
+                <div>Last job received: <span>{lastJobTime}</span></div>
+                <div>Styles loaded: <span>{stylesLoaded}</span></div>
+                <div>Spans: <span>{children ? children.length : 0}</span></div>
+            </div>
+            <div class="debug-controls">
+                <PreviewButton 
+                    isPrintPreview={isPrintPreview}
+                    onClick={togglePrintPreview}
+                />
+            </div>
+        </div>
     </div>
 
     <div class="page-container-wrapper">
         <PageWrapper 
             scale={currentScale}
             onScaleChange={(newScale) => currentScale = newScale}
-            showControls={true}
+            showControls={!isPrintPreview}
             showDebug={false}
             position="center"
         >
@@ -162,7 +234,9 @@
         </PageWrapper>
     </div>
 
-    <LogContainer logs={printLogs} />
+    <div id="print-log-container" class="debug-info">
+        <LogContainer logs={printLogs} />
+    </div>
 </div>
 
 <style>
@@ -183,6 +257,21 @@
         z-index: 1000;
     }
 
+    .debug-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .debug-info-left {
+        flex: 1;
+    }
+
+    .debug-controls {
+        flex-shrink: 0;
+        margin-left: 16px;
+    }
+
     .page-container-wrapper {
         flex: 1;
         position: relative;
@@ -192,7 +281,10 @@
     }
 
     @media print {
-        #print-debug-info {
+        #print-debug-info, #print-log-container {
+            display: none;
+        }
+        .debug-info {
             display: none;
         }
     }
