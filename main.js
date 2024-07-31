@@ -21,9 +21,33 @@ const store = new Store();
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
+let printWindow;
 
 function isDev() {
     return !app.isPackaged;
+}
+
+function createPrintWindow() {
+    printWindow = new BrowserWindow({
+        width: 800,
+        height: 600,
+        show: isDev(),
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js')
+        }
+    });
+
+    if (isDev()) {
+        printWindow.webContents.openDevTools();
+    }
+
+    if (isDev()) {
+        printWindow.loadFile('public/print.html');
+    } else {
+        printWindow.loadFile(path.join(__dirname, 'public/print.html'));
+    }
 }
 
 function createWindow() {
@@ -57,10 +81,14 @@ function createWindow() {
     // process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = true;
     // mainWindow.webContents.openDevTools();
 
-    ipcMain.on('print', (event, printSettings) => {
-        console.log('printSettings', printSettings)
-        print(printSettings)
-    })
+    ipcMain.on('print', (event, { content, settings }) => {
+        if (!printWindow) {
+            createPrintWindow();
+        }
+        
+        // Send content to print window
+        printWindow.webContents.send('print-job', { content, settings });
+    });
 
     ipcMain.handle('getStoreValue', (event, key) => {
         return store.get(key);
@@ -68,6 +96,84 @@ function createWindow() {
 
     ipcMain.handle('setStoreValue', (event, key, value) => {
         return store.set(key, value);
+    });
+
+    ipcMain.handle('open-pdf-folder', async () => {
+        const pdfDir = path.join(app.getPath('userData'), 'pdfs');
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(pdfDir)) {
+            await fs.promises.mkdir(pdfDir, { recursive: true });
+        }
+        // Open the folder in the system's file explorer
+        require('electron').shell.openPath(pdfDir);
+        return true;
+    });
+
+    // Add new print execution handler
+    ipcMain.handle('execute-print', async (event, { content, settings = {} }) => {
+        try {
+            const options = {
+                margins: {
+                    marginType: 'custom',
+                    top: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0
+                },
+                pageSize: 'A3',
+                scaleFactor: 100,
+                printBackground: false,
+                printSelectionOnly: false,
+                landscape: false,
+                silent: true,
+                ...settings
+            };
+
+            mainWindow.webContents.send('trans-info', '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥');
+
+            // Handle direct printing
+            if (settings?.forcePrint === true) {
+                const printResult = await new Promise((resolve, reject) => {
+                    printWindow.webContents.print(options, (success, errorType) => {
+                        if (!success) {
+                            mainWindow.webContents.send('trans-info', '🥵 Printing failed');
+                            mainWindow.webContents.send('trans-info', errorType);
+                            reject(new Error(errorType));
+                        } else {
+                            mainWindow.webContents.send('trans-info', '🖨️ Printed successfully');
+                            resolve(true);
+                        }
+                    });
+                });
+            }
+
+            // Handle PDF saving
+            const dateString = new Date().toISOString().replace(/:/g, '-');
+            const pdfDir = path.join(app.getPath('userData'), 'pdfs');
+            
+            // Create pdfs directory if it doesn't exist
+            if (!fs.existsSync(pdfDir)) {
+                await fs.promises.mkdir(pdfDir, { recursive: true });
+            }
+            
+            const pdfPath = path.join(pdfDir, `transcript-${dateString}.pdf`);
+            const pdfData = await printWindow.webContents.printToPDF(options);
+            
+            await fs.promises.writeFile(pdfPath, pdfData);
+            console.log(`Wrote PDF successfully to ${pdfPath}`);
+            mainWindow.webContents.send('trans-info', `💦 Wrote PDF successfully to ${pdfPath}`);
+            
+            return true;
+        } catch (error) {
+            console.error('Print/PDF error:', error);
+            mainWindow.webContents.send('trans-info', `🥵 Error: ${error.message}`);
+            throw error;
+        }
+    });
+
+    // Handle print status updates
+    ipcMain.on('print-status', (event, status) => {
+        mainWindow.webContents.send('print-success', status.success);
     });
 
     // Emitted when the window is closed.
@@ -192,7 +298,7 @@ function spawnStreamProcess() {
         ])
 //-t 6 --step 0 --length 30000 -vth 0.6
     ls.stdout.on("data", data => {
-        console.log(`stdout: ${data}`);
+        // console.log(`stdout: ${data}`);
         let string = new TextDecoder().decode(data);
         mainWindow.webContents.send('trans-data', string)
     });
@@ -214,9 +320,73 @@ function spawnStreamProcess() {
         console.log(`child process exited with code ${code}`);
     });
 }
+
+function generateSimulatedTranscript() {
+    const loremWords = [
+        "Lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
+        "Sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore",
+        "magna", "aliqua", "Ut", "enim", "ad", "minim", "veniam", "quis", "nostrud",
+        "exercitation", "ullamco", "laboris", "nisi", "ut", "aliquip", "ex", "ea",
+        "commodo", "consequat"
+    ];
+
+    const dontSaveMessages = [
+        '[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [', '[ [ [', '[ [', '[',
+        '(buzzer)', '(buzzing)', '.'
+    ];
+
+    function getRandomMessage() {
+        // 20% chance for dontSave messages
+        if (Math.random() < 0.2) {
+            return dontSaveMessages[Math.floor(Math.random() * dontSaveMessages.length)];
+        }
+
+        // Generate a random sentence from lorem words
+        const wordCount = Math.floor(Math.random() * 6) + 1;
+        const sentence = [];
+        for (let i = 0; i < wordCount; i++) {
+            sentence.push(loremWords[Math.floor(Math.random() * loremWords.length)]);
+        }
+        return sentence.join(' ');
+    }
+
+    function simulateStream() {
+        let baseTime = Date.now();
+        let messageCount = 0;
+
+        const interval = setInterval(() => {
+            if (!mainWindow || messageCount > 100) {
+                clearInterval(interval);
+                return;
+            }
+
+            const currentTime = Date.now() - baseTime;
+            const message = getRandomMessage();
+            
+            // Every 3-5 messages, send a NEW message
+            if (messageCount % (Math.floor(Math.random() * 3) + 3) === 0) {
+                mainWindow.webContents.send('trans-data', `${message}NEW`);
+            } else {
+                mainWindow.webContents.send('trans-data', message);
+            }
+
+            messageCount++;
+        }, 800); // Send message every 800ms
+    }
+
+    return simulateStream;
+}
+
+// Modify the existing setTimeout block to include simulation mode
 setTimeout(() => {
-    spawnStreamProcess()
-}, 3000)
+    if (process.argv.includes('--simulate')) {
+        console.log('Running in simulation mode');
+        const simulateStream = generateSimulatedTranscript();
+        simulateStream();
+    } else {
+        spawnStreamProcess();
+    }
+}, 3000);
 
 
 

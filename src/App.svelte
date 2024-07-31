@@ -197,7 +197,7 @@
 	$: currentContentList = [...committedContent, currentSentence]
 
 	window.electronAPI.onTransData((event, value) => {
-		// console.log("New Trans Data: ", value)
+		console.log("New Trans Data: ", value, window.performance.now())
 		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
 		if (String(value).endsWith('NEW')) {
 			currentSentence = formatTTSasTxtObject(value)
@@ -313,7 +313,28 @@
 	}
 
 	function printFile() {
-		window.electronAPI.print(printerSettings)
+		const pageContent = document.querySelector('page').innerHTML;
+		window.electronAPI.print({
+			content: pageContent,
+			settings: {
+				...printerSettings,
+				silent: true,  // Ensure silent printing
+				printBackground: true, // Enable background printing
+				printSelectionOnly: false,
+				landscape: false,
+				pageSize: 'A3',
+				margins: {
+					marginType: 'custom',
+					top: 0,
+					bottom: 0,
+					left: 0,
+					right: 0
+				},
+				// Send additional style information
+				inlineStyle: settings.inlineStyle,
+				svgFiltersCode: svgFiltersCode
+			}
+		});
 	}
 	function clearAll() {
 		committedContent = []
@@ -332,9 +353,9 @@
 		if (percent < 10) {
 			console.log("page full")
 			printFile()
-			// setTimeout(() => {
-			// 	clearAll()
-			// }, 1000)
+			setTimeout(() => {
+				clearAll()
+			}, 0)
 		}
 	}
 	window.setInterval(isPageFull, 3000)
@@ -413,6 +434,7 @@
 			<div class="printControls">
 			<button on:click="{printFile}">PRINT</button>
 			<button on:click="{clearAll}">CLEAR ALL</button>
+			<button on:click={() => window.electronAPI.openPDFFolder()}>OPEN PDFs FOLDER</button>
 			<input bind:value={printerSettings.deviceName} type="text" disabled>
 			<label><input bind:checked={printerSettings.forcePrint} type="checkbox">Force Print</label>
 			</div>
@@ -515,6 +537,7 @@
 
 	@media print {
 		* {
+			print-color-adjust: exact;
 			-webkit-print-color-adjust: exact;
 		}
 		.print-non {
