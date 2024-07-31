@@ -33,8 +33,8 @@ function isDev() {
 
 function createPrintWindow() {
     printWindow = new BrowserWindow({
-        width: 800,
-        height: 900,
+        width: 450,
+        height: 950,
         show: isDev(),
         webPreferences: {
             scrollBounce: true,
@@ -128,8 +128,8 @@ function createPrintWindow() {
 function createWindow() {
     // Create the browser window.
     mainWindow = new BrowserWindow({
-        width: 1100,
-        height: 800,
+        width: 800,
+        height: 950,
         webPreferences: {
             titleBarStyle:{
                 hiddenInset: true,
