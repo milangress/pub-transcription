@@ -6,10 +6,9 @@
     import { sass, sassLanguage } from "@codemirror/lang-sass";
     import { html } from "@codemirror/lang-html";
     import { basicSetup } from "codemirror";
-    import { autocompletion, CompletionContext, completionKeymap, startCompletion } from "@codemirror/autocomplete";
+    import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
     import { closeBrackets } from "@codemirror/autocomplete";
 
-    import { syntaxTree } from "@codemirror/language";
     export let value = "";
     export let language = "css";
     export let controllerSettings = [];
