@@ -1,19 +1,20 @@
 <script>
     import { onMount, createEventDispatcher } from 'svelte';
     import { EditorView, keymap } from "@codemirror/view";
-    import { EditorState, StateEffect } from "@codemirror/state";
+    import { EditorState } from "@codemirror/state";
     import { defaultKeymap, toggleComment, toggleLineComment } from "@codemirror/commands";
-    import { sass } from "@codemirror/lang-sass";
+    import { sass, sassLanguage } from "@codemirror/lang-sass";
     import { html } from "@codemirror/lang-html";
     import { basicSetup } from "codemirror";
-    import { autocompletion } from "@codemirror/autocomplete";
+    import { autocompletion, CompletionContext, completionKeymap, startCompletion } from "@codemirror/autocomplete";
     import { closeBrackets } from "@codemirror/autocomplete";
 
+    import { syntaxTree } from "@codemirror/language";
     export let value = "";
     export let language = "css";
     export let controllerSettings = [];
     export let svgFiltersCode = "";
-    
+    export let fontFamilys = [];
     const dispatch = createEventDispatcher();
     let element;
     let view;
@@ -33,11 +34,31 @@
     }
 
     function createCompletions(context) {
+        // Check for font-family completion
+        let before = context.matchBefore(/font-family:\s*[^;]*/)
+        if (before) {
+            let word = context.matchBefore(/[^:\s;]*$/)
+            if (!word && !context.explicit) return null
+
+            const options = fontFamilys.map(font => ({
+                label: font.name,
+                type: 'keyword',
+                boost: 1
+            }));
+
+            return {
+                from: word.from,
+                options,
+                validFor: /^[^;]*$/
+            }
+        }
+
         // Check for MIDI variable completion
         let varWord = context.matchBefore(/\$\w*/)
         if (varWord && !(varWord.from == varWord.to && !context.explicit)) {
             return {
                 from: varWord.from,
+                validFor: /^\$\w*$/,
                 options: controllerSettings.map(setting => ({
                     label: '$' + setting.var,
                     type: 'variable',
@@ -48,7 +69,7 @@
         }
 
         // Check for filter completion
-        let filterWord = context.matchBefore(/filter:\s*url\(#[^)]*/)
+        let filterWord = context.matchBefore(/url\(#[^)]*/)
         if (filterWord && !(filterWord.from == filterWord.to && !context.explicit)) {
             console.log('Filter completion triggered');
             const hashIndex = filterWord.text.lastIndexOf('#');
@@ -59,6 +80,7 @@
             
             return {
                 from: filterWord.from + (hashIndex >= 0 ? hashIndex + 1 : filterWord.text.length),
+                validFor: /^[a-zA-Z0-9-]*$/,
                 options: filterIds.map(id => ({
                     label: id,
                     type: 'filter',
@@ -84,6 +106,7 @@
             }
         }
 
+        // Let the default completions handle everything else
         return null;
     }
 
@@ -100,20 +123,21 @@
     onMount(() => {
         const languageSupport = language === 'css' ? sass() : html();
         
+        console.log('Setting up editor with fonts:', fontFamilys);
+        
         const state = EditorState.create({
             doc: value,
             extensions: [
                 basicSetup,
                 languageSupport,
                 closeBrackets(),
-                autocompletion({
-                    override: [createCompletions],
-                    defaultKeymap: true,
-                    closeOnBlur: true,
-                    icons: true
+                autocompletion(),
+                sassLanguage.data.of({
+                    autocomplete: createCompletions
                 }),
                 keymap.of([
                     ...defaultKeymap,
+                    ...completionKeymap,
                     { key: "Mod-/", run: toggleLineComment },
                     { key: "Shift-Alt-a", run: toggleComment }
                 ]),

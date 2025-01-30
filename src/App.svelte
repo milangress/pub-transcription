@@ -388,6 +388,7 @@
 				language="css"
 				controllerSettings={settings.controllerSettings}
 				svgFiltersCode={svgFiltersCode}
+				fontFamilys={fontFamilys}
 			/>
 
 			<hr>
