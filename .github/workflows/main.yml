@@ -37,11 +37,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Zip app bundle
+        run: |
+          cd dist/mac-arm64
+          zip -r "../Pub-Transcriptions-mac-arm64.zip" ./*
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mac-arm64-build
-          path: dist/mac-arm64
+          path: dist/Pub-Transcriptions-mac-arm64.zip
           if-no-files-found: error
 
       - name: Create Release
@@ -53,4 +58,4 @@ jobs:
             --repo="$GITHUB_REPOSITORY" \
             --title="Pub Transcriptions $GITHUB_REF_NAME" \
             --generate-notes \
-            ./dist/mac-arm64/**/*
+            "./dist/Pub-Transcriptions-mac-arm64.zip#Mac arm64 App Bundle"
