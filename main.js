@@ -1,5 +1,6 @@
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { EventEmitter } = require('events');
 const path = require('path');
 const serve = require('electron-serve');
 const loadURL = serve({ directory: 'public' });
@@ -10,6 +11,10 @@ const PrintQueue = require('./electron/PrintQueue');
 const { simulatedTranscriptController } = require('./electron/simulateTranscriptForDevTesting');
 const { createStreamProcess } = require('./electron/streamProcess');
 const { AudioRecorder } = require('./electron/audioRecorder');
+const { PRINT_ACTIONS, PRINT_STATUS, createPrintStatusMessage } = require('./electron/printMessages');
+
+// Create event emitter for print events
+const printEvents = new EventEmitter();
 const store = new Store();
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -107,12 +112,7 @@ function createPrintWindow() {
 
     // Initialize print queue if it doesn't exist
     if (!printQueue) {
-        printQueue = new PrintQueue(printWindow, () => {
-            if (!printWindow) {
-                return createPrintWindow();
-            }
-            return printWindow;
-        });
+        printQueue = new PrintQueue(printWindow, createPrintWindow, printEvents);
     } else {
         // Update existing print queue with new window reference
         printQueue.setPrintWindow(printWindow);
@@ -162,7 +162,7 @@ function createWindow() {
     ipcMain.on('print', async (event, { content, settings }) => {
         try {
             if (!printQueue) {
-                printQueue = new PrintQueue(printWindow, createPrintWindow);
+                printQueue = new PrintQueue(printWindow, createPrintWindow, printEvents);
             }
 
             if (!content || typeof content !== 'string') {
@@ -177,8 +177,15 @@ function createWindow() {
                 settings: settings.printId,
             });
 
-            await printQueue.add(content, settings);
+            const { queued, completion } = await printQueue.add(content, settings);
+            
+            // Send queue notification immediately
             event.reply('print-queued', { success: true, printId: settings.printId });
+            
+            // Wait for completion in background
+            completion.catch(error => {
+                console.error('Print job failed:', error);
+            });
         } catch (error) {
             console.error('Print queue error:', error);
             event.reply('print-queued', { success: false, error: error.message, printId: settings?.printId });
@@ -214,17 +221,6 @@ function createWindow() {
         });
     }
 
-    // Helper to create structured messages
-    function createMessage(printId, action, status, details = {}) {
-        return {
-            id: printId,
-            timestamp: Date.now(),
-            action: action,      // 'PRINT_START', 'PRINT_COMPLETE', 'PDF_SAVE', etc.
-            status: status,      // 'SUCCESS', 'ERROR', 'INFO'
-            ...details
-        };
-    }
-
     // Modify the execute-print handler
     ipcMain.handle('execute-print', async (event, { content, settings = {} }) => {
         try {
@@ -255,10 +251,10 @@ function createWindow() {
                 printId: settings.printId  // Ensure printId is explicitly set
             };
 
-            sendToAllWindows('print-status', createMessage(
+            sendToAllWindows('print-status', createPrintStatusMessage(
                 settings.printId,
-                'PRINT_START',
-                'INFO',
+                PRINT_ACTIONS.PRINT_START,
+                PRINT_STATUS.INFO,
                 { message: '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥' }
             ));
 
@@ -267,10 +263,10 @@ function createWindow() {
                 const printResult = await new Promise((resolve, reject) => {
                     printWindow.webContents.print(options, (success, errorType) => {
                         if (!success) {
-                            sendToAllWindows('print-status', createMessage(
+                            sendToAllWindows('print-status', createPrintStatusMessage(
                                 settings.printId,
-                                'PRINT_COMPLETE',
-                                'ERROR',
+                                PRINT_ACTIONS.PRINT_COMPLETE,
+                                PRINT_STATUS.ERROR,
                                 { 
                                     message: 'Printing failed',
                                     error: errorType
@@ -278,11 +274,11 @@ function createWindow() {
                             ));
                             reject(new Error(errorType));
                         } else {
-                            sendToAllWindows('print-status', createMessage(
+                            sendToAllWindows('print-status', createPrintStatusMessage(
                                 settings.printId,
-                                'PRINT_COMPLETE',
-                                'SUCCESS',
-                                { message: '🖨️ Printed successfully' }
+                                PRINT_ACTIONS.PRINT_COMPLETE,
+                                PRINT_STATUS.SUCCESS,
+                                { message: '🖨️ Print completed' }
                             ));
                             resolve(true);
                         }
@@ -304,28 +300,42 @@ function createWindow() {
             
             await fs.promises.writeFile(pdfPath, pdfData);
             console.log(`Wrote PDF successfully to ${pdfPath}`);
-            sendToAllWindows('print-status', createMessage(
+            sendToAllWindows('print-status', createPrintStatusMessage(
                 settings.printId,
-                'PDF_SAVE',
-                'SUCCESS',
+                PRINT_ACTIONS.PDF_SAVE,
+                PRINT_STATUS.SUCCESS,
                 { 
                     message: `💦 Wrote PDF successfully to ${pdfPath}`,
                     path: pdfPath
                 }
             ));
             
+            // Emit success event for PrintQueue
+            printEvents.emit('print-complete', { 
+                printId: settings.printId, 
+                success: true 
+            });
+            
             return true;
         } catch (error) {
             console.error('Print/PDF error:', error);
-            sendToAllWindows('print-status', createMessage(
+            sendToAllWindows('print-status', createPrintStatusMessage(
                 settings.printId,
-                'PRINT_ERROR',
-                'ERROR',
+                PRINT_ACTIONS.PRINT_ERROR,
+                PRINT_STATUS.ERROR,
                 { 
                     message: `🥵 Error: ${error.message}`,
                     error: error.message
                 }
             ));
+            
+            // Emit error event for PrintQueue
+            printEvents.emit('print-complete', { 
+                printId: settings.printId, 
+                success: false, 
+                error: error.message 
+            });
+            
             throw error;
         }
     });
@@ -338,10 +348,10 @@ function createWindow() {
         }
         
         // Send the status to all windows
-        sendToAllWindows('print-status', createMessage(
+        sendToAllWindows('print-status', createPrintStatusMessage(
             status.printId,
-            status.success ? 'PRINT_COMPLETE' : 'PRINT_ERROR',
-            status.success ? 'SUCCESS' : 'ERROR',
+            status.success ? PRINT_ACTIONS.PRINT_COMPLETE : PRINT_ACTIONS.PRINT_ERROR,
+            status.success ? PRINT_STATUS.SUCCESS : PRINT_STATUS.ERROR,
             { 
                 message: status.error || (status.success ? '🖨️ Print completed' : '❌ Print failed'),
                 error: status.error
@@ -351,10 +361,21 @@ function createWindow() {
 
     // Emitted when the window is closed.
     mainWindow.on('closed', function () {
-        // Dereference the window object, usually you would store windows
-        // in an array if your app supports multi windows, this is the time
-        // when you should delete the corresponding element.
-        mainWindow = null
+        // If there are active print jobs, show the print window
+        if (printQueue && (printQueue.queue.length > 0 || printQueue.isProcessing)) {
+            if (printWindow && !printWindow.isDestroyed()) {
+                printWindow.show();
+            }
+        }
+        
+        // Clean up stream process
+        if (global.streamProcess) {
+            global.streamProcess.kill();
+            global.streamProcess = null;
+        }
+        
+        // Dereference the window object
+        mainWindow = null;
     });
 
     // Wait for window to be ready and loaded

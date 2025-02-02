@@ -56,7 +56,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     /**
      * Sends print status updates
-     * @param {string} status - The current print status
+     * @param {Object} status - The print status object
+     * @param {string} status.id - Print job ID
+     * @param {string} status.action - Print action (from PRINT_ACTIONS)
+     * @param {string} status.status - Status type (from PRINT_STATUS)
+     * @param {Object} [status.details] - Additional status details
      */
     sendPrintStatus: (status) => ipcRenderer.send('print-status', status),
 
