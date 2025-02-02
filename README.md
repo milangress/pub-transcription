@@ -46,12 +46,14 @@ Built with Electron + Svelte, the system combines:
 ### Interface
 
 Real-time Manipulation:
+
 - Direct CSS parameter modification
 - SVG filter composition
 - Typography variation
 - Live visual feedback
 
 Physical Output:
+
 - Continuous A3 documentation
 - Automated layout composition
 - Print queue orchestration
@@ -62,6 +64,7 @@ Physical Output:
 ### MIDI Control
 
 Parameter space exploration through:
+
 - Spatial relationships
 - Color systems
 - Scale variations
@@ -96,6 +99,7 @@ Parameter space exploration through:
 - `ALT-Enter` : Block execution
 
 Code completion for:
+
 - MIDI variables (`$`)
 - SVG filters (`filter: url(#`)
 - Typography (`font-family:`)
