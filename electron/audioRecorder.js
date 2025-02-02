@@ -3,6 +3,19 @@ const { WaveFile } = require("wavefile");
 const fs = require("fs");
 const { transcribeWavFile } = require("./whisperTranscription");
 
+/**
+ * AudioRecorder handles real-time audio recording and transcription using PvRecorder.
+ * Captures audio in frames, converts them to WAV format, and processes them through
+ * Whisper for transcription.
+ * 
+ * Features:
+ * - Real-time audio frame collection
+ * - Automatic WAV file generation
+ * - Integration with Whisper transcription
+ * - Device management
+ * 
+ * @exports AudioRecorder
+ */
 class AudioRecorder {
     constructor() {
         this.frames = [];

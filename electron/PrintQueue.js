@@ -1,3 +1,17 @@
+/**
+ * PrintQueue manages a queue of print jobs for electron windows.
+ * Handles print job processing, retries, timeouts and window management.
+ * 
+ * Features:
+ * - Configurable retry attempts for failed jobs
+ * - Timeout handling for stalled jobs
+ * - Auto-recreation of print windows if destroyed
+ * - Queue status updates via IPC
+ * - Graceful cleanup of pending jobs
+ * 
+ * @param {BrowserWindow} printWindow - The electron window used for printing
+ * @param {Function} createWindowCallback - Callback to create a new print window if needed
+ */
 class PrintQueue {
     constructor(printWindow, createWindowCallback) {
         this.queue = [];
