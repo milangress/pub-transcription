@@ -38,15 +38,16 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mac-build
-          path: dist/mac
+          name: mac-arm64-build
+          path: dist/mac-arm64
+          if-no-files-found: error
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/mac/**/*
+            dist/mac-arm64/**/*
           draft: false
           prerelease: false
         env:
