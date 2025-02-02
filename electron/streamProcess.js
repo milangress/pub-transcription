@@ -1,5 +1,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
+const { app } = require('electron');
+const fs = require('fs');
 
 
 /**
@@ -17,7 +19,24 @@ const path = require('path');
  */
 
 function createStreamProcess(mainWindow, baseDir) {
-    const ls = spawn(path.join(baseDir, 'lib/stream'),
+    // Create audio directory in userData if it doesn't exist
+    const audioDir = path.join(app.getPath('userData'), 'audio');
+    if (!fs.existsSync(audioDir)) {
+        fs.mkdirSync(audioDir, { recursive: true });
+    }
+
+    // Change working directory to audioDir before spawning process
+    const options = {
+        cwd: audioDir
+    };
+
+    console.log(`Audio directory: '${audioDir}'`);
+
+    const streamPath = path.join(baseDir, 'lib/stream');
+
+    console.log(`Stream path: '${streamPath}'`);
+
+    const ls = spawn(streamPath,
         [
             '--model', path.join(baseDir, 'models/ggml-small.en-q5_1.bin'),
             '-t', '8',
@@ -26,7 +45,7 @@ function createStreamProcess(mainWindow, baseDir) {
             '--keep', '300',
             '--max-tokens', '64',
             '--save-audio',
-        ]);
+        ], options);
 
     ls.stdout.on("data", data => {
         let string = new TextDecoder().decode(data);
