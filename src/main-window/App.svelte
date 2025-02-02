@@ -9,12 +9,13 @@
 	import CodeEditor from "./components/CodeEditor.svelte"
 	import PrintStatusBar from './components/PrintStatusBar.svelte'
 	import { onMount } from 'svelte'
+	import { writable } from 'svelte/store'
 
 	console.log(inputJson)
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
 
-	let dontSave = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)', '(buzzing)', '.']
+	let unwantedTragmentsDontCommit = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)', '(buzzing)', '.']
 
 	// Only Contains the final sentences
 	let committedContent = []
@@ -75,6 +76,10 @@
 
 	let printStatusBar;
 
+	// Store for sentences waiting to be committed while printing
+	const pendingSentences = writable([])
+	let isPrinting = writable(false)
+
 	async function initSave() {
 		console.log("initSave")
 		const inlineStyle = await window.electronAPI.getStoreValue('inlineStyle')
@@ -114,18 +119,28 @@
 	$: currentContentList = [...committedContent, currentSentence]
 
 	window.electronAPI.onTranscriptionData((event, value) => {
-		// console.log("New Trans Data: ", value, window.performance.now())
-		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
-		if (String(value).endsWith('NEW')) {
-			currentSentence = formatTTSasTxtObject(value)
-			commitFinalSentence()
+		if ($isPrinting) {
+			console.log("Printing in progress discarding", value)
 			return
-		} else {
-			currentSentence = formatTTSasTxtObject(value)
-			// console.log("currentSentence", currentSentence)
 		}
-		// list = [value, ...list]
-		// console.log("list", committedContent)
+
+		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
+		const formattedSentence = formatTTSasTxtObject(value)
+		
+		if (String(value).endsWith('NEW')) {
+			// Final sentence received
+			currentSentence = {} // Clear current visualization
+			
+			// Only commit if it's not in the dontSave list
+			if (!unwantedTragmentsDontCommit.some(x => x.toLowerCase() === formattedSentence.content.toLowerCase().trim())) {
+				console.log("Commiting finalSentence", formattedSentence.content);
+
+				committedContent = [...committedContent, formattedSentence];
+			}
+		} else {
+			// Always show partial results, even if they would be filtered when final
+			currentSentence = formattedSentence
+		}
 	})
 
 	function formatTTSasTxtObject(tts) {
@@ -138,11 +153,93 @@
 		}
 	}
 
-	function commitFinalSentence() {
-		if (!dontSave.some(x => x.toLowerCase() === currentSentence.content.toLowerCase().trim())) {
-			committedContent = [...committedContent, currentSentence]
+
+	async function handleOverflow(overflowingItem) {
+		// Don't handle overflow if we're already printing
+		if ($isPrinting) return;
+
+		console.log("Handling overflow for:", overflowingItem.content);
+		
+		// Find the index of the overflowing item
+		const index = committedContent.findIndex(item => item.id === overflowingItem.id);
+		if (index === -1) return;
+
+		// If this is the first item on the page and it's overflowing,
+		// we need to handle it specially to avoid an infinite loop
+		if (index === 0) {
+			console.warn("First item on page is overflowing - forcing it to print alone:", overflowingItem.content);
+			// Print just this item on its own page
+			const itemToPrint = [overflowingItem];
+			const remainingItems = committedContent.slice(1);
+			
+			// Update committed content to only include the overflowing item
+			committedContent = itemToPrint;
+			
+			// Print current page and continue with remaining items
+			await printFile();
+			committedContent = remainingItems;
+			return;
 		}
-		// currentSentence = ''
+
+		// Normal case - split at the overflowing item
+		const itemsToPrint = committedContent.slice(0, index);
+		const itemsForNextPage = committedContent.slice(index);
+		
+		// Print current page and continue with remaining items
+		committedContent = itemsToPrint;
+		await printFile();
+		committedContent = itemsForNextPage;
+	}
+
+	async function printFile() {
+		console.log("🖨️ Starting print process");
+		isPrinting.set(true);
+		
+		try {
+			const pageElement = document.querySelector('page');
+			if (!pageElement) {
+				console.error('❌ No page element found');
+				isSuccessfulPrint = false;
+				return;
+			}
+
+			const pageContent = pageElement.innerHTML;
+			if (!pageContent || typeof pageContent !== 'string') {
+				console.error('❌ Invalid page content');
+				isSuccessfulPrint = false;
+				return;
+			}
+
+			// Create a print request in the status bar
+			const printId = printStatusBar.addPrintRequest();
+			console.log(`📝 Created print request with ID: ${printId}`);
+
+			const printSettings = {
+				...printerSettings,
+				silent: true,
+				printBackground: true,
+				printSelectionOnly: false,
+				landscape: false,
+				pageSize: 'A3',
+				margins: {
+					marginType: 'custom',
+					top: 0,
+					bottom: 0,
+					left: 0,
+					right: 0
+				},
+				inlineStyle: settings.inlineStyle,
+				svgFiltersCode: svgFiltersCode,
+				printId
+			};
+			
+			await window.electronAPI.print(pageContent, printSettings);
+		} catch (error) {
+			console.error('❌ Print error:', error);
+			isSuccessfulPrint = false;
+		} finally {
+			isPrinting.set(false);
+		}
 	}
 
 	window.electronAPI.onTranscriptionStatus((event, value) => {
@@ -191,95 +288,6 @@
 		})
 	}
 	setupControllers()
-
-	
-
-	async function printFile() {
-		console.log("🖨️ Starting print process");
-		const pageElement = document.querySelector('page');
-		if (!pageElement) {
-			console.error('❌ No page element found');
-			isSuccessfulPrint = false;
-			return;
-		}
-
-		const pageContent = pageElement.innerHTML;
-		if (!pageContent || typeof pageContent !== 'string') {
-			console.error('❌ Invalid page content');
-			isSuccessfulPrint = false;
-			return;
-		}
-
-		try {
-			// First create a print request in the status bar
-			const printId = printStatusBar.addPrintRequest();
-			console.log(`📝 Created print request with ID: ${printId}`);
-			
-			console.log("pageContent", pageContent);
-
-			const printSettings = {
-				...printerSettings,
-				silent: true,
-				printBackground: true,
-				printSelectionOnly: false,
-				landscape: false,
-				pageSize: 'A3',
-				margins: {
-					marginType: 'custom',
-					top: 0,
-					bottom: 0,
-					left: 0,
-					right: 0
-				},
-				inlineStyle: settings.inlineStyle,
-				svgFiltersCode: svgFiltersCode,
-				printId
-			};
-			
-			await window.electronAPI.print(pageContent, printSettings);
-
-			// Clear the content immediately after queuing the print job
-			// This prevents double printing and overflow
-			console.log("🗑️ Clearing content after print queue");
-			clearAll();
-
-		} catch (error) {
-			console.error('❌ Print error:', error);
-			isSuccessfulPrint = false;
-		}
-	}
-
-
-	function isPageFull() {
-		let page = document.getElementsByTagName('page')[0]
-		if (!page) return;
-		
-		const currentElement = document.getElementsByClassName('current')[0]
-		if (!currentElement) return;
-
-		const {height: pageHeight, y: pageY} = page.getBoundingClientRect()
-		const pageBottom = pageHeight + pageY
-		const {height: contentHeight, y: contentY} = currentElement.getBoundingClientRect()
-		const contentBottom = contentHeight + contentY
-		const distance = pageBottom - contentBottom
-		const percent = (distance / pageHeight) * 100
-
-		console.log("Page space check:", { percent, distance, pageBottom, contentBottom });
-
-		if (percent < 10) {
-			console.log("🖨️ Page is full! Triggering print...");
-			printFile()
-		}
-	}
-
-	// Check page fullness every 3 seconds
-	onMount(() => {
-		const pageCheckInterval = setInterval(isPageFull, 3000);
-		
-		return () => {
-			clearInterval(pageCheckInterval);
-		};
-	});
 
 	function clearAll() {
 		console.log("🗑️ Clearing all content");
@@ -354,9 +362,22 @@
 			<page size="A3">
 				<div class="content-context">
 				{#each committedContent as item (item.id)}
-					<svelte:component this={item.type} content={item.content} settings="{item.settings}"/>
+					<svelte:component 
+						this={item.type} 
+						content={item.content} 
+						settings={item.settings}
+						on:overflow={() => handleOverflow(item)}
+					/>
 				{/each}
-					<svelte:component bind:this={currentSentenceRef} this={currentSentence.type} content={currentSentence.content} settings="{settings}" isCurrent/>
+				{#if !$isPrinting && currentSentence?.type}
+					<svelte:component 
+						bind:this={currentSentenceRef} 
+						this={currentSentence.type} 
+						content={currentSentence.content} 
+						settings={settings} 
+						isCurrent
+					/>
+				{/if}
 				</div>
 			</page>
 		</div>

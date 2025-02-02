@@ -11,7 +11,7 @@ let simulationInterval = null;
  * @param {number} [balance=0.2] - Probability (0-1) of generating unwanted segments vs natural phrases
  * @returns {Object} Controller object with start() and stop() methods to manage simulation
  */
-function simulatedTranscriptController(mainWindow, SendMessageEvery = 800, balance = 0.2) {
+function simulatedTranscriptController(mainWindow, SendMessageEvery = 1800, balance = 0.2) {
     // Words that are saved in the printed transcript
     const naturalPhrases = [
         // Complete thoughts
