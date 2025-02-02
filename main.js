@@ -124,8 +124,9 @@ function createPrintWindow() {
 function createWindow() {
     // Create the browser window.
     mainWindow = new BrowserWindow({
-        width: 800,
+        width: 1200,
         height: 950,
+        titleBarStyle: 'hidden',
         webPreferences: {
             titleBarStyle:{
                 hiddenInset: true,
@@ -137,7 +138,6 @@ function createWindow() {
         },
         icon: path.join(__dirname, 'public/favicon.png'),
         show: false,
-        // titleBarStyle: 'hidden',
     });
 
     if (isDev()) {
