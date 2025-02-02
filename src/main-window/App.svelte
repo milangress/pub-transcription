@@ -424,7 +424,7 @@
 <svelte:window on:keydown={onKeyDown} />
 
 <style>
-	html, body {
+	:global(html, body) {
 		margin: 0;
 		padding: 0;
 	}
@@ -468,7 +468,7 @@
 		position: fixed;
 	}
 
-	h1 {
+	:global(h1) {
 		color: #ff3e00;
 		text-transform: uppercase;
 		font-size: 4em;
@@ -524,7 +524,7 @@
 			/*scale: 0.5;*/
 			/*background: none;*/
 		}
-		body, page, main {
+		:global(body, page, main) {
 			background: white;
 			margin: 0;
 			padding: 0;
