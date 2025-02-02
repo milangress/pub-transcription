@@ -8,7 +8,7 @@
 	import ControllerManager from "./components/midi/ControllerManager.svelte"
 	import CodeEditor from "./components/CodeEditor.svelte"
 	import PrintStatusBar from './components/PrintStatusBar.svelte'
-	import { onMount } from 'svelte'
+	import { onMount, tick } from 'svelte'
 	import { writable } from 'svelte/store'
 
 	console.log(inputJson)
@@ -79,6 +79,7 @@
 	// Store for sentences waiting to be committed while printing
 	const pendingSentences = writable([])
 	let isPrinting = writable(false)
+	let isHandlingOverflow = false  // Flag to prevent recursive overflow handling
 
 	async function initSave() {
 		console.log("initSave")
@@ -119,22 +120,21 @@
 	$: currentContentList = [...committedContent, currentSentence]
 
 	window.electronAPI.onTranscriptionData((event, value) => {
-		if ($isPrinting) {
-			console.log("Printing in progress discarding", value)
-			return
-		}
-
 		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
 		const formattedSentence = formatTTSasTxtObject(value)
+
+		if (isHandlingOverflow) {
+			console.warn("Overflow handling in progress, discarding:", value)
+			return
+		}
 		
 		if (String(value).endsWith('NEW')) {
 			// Final sentence received
 			currentSentence = {} // Clear current visualization
 			
-			// Only commit if it's not in the dontSave list
+			// Only commit if it's not in the unwanted list
 			if (!unwantedTragmentsDontCommit.some(x => x.toLowerCase() === formattedSentence.content.toLowerCase().trim())) {
 				console.log("Commiting finalSentence", formattedSentence.content);
-
 				committedContent = [...committedContent, formattedSentence];
 			}
 		} else {
@@ -155,45 +155,58 @@
 
 
 	async function handleOverflow(overflowingItem) {
-		// Don't handle overflow if we're already printing
-		if ($isPrinting) return;
+		// Don't handle overflow if we're already handling overflow
+		if (isHandlingOverflow) return;
 
-		console.log("Handling overflow for:", overflowingItem.content);
-		
-		// Find the index of the overflowing item
-		const index = committedContent.findIndex(item => item.id === overflowingItem.id);
-		if (index === -1) return;
-
-		// If this is the first item on the page and it's overflowing,
-		// we need to handle it specially to avoid an infinite loop
-		if (index === 0) {
-			console.warn("First item on page is overflowing - forcing it to print alone:", overflowingItem.content);
-			// Print just this item on its own page
-			const itemToPrint = [overflowingItem];
-			const remainingItems = committedContent.slice(1);
+		try {
+			isHandlingOverflow = true;
+			console.log("Handling overflow for:", overflowingItem.content);
 			
-			// Update committed content to only include the overflowing item
-			committedContent = itemToPrint;
+			// Find the index of the overflowing item
+			const index = committedContent.findIndex(item => item.id === overflowingItem.id);
+			if (index === -1) return;
+
+			// If this is the first item on the page and it's overflowing,
+			// we need to handle it specially to avoid an infinite loop
+			if (index === 0) {
+				console.warn("First item on page is overflowing - forcing it to print alone:", overflowingItem.content);
+				// Print just this item on its own page
+				const itemToPrint = [overflowingItem];
+				const remainingItems = committedContent.slice(1);
+				
+				// Update committed content to only include the overflowing item
+				committedContent = itemToPrint;
+				await tick(); // Wait for DOM update
+				
+				// Print current page and continue with remaining items
+				await printFile();
+				// Clear the printed content before setting the remaining items
+				committedContent = [];
+				await tick(); // Wait for DOM update
+				committedContent = remainingItems;
+				return;
+			}
+
+			// Normal case - split at the overflowing item
+			const itemsToPrint = committedContent.slice(0, index);
+			const itemsForNextPage = committedContent.slice(index);
 			
 			// Print current page and continue with remaining items
+			committedContent = itemsToPrint;
+			await tick(); // Wait for DOM update
 			await printFile();
-			committedContent = remainingItems;
-			return;
+			// Clear the printed content before setting the remaining items
+			committedContent = [];
+			await tick(); // Wait for DOM update
+			committedContent = itemsForNextPage;
+		} finally {
+			isHandlingOverflow = false;
 		}
-
-		// Normal case - split at the overflowing item
-		const itemsToPrint = committedContent.slice(0, index);
-		const itemsForNextPage = committedContent.slice(index);
-		
-		// Print current page and continue with remaining items
-		committedContent = itemsToPrint;
-		await printFile();
-		committedContent = itemsForNextPage;
 	}
 
 	async function printFile() {
 		console.log("🖨️ Starting print process");
-		isPrinting.set(true);
+		await tick(); // Wait for DOM update
 		
 		try {
 			const pageElement = document.querySelector('page');
@@ -202,6 +215,13 @@
 				isSuccessfulPrint = false;
 				return;
 			}
+
+			// Remove any current elements before printing
+			const currentElements = pageElement.querySelectorAll('.current');
+			currentElements.forEach(element => {
+				element.remove();
+				console.log("removed current element", element.textContent.trim())
+			});
 
 			const pageContent = pageElement.innerHTML;
 			if (!pageContent || typeof pageContent !== 'string') {
@@ -213,6 +233,8 @@
 			// Create a print request in the status bar
 			const printId = printStatusBar.addPrintRequest();
 			console.log(`📝 Created print request with ID: ${printId}`);
+
+			console.log("Printing text: ", pageElement.textContent.trim())
 
 			const printSettings = {
 				...printerSettings,
@@ -237,8 +259,6 @@
 		} catch (error) {
 			console.error('❌ Print error:', error);
 			isSuccessfulPrint = false;
-		} finally {
-			isPrinting.set(false);
 		}
 	}
 
