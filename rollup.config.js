@@ -33,7 +33,7 @@ function serve() {
 export default [
 	// Main window config (unchanged)
 	{
-		input: 'src/main.js',
+		input: 'src/main-window/main.js',
 		output: {
 			sourcemap: true,
 			format: 'iife',

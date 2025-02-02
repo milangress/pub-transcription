@@ -1,7 +1,7 @@
 <script>
-	import inputJson from "../input-defaults/input.json"
-	import defaultSvgFilters from "../input-defaults/svgFilters.js"
-	import defaultInlineStyle from "../input-defaults/inlineStyle.js"
+	import inputJson from "../../input-defaults/input.json"
+	import defaultSvgFilters from "../../input-defaults/svgFilters.js"
+	import defaultInlineStyle from "../../input-defaults/inlineStyle.js"
 	
 	import BlockTxt from "./components/pageElement/BlockTxt.svelte"
 	import BlockImg from "./components/pageElement/BlockImg.svelte"
@@ -332,6 +332,11 @@
 	}
 
 </script>
+
+<!-- svelte:head meta title -->
+<svelte:head>
+	<title>a-trans(crip)tion-live-coding-VJ-PDF-printing-tool</title>
+</svelte:head>
 
 <main>
 	<!--<svg id="filters">

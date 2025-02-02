@@ -1,6 +1,6 @@
 <script>
     import { onMount } from 'svelte';
-    import PageWrapper from '../components/PageWrapper.svelte';
+    import PageWrapper from '../shared/page/PageWrapper.svelte';
     import LogContainer from './LogContainer.svelte';
     import PreviewButton from './PreviewButton.svelte';
     
