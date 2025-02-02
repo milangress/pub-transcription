@@ -25,13 +25,6 @@ Using machine transcription, and typographic expression as performative act (pub
 
 ![the interface](doc/interface-v2.webp)
 
-The system operates as both a performance tool and a critical examination of:
-
-- The translation between spoken and written language
-- Real-time typography as performative practice
-- The politics of automated transcription
-- Material documentation of ephemeral moments
-
 ## Implementation
 
 Built with Electron + Svelte, the system combines:
