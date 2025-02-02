@@ -3,6 +3,7 @@
     import PageWrapper from '../shared/page/PageWrapper.svelte';
     import LogContainer from './LogContainer.svelte';
     import PreviewButton from './PreviewButton.svelte';
+   
     
     let status = 'Waiting for print job...';
     let lastJobTime = 'Never';
@@ -88,17 +89,7 @@
         }
     }
 
-    function sendPrintStatus(success, error = null) {
-        if (!currentPrintId) {
-            console.error('❌ Attempting to send print status without printId');
-            return;
-        }
-        window.electronAPI.sendPrintStatus({
-            printId: currentPrintId,
-            success,
-            error
-        });
-    }
+    
 
     async function executePrint(content, settings) {
         if (!settings?.printId) {
@@ -110,10 +101,11 @@
 
         try {
             await window.electronAPI.executePrint(content, settings);
-            sendPrintStatus(true);
+            // Status updates will come from main process
         } catch (error) {
             console.error('❌ Print error:', error);
-            sendPrintStatus(false, error.message);
+            addLogEntry(`Error: ${error.message}`, null, null, 'error');
+            throw error; // Propagate error for queue handling
         }
     }
 

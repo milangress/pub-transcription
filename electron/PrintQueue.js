@@ -11,14 +11,16 @@
  * 
  * @param {BrowserWindow} printWindow - The electron window used for printing
  * @param {Function} createWindowCallback - Callback to create a new print window if needed
+ * @param {EventEmitter} printEvents - Event emitter for print events
  */
 class PrintQueue {
-    constructor(printWindow, createWindowCallback) {
+    constructor(printWindow, createWindowCallback, printEvents) {
         this.queue = [];
         this.isProcessing = false;
         this.maxRetries = 3;
         this.timeout = 5 * 60 * 1000; // 5 minutes timeout
         this.createWindowCallback = createWindowCallback;
+        this.printEvents = printEvents;
         this.setPrintWindow(printWindow);
     }
 
@@ -28,7 +30,7 @@ class PrintQueue {
     }
 
     async add(content, settings) {
-        return new Promise((resolve, reject) => {
+        const jobPromise = new Promise((resolve, reject) => {
             const job = {
                 content,
                 settings,
@@ -43,6 +45,12 @@ class PrintQueue {
             this.updateQueueStatus();
             this.processNext();
         });
+
+        // Return both the immediate success and the job completion promise
+        return {
+            queued: true,
+            completion: jobPromise
+        };
     }
     
     updateQueueStatus() {
@@ -99,16 +107,21 @@ class PrintQueue {
                 }, this.timeout);
                 
                 const cleanup = () => {
-                    require('electron').ipcMain.removeListener('print-status', handleStatus);
+                    this.printEvents.removeListener('print-complete', handleComplete);
                     clearTimeout(timeoutId);
                 };
-                
-                const handleStatus = (event, status) => {
+
+                const handleComplete = ({ printId, success, error }) => {
+                    if (printId !== job.settings.printId) return;
                     cleanup();
-                    resolve(status);
+                    if (success) {
+                        resolve({ success: true });
+                    } else {
+                        resolve({ success: false, error });
+                    }
                 };
                 
-                require('electron').ipcMain.once('print-status', handleStatus);
+                this.printEvents.on('print-complete', handleComplete);
                 
                 // Send the job to the print window
                 try {
@@ -122,6 +135,7 @@ class PrintQueue {
                     if (!job.settings?.printId) {
                         throw new Error('Print ID is required in settings');
                     }
+                    console.log(`Sending job ${job.settings.printId} to print window`);
                     this.printWindow.webContents.send('print-job', { 
                         content: job.content, 
                         settings: job.settings,
@@ -135,20 +149,31 @@ class PrintQueue {
             });
             
             if (result.success) {
+                console.log(`Job ${job.settings.printId} completed successfully`);
                 job.resolve(result);
             } else if (!result.retrying) {
+                console.log(`Job ${job.settings.printId} failed: ${result.error}`);
                 job.reject(new Error(result.error || 'Print failed'));
             }
         } catch (error) {
             console.error('Print job error:', error);
             job.reject(error);
         } finally {
-            this.queue.shift(); // Remove the processed job
+            // Always clean up the current job
+            this.queue.shift();
             this.isProcessing = false;
             this.updateQueueStatus();
             
-            // Process next job after a small delay to allow for cleanup
-            setTimeout(() => this.processNext(), 1000);
+            // Process next job after a delay to allow for SVG filters and window stabilization
+            if (this.queue.length > 0) {
+                console.log(`Will process next job in 1s. Queue length: ${this.queue.length}`);
+                setTimeout(() => {
+                    console.log('Processing next job after delay');
+                    this.processNext();
+                }, 1000);
+            } else {
+                console.log('Queue is empty');
+            }
         }
     }
     
@@ -173,5 +198,4 @@ class PrintQueue {
     }
 }
 
-module.exports = PrintQueue; 
 module.exports = PrintQueue; 

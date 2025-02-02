@@ -17,8 +17,6 @@
     .status-item {
         display: flex;
         align-items: center;
-        gap: 4px;
-        padding: 4px 8px;
         border-radius: 12px;
         background: rgba(255, 255, 255, 0.8);
         font-size: 1.2em;

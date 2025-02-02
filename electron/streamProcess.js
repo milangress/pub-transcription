@@ -47,15 +47,22 @@ function createStreamProcess(mainWindow, baseDir) {
             '--save-audio',
         ], options);
 
+    // Store the process globally for cleanup
+    global.streamProcess = ls;
+    
     ls.stdout.on("data", data => {
         let string = new TextDecoder().decode(data);
-        mainWindow.webContents.send('transcription-data', string);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('transcription-data', string);
+        }
     });
 
     ls.stderr.on("data", info => {
         console.log(`stderr: ${info}`);
         let string = new TextDecoder().decode(info);
-        mainWindow.webContents.send('transcription-status', string);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('transcription-status', string);
+        }
     });
 
     ls.on('error', (error) => {
