@@ -1,14 +1,15 @@
 {
   "name": "pub-transcriptions",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Pub Transcriptions",
   "private": false,
   "license": "MIT",
   "main": "main.js",
   "author": "Milan Gress <mgress@me.com>",
   "build": {
-    "icon": "public/favicon.png",
+    "icon": "public/favicon.png", 
     "productName": "Pub Transcriptions",
+    "appId": "place.milan.pubtranscriptions",
     "files": [
       "public/**/*",
       "main.js",
@@ -36,7 +37,7 @@
     "electron": "wait-on http://localhost:8080 && electron .",
     "electron-dev": "concurrently \"yarn run dev\" \"yarn run electron\"",
     "electron-dev-simulate": "concurrently \"yarn run dev\" \"wait-on http://localhost:8080 && electron . --simulate --inspect\"",
-    "preelectron-pack": "yarn run build",
+    "preelectron-pack": "yarn run dlwisper && yarn run build",
     "electron-pack": "electron-builder"
   },
   "dependencies": {

@@ -126,7 +126,7 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 950,
-        titleBarStyle: 'hidden',
+        // titleBarStyle: 'hidden',
         webPreferences: {
             titleBarStyle:{
                 hiddenInset: true,
