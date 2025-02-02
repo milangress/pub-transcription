@@ -1,19 +1,23 @@
 <script>
+    import { quintOut } from 'svelte/easing';
+    import { slide } from 'svelte/transition';
     export let printId;
     export let status;
 </script>
 
-<div class="status-item" title="{status.text || 'Print status update'}">
-    <span class="emoji">{status.emoji}</span>
-    {#if status.text}
+<div class="status-item" title="{printId} – {status.text || 'Print status update'}">
+    {#key status.emoji}
+    <span transition:slide="{{duration: 600, axis: 'x', easing: quintOut}}" class="emoji">{status.emoji}</span>
+    {/key}
+    <!-- {#if status.text}-->
     <!--hover to show printId-->
-    <button class="text" 
+    <!-- <button class="text" 
         aria-label={`Print status: ${printId} ${status.text}`}
         on:click={() => {
             console.log(`${printId} ${status.text}`);
         }}>
-    </button>
-    {/if}
+    </button> -->
+    <!-- {/if} -->
 </div>
 
 <style>
