@@ -1,4 +1,8 @@
 <script>
+    import { createEventDispatcher } from 'svelte';
+    import { checkPosition } from './checkPosition.js';
+    const dispatch = createEventDispatcher();
+
     export let content = "Hello World"
     export let isCurrent = false
     export let settings = {}
@@ -29,15 +33,17 @@
         return str.trim()
     }
 
-    
     $: isCurrentClass = isCurrent ? 'current' : ''
     $: replacedInlineStyles = transformSassToCSS(settings.inlineStyle, settings.controllerSettings)
 </script>
 
 <span
-        class="{isCurrentClass}"
-        style="{replacedInlineStyles}"
-        style:font-family="{settings.fontFamily.name}"
+    class="{isCurrentClass}"
+    style="{replacedInlineStyles}"
+    style:font-family="{settings.fontFamily.name}"
+    use:checkPosition={!isCurrent ? {
+        onOverflow: () => dispatch('overflow')
+    } : null}
 >
     {content}&nbsp;<wbr>
 </span>
