@@ -1,15 +1,16 @@
 class PrintQueue {
-    constructor(printWindow, createPrintWindow) {
+    constructor(printWindow, createWindowCallback) {
         this.queue = [];
         this.isProcessing = false;
         this.maxRetries = 3;
         this.timeout = 5 * 60 * 1000; // 5 minutes timeout
-        this.createPrintWindow = createPrintWindow;
+        this.createWindowCallback = createWindowCallback;
         this.setPrintWindow(printWindow);
     }
 
     setPrintWindow(window) {
         this.printWindow = window;
+        this.updateQueueStatus();
     }
 
     async add(content, settings) {
@@ -45,17 +46,22 @@ class PrintQueue {
         const job = this.queue[0];
         
         try {
+            // Ensure we have a print window
             if (!this.printWindow || this.printWindow.isDestroyed()) {
-                this.createPrintWindow();
-                // Wait for print window to be ready
-                await new Promise(resolve => {
-                    const checkReady = setInterval(() => {
-                        if (this.printWindow && !this.printWindow.webContents.isLoading()) {
-                            clearInterval(checkReady);
-                            resolve();
-                        }
-                    }, 100);
-                });
+                if (this.createWindowCallback) {
+                    this.printWindow = this.createWindowCallback();
+                    // Wait for print window to be ready
+                    await new Promise(resolve => {
+                        const checkReady = setInterval(() => {
+                            if (this.printWindow && !this.printWindow.webContents.isLoading()) {
+                                clearInterval(checkReady);
+                                resolve();
+                            }
+                        }, 100);
+                    });
+                } else {
+                    throw new Error('Print window is not available and cannot be created');
+                }
             }
             
             // Send content to print window and wait for response
@@ -153,4 +159,5 @@ class PrintQueue {
     }
 }
 
+module.exports = PrintQueue; 
 module.exports = PrintQueue; 

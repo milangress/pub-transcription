@@ -3,35 +3,69 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const serve = require('electron-serve');
 const loadURL = serve({ directory: 'public' });
-const os = require('node:os')
-
-
-const fs= require("fs");
-const { PvRecorder } = require("@picovoice/pvrecorder-node");
-const { WaveFile } = require("wavefile");
-
-// const whisper = require("whisper-node-anas23")
-
+const fs = require("fs");
 
 const Store = require('electron-store');
-const PrintQueue = require('./src/print-window/PrintQueue');
-
+const PrintQueue = require('./electron/PrintQueue');
+const { simulatedTranscriptController } = require('./electron/simulateTranscriptForDevTesting');
+const { createStreamProcess } = require('./electron/streamProcess');
+const { AudioRecorder } = require('./electron/audioRecorder');
 const store = new Store();
-
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 let printWindow = null;
 let debuggerAttached = false;
-let simulationInterval = null;
+let simulationController = null;
 let printQueue;
+let audioRecorder = null;
 
 function isDev() {
     return !app.isPackaged;
 }
 
+// Register print preview handler once at startup
+ipcMain.handle('toggle-print-preview', async (event, enable) => {
+    try {
+        const webContents = event.sender;
+        
+        if (enable && !debuggerAttached) {
+            await webContents.debugger.attach('1.3');
+            debuggerAttached = true;
+        }
+        
+        if (debuggerAttached) {
+            await webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { media: enable ? 'print' : 'screen' });
+            // Force a repaint to ensure changes take effect
+            await webContents.invalidate();
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('CDP error:', error);
+        // If debugger is already attached, we can still try to set the media
+        if (error.message.includes('Debugger is already attached')) {
+            try {
+                debuggerAttached = true;
+                const webContents = event.sender;
+                await webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { media: enable ? 'print' : 'screen' });
+                await webContents.invalidate();
+                return true;
+            } catch (innerError) {
+                console.error('CDP inner error:', innerError);
+                return false;
+            }
+        }
+        return false;
+    }
+});
+
 function createPrintWindow() {
+    if (printWindow && !printWindow.isDestroyed()) {
+        return printWindow;
+    }
+
     printWindow = new BrowserWindow({
         width: 450,
         height: 950,
@@ -40,13 +74,9 @@ function createPrintWindow() {
             scrollBounce: true,
             nodeIntegration: false,
             contextIsolation: true,
-            preload: path.join(__dirname, 'preload.js')
+            preload: path.join(__dirname, 'electron/preload.js')
         }
     });
-
-    if (isDev()) {
-        // printWindow.webContents.openDevTools();
-    }
 
     if (isDev()) {
         printWindow.loadFile('public/print.html');
@@ -54,44 +84,8 @@ function createPrintWindow() {
         printWindow.loadFile(path.join(__dirname, 'public/print.html'));
     }
 
-    // Initialize debugger
+    // Initialize debugger state for new window
     debuggerAttached = false;
-
-    // Add CDP handlers
-    ipcMain.handle('toggle-print-preview', async (event, enable) => {
-        try {
-            const webContents = event.sender;
-            
-            if (enable && !debuggerAttached) {
-                await webContents.debugger.attach('1.3');
-                debuggerAttached = true;
-            }
-            
-            if (debuggerAttached) {
-                await webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { media: enable ? 'print' : 'screen' });
-                // Force a repaint to ensure changes take effect
-                await webContents.invalidate();
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('CDP error:', error);
-            // If debugger is already attached, we can still try to set the media
-            if (error.message.includes('Debugger is already attached')) {
-                try {
-                    debuggerAttached = true;
-                    const webContents = event.sender;
-                    await webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { media: enable ? 'print' : 'screen' });
-                    await webContents.invalidate();
-                    return true;
-                } catch (innerError) {
-                    console.error('CDP inner error:', innerError);
-                    return false;
-                }
-            }
-            return false;
-        }
-    });
 
     // Clean up debugger on window close
     printWindow.on('closed', () => {
@@ -115,7 +109,7 @@ function createPrintWindow() {
     if (!printQueue) {
         printQueue = new PrintQueue(printWindow, () => {
             if (!printWindow) {
-                createPrintWindow();
+                return createPrintWindow();
             }
             return printWindow;
         });
@@ -123,6 +117,8 @@ function createPrintWindow() {
         // Update existing print queue with new window reference
         printQueue.setPrintWindow(printWindow);
     }
+
+    return printWindow;
 }
 
 function createWindow() {
@@ -135,7 +131,7 @@ function createWindow() {
                 hiddenInset: true,
             },
             nodeIntegration: true,
-            preload: path.join(__dirname, 'preload.js'),
+            preload: path.join(__dirname, 'electron/preload.js'),
             // enableRemoteModule: true,
             // contextIsolation: false
         },
@@ -164,12 +160,10 @@ function createWindow() {
     // mainWindow.webContents.openDevTools();
 
     ipcMain.on('print', async (event, { content, settings }) => {
-        debugger;
         try {
             if (!printQueue) {
                 printQueue = new PrintQueue(printWindow, createPrintWindow);
             }
-
 
             if (!content || typeof content !== 'string') {
                 throw new Error('Invalid content format');
@@ -363,12 +357,26 @@ function createWindow() {
         mainWindow = null
     });
 
-    // Emitted when the window is ready to be shown
-    // This helps in showing the window gracefully.
+    // Wait for window to be ready and loaded
+    let isWindowShown = false;
+    let isContentLoaded = false;
+
+    function checkAndStartProcesses() {
+        if (isWindowShown && isContentLoaded) {
+            startProcesses();
+        }
+    }
+
     mainWindow.once('ready-to-show', () => {
-        mainWindow.show()
+        mainWindow.show();
+        isWindowShown = true;
+        checkAndStartProcesses();
     });
-    // mainWindow.webContents.openDevTools()
+
+    mainWindow.webContents.once('did-finish-load', () => {
+        isContentLoaded = true;
+        checkAndStartProcesses();
+    });
 }
 
 // This method will be called when Electron has finished
@@ -401,188 +409,36 @@ app.on('activate', function () {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
-const devices = PvRecorder.getAvailableDevices();
-for (let i = 0; i < devices.length; i++) {
-    console.log(`index: ${i}, device name: ${devices[i]}`)
-}
-
-const frames = [];
-async function handleAudio() {
-    const recorder = new PvRecorder(512, 1);
-    console.log(`Using PvRecorder version: ${recorder.version}`);
-    recorder.start();
-    console.log(recorder)
-
-
-    while (recorder.isRecording) {
-        // const frame = recorder.readSync(), for synchronous calls
-        const frame = await recorder.read();
-        frames.push(frame);
-        if (frames.length > 200) {
-            const wav = new WaveFile();
-            const audioData = new Int16Array(recorder.frameLength * frames.length);
-            for (let i = 0; i < frames.length; i++) {
-                audioData.set(frames[i], i * recorder.frameLength);
-            }
-            wav.fromScratch(1, recorder.sampleRate, '16', audioData);
-            fs.writeFileSync("test.wav", wav.toBuffer());
-            console.log("Wrote test.wav");
-            transcribeWav().then(r => console.log(r))
-            frames.length = 0
-        }
+// Initialize audio devices
+const initAudioDevices = () => {
+    audioRecorder = new AudioRecorder();
+    const devices = audioRecorder.getAvailableDevices();
+    for (let i = 0; i < devices.length; i++) {
+        console.log(`index: ${i}, device name: ${devices[i]}`);
     }
+};
+initAudioDevices();
 
-    recorder.release();
-}
-
-async function transcribeWav() {
-    let Whisper = await import('whisper-node-anas23')
-    // console.log(Whisper)
-    const filePath = "test.wav"
-
-    const options = {
-        modelName: "base.en",                   // default
-        //modelPath: "/custom/path/to/model.bin", // use model in a custom directory
-        whisperOptions: {
-            gen_file_txt: false,      // outputs .txt file
-            gen_file_subtitle: false, // outputs .srt file
-            gen_file_vtt: false,      // outputs .vtt file
-            //timestamp_size: 10,       // amount of dialogue per timestamp pair
-            //word_timestamps: true     // timestamp for every word
-        }
-    }
-
-    const transcript = await Whisper.whisper(filePath, options);
-    console.log(transcript);
-
-}
-// handleAudio().then(r => console.log(r))
-
-
-
-function spawnStreamProcess() {
-    const {spawn} = require("child_process");
-
-    const ls = spawn(path.join(__dirname, 'lib/stream'),
-        [
-            '--model', path.join(__dirname, 'models/ggml-small.en-q5_1.bin'),
-            '-t', '8',
-            '--step', '800',
-            '--length', '5000',
-            '--keep', '300',
-            '--max-tokens', '64',
-            '--save-audio',
-            // '--keep-context',
-            // '-vth', '0.6'
-        ])
-//-t 6 --step 0 --length 30000 -vth 0.6
-    ls.stdout.on("data", data => {
-        let string = new TextDecoder().decode(data);
-        mainWindow.webContents.send('transcription-data', string)
-    });
-
-    ls.stderr.on("data", info => {
-        console.log(`stderr: ${info}`);
-        let string = new TextDecoder().decode(info);
-        mainWindow.webContents.send('transcription-status', string)
-    });
-
-    ls.on('error', (error) => {
-        console.log(`error: ${error.message}`);
-        if(mainWindow){
-            mainWindow.webContents.send('transcription-status', error.message)
-        }
-    });
-
-    ls.on("close", code => {
-        console.log(`child process exited with code ${code}`);
-    });
-}
-
-function generateSimulatedTranscript() {
-    const loremWords = [
-        "Lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
-        "Sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore",
-        "magna", "aliqua", "Ut", "enim", "ad", "minim", "veniam", "quis", "nostrud",
-        "exercitation", "ullamco", "laboris", "nisi", "ut", "aliquip", "ex", "ea",
-        "commodo", "consequat"
-    ];
-
-    const dontSaveMessages = [
-        '[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [', '[ [ [', '[ [', '[',
-        '(buzzer)', '(buzzing)', '.'
-    ];
-
-    function getRandomMessage() {
-        // 20% chance for dontSave messages
-        if (Math.random() < 0.2) {
-            return dontSaveMessages[Math.floor(Math.random() * dontSaveMessages.length)];
-        }
-
-        // Generate a random sentence from lorem words
-        const wordCount = Math.floor(Math.random() * 6) + 1;
-        const sentence = [];
-        for (let i = 0; i < wordCount; i++) {
-            sentence.push(loremWords[Math.floor(Math.random() * loremWords.length)]);
-        }
-        return sentence.join(' ');
-    }
-
-    function simulateStream() {
-        // Clear any existing interval
-        if (simulationInterval) {
-            clearInterval(simulationInterval);
-            simulationInterval = null;
-        }
-
-        let baseTime = Date.now();
-
-        simulationInterval = setInterval(() => {
-            if (!mainWindow || mainWindow.isDestroyed()) {
-                clearInterval(simulationInterval);
-                simulationInterval = null;
-                return;
-            }
-
-            const currentTime = Date.now() - baseTime;
-            const message = getRandomMessage();
-            
-            // Every 3-5 messages, send a NEW message
-            if (Math.random() < 0.25) {
-                mainWindow.webContents.send('transcription-data', `${message}NEW`);
-            } else {
-                mainWindow.webContents.send('transcription-data', message);
-            }
-        }, 800);
-
-        // Clean up interval when window is closed or reloaded
-        mainWindow.on('closed', () => {
-            if (simulationInterval) {
-                clearInterval(simulationInterval);
-                simulationInterval = null;
-            }
-        });
-    }
-
-    return simulateStream;
-}
-
-// Modify the existing setTimeout block to include simulation mode
-setTimeout(() => {
+// Function to start processes after window is ready
+function startProcesses() {
     if (process.argv.includes('--simulate')) {
         console.log('Running in simulation mode');
-        const simulateStream = generateSimulatedTranscript();
-        simulateStream();
+        simulationController = simulatedTranscriptController(mainWindow);
+        simulationController.start();
     } else {
-        spawnStreamProcess();
+        createStreamProcess(mainWindow, __dirname);
     }
-}, 3000);
+}
 
 // Add cleanup for app quit
 app.on('before-quit', () => {
-    if (simulationInterval) {
-        clearInterval(simulationInterval);
-        simulationInterval = null;
+    if (simulationController) {
+        simulationController.stop();
+        simulationController = null;
+    }
+    if (audioRecorder) {
+        audioRecorder.stop();
+        audioRecorder = null;
     }
     if (printQueue) {
         printQueue.cleanup();

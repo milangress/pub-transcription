@@ -13,7 +13,8 @@
       "public/**/*",
       "main.js",
       "node_modules/**/*",
-      "preload.js",
+      "electron/preload.js",
+      "electron/**/*",
       "models/**/*",
       "lib/**/*",
       "input-defaults/**/*"
