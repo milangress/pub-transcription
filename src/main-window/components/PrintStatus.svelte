@@ -7,9 +7,12 @@
     <span class="emoji">{status.emoji}</span>
     {#if status.text}
     <!--hover to show printId-->
-    <span class="text" onmouseover={() => {
-        console.log(`${printId} ${status.text}`);
-    }}></span>
+    <button class="text" 
+        aria-label={`Print status: ${printId} ${status.text}`}
+        on:click={() => {
+            console.log(`${printId} ${status.text}`);
+        }}>
+    </button>
     {/if}
 </div>
 
@@ -22,10 +25,7 @@
         font-size: 1.2em;
         transition: all 0.2s ease;
     }
-    .status-item:hover {
-        background: rgba(255, 255, 255, 1);
-        transform: translateY(-1px);
-    }
+
     .emoji {
         font-size: 1.2em;
     }
@@ -36,5 +36,9 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        background: none;
+        border: none;
+        padding: 0;
+        cursor: default;
     }
 </style> 

@@ -37,10 +37,18 @@
             <p>-{item.keys.down}  +{item.keys.up}</p>
             <p>+-{item.step}</p>
         </div>
-        <div class="var" on:click={() => copyContent(item.var)}>
+        <div class="var" 
+            role="button" 
+            tabindex="0" 
+            on:click={() => copyContent(item.var)}
+            on:keydown={e => e.key === 'Enter' && copyContent(item.var)}>
             <p class:copySuccess>{item.var}</p>
         </div>
-        <div class="value" on:click={() => resetValueToDefault(item)}>
+        <div class="value" 
+            role="button" 
+            tabindex="0" 
+            on:click={() => resetValueToDefault(item)}
+            on:keydown={e => e.key === 'Enter' && resetValueToDefault(item)}>
             <p>{item.value}</p>
         </div>
         <div class="input-slider">
