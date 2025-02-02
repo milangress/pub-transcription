@@ -1,6 +1,21 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
+
+/**
+ * Creates and manages a child process for real-time audio stream transcription.
+ * 
+ * @param {BrowserWindow} mainWindow - The Electron main window instance to send transcription events
+ * @param {string} baseDir - Base directory path for locating the stream executable and model files
+ * @returns {ChildProcess} The spawned child process instance
+ * 
+ * The process handles:
+ * - Spawning the stream executable with model and configuration parameters
+ * - Streaming transcription data back to the main window
+ * - Error handling and status updates
+ * - Process lifecycle management
+ */
+
 function createStreamProcess(mainWindow, baseDir) {
     const ls = spawn(path.join(baseDir, 'lib/stream'),
         [
