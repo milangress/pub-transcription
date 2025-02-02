@@ -1,53 +1,114 @@
+# My book is done when I'mm done speaking
 
-# A (radio) live transcription livecoding VJ PDF printing tool
+> **A (radio)-live-trans{crip}tion—live-coding-VJ-PDF-printing-tool-?**
 
-- streams audio from the microphone
-- transcribes the audio
-- places the transcription on a3 page
-- every incoming transcription can be individualy styled with css
-- additiionaly with a custom svg filter
-- custom variables with a midi bridge
-- full page gets autamtically printed and saved to pdf
+Originally to document a [pub Sandberg](https://pub.sandberg.nl) radio show in real-time… to produce a publication during the event itself…
+Now a tool to taste the material of spoken language through real-time transcription, typographic intervention (quick-quick you only have 2 seconds to design you type)… *performing design* is full of mistakes.
 
+![Header graphic Transcribing](doc/Transcribing.webp)
 
+> **The flow:**
+>
+> 1. streams audio from the microphone
+> 2. transcribes the audio using whisper
+> 3. places the transcription on a3 page
+> 4. every incoming transcription can be individually styled with CSS
+> 5. additionally with custom SVG-filters
+> 6. custom variables with a midi bridge for live manipulation
+> 7. full page gets automatically printed and saved to PDF
 
-## css and svg filter editor (codemirror 6)
+## Context
 
-- `ctrl + /` toggles line comments
-- `shift + alt + a` toggles block comments
-- `Ctrl-Space` triggers completions
+Using machine transcription, and typographic expression as performative act (public and real-time — no way to edit). Embracing all the mistakes of live-performance… neither whisper is able to capture the full bandwidth of reality — neither you and your speed in writing css-parameters on the fly.
 
-https://codemirror.net/6/docs/ref/#autocomplete
+![System Overview](doc/printer-laughter.webp)
 
-### livecoding interface (planned)
+![the interface](doc/interface-v2.webp)
 
-as a next step i would like to create a custom livecoding system where you have traditional livecodyn controlls:
+The system operates as both a performance tool and a critical examination of:
 
-- `CTRL-Enter` runs a line of code
-- `CTRL-Shift-Enter` runs all code on screen
-- `ALT-Enter` runs a block (in this case just css lines without a empty line between them)
+- The translation between spoken and written language
+- Real-time typography as performative practice
+- The politics of automated transcription
+- Material documentation of ephemeral moments
 
-runing lines would be highlighted by blue background
+## Implementation
 
-it always applys the last version of a css property. so when you run a line it checks if the property is already set and if so it overwrites it. unmarking the old line that was overwritten.
+Built with Electron + Svelte, the system combines:
 
-so markd lines represent the current state of the css.
+- Real-time audio transcription (Whisper)
+- Dynamic typographic manipulation
+- Physical output through continuous printing
+- MIDI-based parameter space exploration
 
-running all would mean that it finds and runs all css lines but only actually applies the last version of a css property.
+![Interface Detail](doc/both_windows_v2.webp)
 
-maybe even auto run mode where if you type a new property it automaticla chacks if sutch a property is already set and if so unmarks the old line and marks the new one.
+### Interface
 
-edit maybe running & marking Vs. unrunnnig & unmarking jst means that lines get commented out or reactivated.
+Real-time Manipulation:
+- Direct CSS parameter modification
+- SVG filter composition
+- Typography variation
+- Live visual feedback
 
-### custom completions
+Physical Output:
+- Continuous A3 documentation
+- Automated layout composition
+- Print queue orchestration
+- PDF archival
 
-- `$` will complete all custom MIDI controller variables
-- `filter: url(#` will complete and preview all svg filter ids
-- `font-family: ` will complete all valable font family names
+![Filter Exploration](doc/filter-preview.png)
 
+### MIDI Control
 
-## transcription
+Parameter space exploration through:
+- Spatial relationships
+- Color systems
+- Scale variations
+- Visual effects
+- Temporal dynamics
 
-The transcription runs on a custom whisper.ccp version. It runs OpenAI's Whisper on the apple metal engine. naive example of performing real-time inference on audio from your microphone. The stream tool samples the audio every half a second and runs the transcription continously
+### Configuration Example
 
-https://github.com/milangress/whisper.cpp-milan/blob/master/examples/stream/stream.cpp
+```javascript
+{
+  "name": "midi2",
+  "var": "m2",
+  "value": 1,
+  "default": 1,
+  "step": 0.1,
+  "knobNR": 5,
+  "range": [0, 1],
+  "keys": {
+    "up": "y",
+    "down": "Y"
+  }
+}
+```
+
+### Interface Shortcuts
+
+- `ctrl + /` : Comment toggle
+- `shift + alt + a` : Block comment
+- `Ctrl-Space` : Completion
+- `CTRL-Enter` : Line execution
+- `CTRL-Shift-Enter` : Full execution
+- `ALT-Enter` : Block execution
+
+Code completion for:
+- MIDI variables (`$`)
+- SVG filters (`filter: url(#`)
+- Typography (`font-family:`)
+
+### Transcription
+
+Custom implementation of Whisper.cpp (Gerganov's version of OpenAI's Whisper) optimized for Apple Metal, providing continuous audio interpretation at 500ms intervals. At the time this version was the most reliable version to support something as messy as a radio program with multiple voices and music playing.
+
+### TODO run in the browser via WASM
+
+The current version relies on a custom implementation of: <https://github.com/milangress/whisper.cpp-milan/blob/master/examples/stream/stream.cpp> that is only compiled for M1 Macs.
+This version <https://whisper.ggerganov.com/stream/> could be supported without compiling it as command line tool.
+
+## License
+
+MIT License - See LICENSE for details

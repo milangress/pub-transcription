@@ -1,0 +1,10 @@
+{
+    "languageToolLinter.languageTool.ignoredWordsInWorkspace": [
+        "cpp",
+        "css-parameters",
+        "gerganov",
+        "tion"
+    ],
+    "languageToolLinter.languageTool.disabledCategories": "UNLIKELY_OPENING_PUNCTUATION",
+    "languageToolLinter.languageTool.disabledRules": "UNLIKELY_OPENING_PUNCTUATION"
+}
