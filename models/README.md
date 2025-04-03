@@ -28,9 +28,9 @@ https://huggingface.co/ggerganov/whisper.cpp/tree/main
 ## Available models
 
 | Model     | Disk   | Mem     | SHA                                        |
-| ---       | ---    | ---     | ---                                        |
-| tiny      |  75 MB | ~390 MB | `bd577a113a864445d4c299885e0cb97d4ba92b5f` |
-| tiny.en   |  75 MB | ~390 MB | `c78c86eb1a8faa21b369bcd33207cc90d64ae9df` |
+| --------- | ------ | ------- | ------------------------------------------ |
+| tiny      | 75 MB  | ~390 MB | `bd577a113a864445d4c299885e0cb97d4ba92b5f` |
+| tiny.en   | 75 MB  | ~390 MB | `c78c86eb1a8faa21b369bcd33207cc90d64ae9df` |
 | base      | 142 MB | ~500 MB | `465707469ff3a37a2b9b8d8f89f2f99de7299dac` |
 | base.en   | 142 MB | ~500 MB | `137c40403d78fd54d454da0f9bd998f78703390c` |
 | small     | 466 MB | ~1.0 GB | `55356645c2b361a969dfd0ef2c5a50d530afd8d5` |

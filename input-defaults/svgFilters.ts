@@ -82,4 +82,4 @@ export default `<svg>
 </filter>
 
 </svg>
-` 
+`

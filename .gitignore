@@ -23,3 +23,7 @@ private
 
 # ignore intermediate wav files
 *.wav
+
+
+out
+.eslintcache

@@ -3,7 +3,7 @@
 > **A (radio)-live-trans{crip}tion—live-coding-VJ-PDF-printing-tool-?**
 
 Originally to document a [pub Sandberg](https://pub.sandberg.nl) radio show in real-time… to produce a publication during the event itself…
-Now a tool to taste the material of spoken language through real-time transcription, typographic intervention (quick-quick you only have 2 seconds to design you type)… *performing design* is full of mistakes.
+Now a tool to taste the material of spoken language through real-time transcription, typographic intervention (quick-quick you only have 2 seconds to design you type)… _performing design_ is full of mistakes.
 
 ![Header graphic Transcribing](doc/Transcribing.webp)
 
