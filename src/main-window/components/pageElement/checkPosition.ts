@@ -1,4 +1,8 @@
-export function checkPosition(element, params) {
+interface CheckPositionParams {
+    onOverflow: (element: HTMLElement) => void;
+}
+
+export function checkPosition(element: HTMLElement, params: CheckPositionParams | null): { destroy: () => void } {
     // If no params provided or explicitly set to null, don't do any checking
     if (!params) return { destroy() {} };
 
@@ -28,4 +32,4 @@ export function checkPosition(element, params) {
             // Cleanup if needed
         }
     };
-}
+} 

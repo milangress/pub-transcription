@@ -1,8 +1,14 @@
-<script>
+<script lang="ts">
     import { quintOut } from 'svelte/easing';
     import { slide } from 'svelte/transition';
-    export let printId;
-    export let status;
+
+    interface Status {
+        emoji: string;
+        text?: string;
+    }
+
+    export let printId: string;
+    export let status: Status;
 </script>
 
 <div class="status-item" title="{printId} – {status.text || 'Print status update'}">

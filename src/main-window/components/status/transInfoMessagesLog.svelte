@@ -1,8 +1,8 @@
-<script>    
-    let messages = []
+<script lang="ts">    
+    let messages: string[] = [];
 
     // Listen for transcription status updates
-    window.electronAPI.onTranscriptionStatus((event, value) => {
+    window.electronAPI.onTranscriptionStatus((event: Event, value: string) => {
         messages = [value, ...messages];
     });
 </script>
