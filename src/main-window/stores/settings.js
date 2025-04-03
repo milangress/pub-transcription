@@ -4,6 +4,8 @@ import defaultInlineStyle from "../../../input-defaults/inlineStyle.js";
 import inputJson from "../../../input-defaults/input.json";
 import defaultSvgFilters from "../../../input-defaults/svgFilters.js";
 
+import { mapRange } from "../../utils/utils.js";
+
 // Default settings structure
 const defaultSettings = {
     controllerSettings: [],
@@ -84,9 +86,29 @@ function createSettingsStore() {
                 
                 initialized = true;
                 console.log('Settings loaded successfully');
+                this.setupControllers()
             } catch (err) {
                 console.error('Error loading settings:', err);
             }
+        },
+
+        setupControllers() {
+            store.controllerSettings.forEach((controller) => {
+                console.log("controller", controller)
+                window.setTimeout(() => {
+                    console.log('set synth')
+                    console.log("mySynth", mySynth)
+    
+                    if (mySynth) {
+                        mySynth.channels[1].addListener("controlchange", e => {
+                            if (e.controller.number === controller.knobNR) {
+                                const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1])
+                                settings.updateControllerValue(controller.var, Number.parseFloat(value.toFixed(2)))
+                            }
+                        });
+                    }
+                }, 5000)
+            })
         },
 
         // Mark content as unsaved and trigger save
