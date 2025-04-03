@@ -21,9 +21,6 @@
 
 	let currentSentence = {}
 
-	// only Info and debug messages
-	let transInfoMessages = []
-
 	let currentSentenceRef = null
 
 	let fontFamilys = [
