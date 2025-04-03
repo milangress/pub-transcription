@@ -7,7 +7,7 @@
   "main": "main.js",
   "author": "Milan Gress <mgress@me.com>",
   "build": {
-    "icon": "public/favicon.png", 
+    "icon": "public/favicon.png",
     "productName": "Pub Transcriptions",
     "appId": "place.milan.pubtranscriptions",
     "files": [
