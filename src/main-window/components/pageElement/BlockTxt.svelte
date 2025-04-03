@@ -6,7 +6,6 @@
     export let content = "Hello World"
     export let isCurrent = false
     export let settings = {
-        fontFamily: { name: 'Garamondt-Regular' },
         inlineStyle: '',
         controllerSettings: []
     }
@@ -40,14 +39,12 @@
     }
 
     $: isCurrentClass = isCurrent ? 'current' : ''
-    $: fontFamilyName = settings?.fontFamily?.name || 'Garamondt-Regular'
     $: compiledStyle = transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings)
 </script>
 
 <span
     class="{isCurrentClass}"
     style="{compiledStyle}"
-    style:font-family="{fontFamilyName}"
     use:checkPosition={!isCurrent ? {
         onOverflow: () => dispatch('overflow')
     } : null}

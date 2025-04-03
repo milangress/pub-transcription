@@ -67,7 +67,6 @@
 	let printStatusBar;
 
 	// Store for sentences waiting to be committed while printing
-	const pendingSentences = writable([])
 	let isPrinting = writable(false)
 	let isHandlingOverflow = false  // Flag to prevent recursive overflow handling
 
@@ -251,24 +250,6 @@
 	function setupControllers() {
 		inputJson.controllers.forEach((controller) => {
 			console.log("controller", controller)
-			window.addEventListener("keydown", (event) => {
-				if(false) {
-					if (event.key === controller.keys.up) {
-						console.log("up")
-						console.log("settings", settings.controllerSettings)
-						const sett = settings.controllerSettings.find((elm) => elm.name === controller.name)
-						sett.value += controller.step
-						sett.value = Number.parseFloat(sett.value.toFixed(1))
-						settings = settings
-					} else if (event.key === controller.keys.down) {
-						console.log("down")
-						const sett = settings.controllerSettings.find((elm) => elm.name === controller.name)
-						sett.value -= controller.step
-						sett.value = Number.parseFloat(sett.value.toFixed(1))
-						settings = settings
-					}
-				}
-			});
 			window.setTimeout(() => {
 				console.log('set synth')
 				console.log("mySynth", mySynth)
@@ -291,16 +272,6 @@
 		committedContent = []
 	}
 
-
-	function increaseFontSize() {
-		const newFontSize = $settings.fontSize + 0.1
-		$settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
-	}
-
-	function decreaseFontSize() {
-		const newFontSize = $settings.fontSize - 0.1
-		$settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
-	}
 
 
 	WebMidi
@@ -328,16 +299,6 @@
 </svelte:head>
 
 <main>
-	<!--<svg id="filters">
-		<defs>
-			<filter id="threshold">
-				<feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0
-                  0 1 0 0 0
-                  0 0 1 0 0
-                  0 0 0 255 -140" />
-			</filter>
-		</defs>
-	</svg>-->
 	{#if currentContentList.length > 0}
 		<div class="print-context">
 			<page size="A3">
