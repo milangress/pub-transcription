@@ -1,80 +1,86 @@
 @font-face {
-	font-family: SpaceMono;
-	src: url(SpaceMono-Regular.ttf);
-	font-weight: normal;
+  font-family: SpaceMono;
+  src: url(SpaceMono-Regular.ttf);
+  font-weight: normal;
 }
 @font-face {
-	font-family: SpaceMono;
-	src: url(SpaceMono-Bold.ttf);
-	font-weight: bold;
+  font-family: SpaceMono;
+  src: url(SpaceMono-Bold.ttf);
+  font-weight: bold;
 }
 
 :root {
-	--grain: url('data:image/svg+xml,    <svg xmlns="http://www.w3.org/2000/svg">      <filter id="grain">       <feTurbulence type="turbulence" baseFrequency="0.5" numOctaves="2" result="turbulence"/>       <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="3" xChannelSelector="R" yChannelSelector="G"/>       </filter>   </svg>#grain');
-	--grainTest: url('data:image/svg+xml,    <svg xmlns="http://www.w3.org/2000/svg">      <filter id="filter" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse" color-interpolation-filters="linearRGB">   <feTurbulence type="turbulence" baseFrequency="0.015 0.1" numOctaves="2" seed="2" stitchTiles="stitch" x="0%" y="0%" width="100%" height="100%" result="turbulence"/>   <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="15" xChannelSelector="R" yChannelSelector="B" x="0%" y="0%" width="100%" height="100%" result="displacementMap1"/>   </filter> |  </svg>#filter');
-	--grain-min: url('data:image/svg+xml,    <svg xmlns="http://www.w3.org/2000/svg">      <filter id="grain">       <feTurbulence type="turbulence" baseFrequency="0.5" numOctaves="2" result="turbulence"/>       <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="1" xChannelSelector="R" yChannelSelector="G"/>       </filter>   </svg>#grain')
+  --grain: url('data:image/svg+xml,    <svg xmlns="http://www.w3.org/2000/svg">      <filter id="grain">       <feTurbulence type="turbulence" baseFrequency="0.5" numOctaves="2" result="turbulence"/>       <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="3" xChannelSelector="R" yChannelSelector="G"/>       </filter>   </svg>#grain');
+  --grainTest: url('data:image/svg+xml,    <svg xmlns="http://www.w3.org/2000/svg">      <filter id="filter" x="-20%" y="-20%" width="140%" height="140%" filterUnits="objectBoundingBox" primitiveUnits="userSpaceOnUse" color-interpolation-filters="linearRGB">   <feTurbulence type="turbulence" baseFrequency="0.015 0.1" numOctaves="2" seed="2" stitchTiles="stitch" x="0%" y="0%" width="100%" height="100%" result="turbulence"/>   <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="15" xChannelSelector="R" yChannelSelector="B" x="0%" y="0%" width="100%" height="100%" result="displacementMap1"/>   </filter> |  </svg>#filter');
+  --grain-min: url('data:image/svg+xml,    <svg xmlns="http://www.w3.org/2000/svg">      <filter id="grain">       <feTurbulence type="turbulence" baseFrequency="0.5" numOctaves="2" result="turbulence"/>       <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="1" xChannelSelector="R" yChannelSelector="G"/>       </filter>   </svg>#grain');
 }
 
-html, body {
-	position: relative;
-	width: 100%;
-	height: 100%;
+html,
+body {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 body {
-	color: #333;
-	margin: 0;
-	padding: 0;
-	box-sizing: border-box;
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  color: #333;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell,
+    'Helvetica Neue', sans-serif;
 }
 
 a {
-	color: rgb(0,100,200);
-	text-decoration: none;
+  color: rgb(0, 100, 200);
+  text-decoration: none;
 }
 
 a:hover {
-	text-decoration: underline;
+  text-decoration: underline;
 }
 
 a:visited {
-	color: rgb(0,80,160);
+  color: rgb(0, 80, 160);
 }
 
 label {
-	display: block;
+  display: block;
 }
 
-input, button, select, textarea {
-	font-family: inherit;
-	font-size: inherit;
-	-webkit-padding: 0.4em 0;
-	padding: 0.4em;
-	margin: 0 0 0.5em 0;
-	box-sizing: border-box;
-	border: 1px solid #ccc;
-	border-radius: 2px;
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  -webkit-padding: 0.4em 0;
+  padding: 0.4em;
+  margin: 0 0 0.5em 0;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 2px;
 }
 
 input:disabled {
-	color: #ccc;
+  color: #ccc;
 }
 
 button {
-	color: #333;
-	background-color: #f4f4f4;
-	outline: none;
+  color: #333;
+  background-color: #f4f4f4;
+  outline: none;
 }
 
 button:disabled {
-	color: #999;
+  color: #999;
 }
 
 button:not(:disabled):active {
-	background-color: #ddd;
+  background-color: #ddd;
 }
 
 button:focus {
-	border-color: #666;
+  border-color: #666;
 }

@@ -9,11 +9,11 @@
   import { writable, type Writable } from 'svelte/store'
   import { WebMidi } from 'webmidi'
   import type {
-      BlockTxtSettings,
-      FontFamily,
-      PrinterSettings,
-      PrintSettings,
-      TxtObject
+    BlockTxtSettings,
+    FontFamily,
+    PrinterSettings,
+    PrintSettings,
+    TxtObject
   } from './types'
 
   let loremIpsum: string =
