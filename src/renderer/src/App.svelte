@@ -1,19 +1,19 @@
 <script lang="ts">
+  import PrintStatusBar from '@/components/status/PrintStatusBar.svelte'
   import CodeEditor from '@components/codeEditor/CodeEditor.svelte'
   import ControllerManager from '@components/midi/ControllerManager.svelte'
   import BlockTxt from '@components/pageElement/BlockTxt.svelte'
-  import PrintStatusBar from '@components/PrintStatusBar.svelte'
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
   import { settings } from '@stores/settings.js'
   import { tick } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
   import { WebMidi } from 'webmidi'
   import type {
-    BlockTxtSettings,
-    FontFamily,
-    PrinterSettings,
-    PrintSettings,
-    TxtObject
+      BlockTxtSettings,
+      FontFamily,
+      PrinterSettings,
+      PrintSettings,
+      TxtObject
   } from './types'
 
   let loremIpsum: string =

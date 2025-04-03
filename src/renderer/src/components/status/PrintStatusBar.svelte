@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { fly } from 'svelte/transition'
   import type { PrintStatusMessage } from '../../../electron/types'
-  import PrintStatus from './PrintStatus.svelte'
+  import PrintStatus from '../print-window/PrintStatus.svelte'
 
   interface StatusEmojis {
     LOCAL_REQUEST: string
