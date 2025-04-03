@@ -4,7 +4,7 @@ import defaultInlineStyle from "../../../input-defaults/inlineStyle.js";
 import inputJson from "../../../input-defaults/input.json";
 import defaultSvgFilters from "../../../input-defaults/svgFilters.js";
 
-import { mapRange } from "../../utils/utils.js";
+import { mapRange } from "../../utils/math.js";
 
 // Default settings structure
 const defaultSettings = {
