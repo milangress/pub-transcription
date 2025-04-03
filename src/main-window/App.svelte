@@ -28,8 +28,6 @@
 	// only Info and debug messages
 	let transInfoMessages = []
 
-	let codeEditorContentSaved = false
-	
 	let currentSentenceRef = null
 
 	let fontFamilys = [
@@ -58,8 +56,6 @@
 		}
 	]
 
-	let svgFiltersCode = defaultSvgFilters
-
 	let printerSettings = {
 		deviceName: 'Xerox_Phaser_5550N',
 		forcePrint: false
@@ -75,54 +71,18 @@
 	let isPrinting = writable(false)
 	let isHandlingOverflow = false  // Flag to prevent recursive overflow handling
 
-	// Initialize settings with default values
+	// Initialize settings when the app starts
 	$: {
-		if ($settings.controllerSettings.length === 0 && inputJson.controllers) {
-			settings.init({
-				controllerSettings: [...inputJson.controllers],
-				fontFamily: fontFamilys[0],
-				inlineStyle: defaultInlineStyle
+		if (!$settings.controllerSettings.length) {
+			settings.load({
+				controllers: inputJson.controllers,
+				inlineStyle: defaultInlineStyle,
+				svgFilters: defaultSvgFilters
 			});
 		}
 	}
 
-	async function initSave() {
-		console.log("initSave")
-		const inlineStyle = await window.electronAPI.getStoreValue('inlineStyle')
-		const svgFilters = await window.electronAPI.getStoreValue('svgFilters')
-		
-		settings.init({
-			inlineStyle: inlineStyle || defaultInlineStyle,
-			fontFamily: fontFamilys[0],
-			controllerSettings: [...inputJson.controllers]
-		});
-
-		if (svgFilters) {
-			console.log('found svgFilters')
-			svgFiltersCode = svgFilters
-		}
-	}
-
-	async function saveInlineStyle() {
-		await window.electronAPI.setStoreValue('inlineStyle', $settings.inlineStyle)
-		await window.electronAPI.setStoreValue('svgFilters', svgFiltersCode)
-		codeEditorContentSaved = true
-		console.log("codeEditorContentSaved", codeEditorContentSaved)
-	}
-
-	function debounce(func, delay) {
-		let timeout;
-		return function(...args) {
-			clearTimeout(timeout);
-			timeout = setTimeout(() => func.apply(this, args), delay);
-		};
-	}
-	const debouncedSave = debounce(() => {
-    console.log("debounced")
-    saveInlineStyle()
-}, 1000)
-
-
+	$: codeEditorContentSaved = settings.codeEditorContentSaved;
 
 	$: currentContentList = [...committedContent, currentSentence]
 
@@ -155,11 +115,24 @@
 		return {
 			type: BlockTxt,
 			content: removeNEWKeyword,
-			settings: JSON.parse(JSON.stringify($settings)),
+			settings: JSON.parse(JSON.stringify($settings)), // Deep copy of current settings
 			id: Math.random()
 		}
 	}
 
+	// Update the onKeyDown handler to mark content as unsaved
+	function onKeyDown(e) {
+		const inputSettings = inputJson.keys[e.key]
+		if (inputSettings) {
+			eval(`${inputSettings.function}()`)
+		}
+		settings.markUnsaved();
+	}
+
+	// Watch for code changes and mark as unsaved
+	$: if ($settings.inlineStyle || $settings.svgFilters) {
+		settings.markUnsaved();
+	}
 
 	async function handleOverflow(overflowingItem) {
 		// Don't handle overflow if we're already handling overflow
@@ -258,7 +231,7 @@
 					right: 0
 				},
 				inlineStyle: $settings.inlineStyle,
-				svgFiltersCode: svgFiltersCode,
+				svgFilters: $settings.svgFilters,
 				printId
 			};
 			
@@ -318,14 +291,6 @@
 		committedContent = []
 	}
 
-	function onKeyDown(e) {
-		codeEditorContentSaved = false
-		const inputSettings = inputJson.keys[e.key]
-		if (inputSettings) {
-			eval(`${inputSettings.function}()`)
-		}
-		debouncedSave()
-	}
 
 	function increaseFontSize() {
 		const newFontSize = $settings.fontSize + 0.1
@@ -401,12 +366,12 @@
 
 	<div class="print-non" class:printFailed={!isSuccessfulPrint}>
 		<div class="infobox">
-			<div class="dot" class:greenDot={codeEditorContentSaved}></div>
+			<div class="dot" class:greenDot={$codeEditorContentSaved}></div>
 			<CodeEditor 
 				bind:value={$settings.inlineStyle} 
 				language="css"
 				controllerSettings={$settings.controllerSettings}
-				svgFiltersCode={svgFiltersCode}
+				svgFiltersCode={$settings.svgFilters}
 				fontFamilys={fontFamilys}
 			/>
 
@@ -436,13 +401,13 @@
 			</div>
 			<hr>
 			<CodeEditor 
-				bind:value={svgFiltersCode} 
+				bind:value={$settings.svgFilters} 
 				language="html"
 				controllerSettings={$settings.controllerSettings}
-				svgFiltersCode={svgFiltersCode}
+				svgFiltersCode={$settings.svgFilters}
 			/>
 			<div style="display: none">
-				{@html svgFiltersCode}
+				{@html $settings.svgFilters}
 			</div>
 	<!--{#each allIncomingTTSMessages as item}-->
 	<!--	<p>{item}</p>-->
@@ -458,7 +423,7 @@
 
 </main>
 
-<svelte:window on:keydown={onKeyDown} />
+<svelte:window />
 
 <style>
 	:global(html, body) {
