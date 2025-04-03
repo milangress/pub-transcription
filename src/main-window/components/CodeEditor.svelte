@@ -1,15 +1,15 @@
 <script>
-    import { onMount, createEventDispatcher } from 'svelte';
-    import { EditorView, keymap, WidgetType, ViewPlugin, Decoration } from "@codemirror/view";
-    import { EditorState } from "@codemirror/state";
+    import { autocompletion, closeBrackets, completionKeymap } from "@codemirror/autocomplete";
     import { defaultKeymap, toggleComment, toggleLineComment } from "@codemirror/commands";
-    import { sass, sassLanguage } from "@codemirror/lang-sass";
     import { html } from "@codemirror/lang-html";
-    import { basicSetup } from "codemirror";
-    import { autocompletion, completionKeymap } from "@codemirror/autocomplete";
-    import { closeBrackets } from "@codemirror/autocomplete";
+    import { sass, sassLanguage } from "@codemirror/lang-sass";
     import { syntaxTree } from "@codemirror/language";
     import { linter, lintGutter } from "@codemirror/lint";
+    import { EditorState } from "@codemirror/state";
+    import { Decoration, EditorView, keymap, ViewPlugin, WidgetType } from "@codemirror/view";
+    import { basicSetup } from "codemirror";
+    import { createEventDispatcher, onMount } from 'svelte';
+    import { settings } from '../stores/settings.js';
 
     export let value = "";
     export let language = "css";
@@ -21,6 +21,10 @@
     let view;
     let filterIds = [];
     let isUpdatingFromPreview = false;
+    let isDragging = false;
+    let dragStartX = 0;
+    let currentVar = null;
+    let currentController = null;
 
     function extractFilterIds(svgCode) {
         const parser = new DOMParser();
@@ -299,6 +303,97 @@
         view.dispatch(view.state.update());
     }
 
+    function handleMouseDown(event) {
+        if (!event.altKey) return;
+        
+        // Get the position in the editor
+        const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+        if (pos === null) return;
+
+        // Find the variable at this position
+        const line = view.state.doc.lineAt(pos);
+        const lineText = line.text;
+        
+        // Find any $variables in this line
+        const regex = /\$(\w+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g;
+        let match;
+        let found = false;
+        
+        while ((match = regex.exec(lineText)) !== null) {
+            const [fullMatch, varName, multiplier = "1"] = match;
+            const start = line.from + match.index;
+            const end = start + fullMatch.length;
+            
+            if (pos >= start && pos <= end) {
+                const controller = controllerSettings.find(s => s.var === varName);
+                if (controller) {
+                    isDragging = true;
+                    dragStartX = event.clientX;
+                    currentVar = varName;
+                    currentController = controller;
+                    found = true;
+                    
+                    // Add dragging class to editor
+                    element.classList.add('dragging');
+                    
+                    // Create and show the drag overlay
+                    const overlay = document.createElement('div');
+                    overlay.className = 'drag-overlay';
+                    overlay.textContent = `${varName}: ${controller.value}`;
+                    document.body.appendChild(overlay);
+                    
+                    // Position the overlay near the cursor
+                    overlay.style.left = `${event.clientX + 10}px`;
+                    overlay.style.top = `${event.clientY - 25}px`;
+                    break;
+                }
+            }
+        }
+        
+        if (!found) {
+            isDragging = false;
+            currentVar = null;
+            currentController = null;
+        }
+    }
+
+    function handleMouseMove(event) {
+        if (!isDragging || !currentController) return;
+        
+        const overlay = document.querySelector('.drag-overlay');
+        if (overlay) {
+            overlay.style.left = `${event.clientX + 10}px`;
+            overlay.style.top = `${event.clientY - 25}px`;
+        }
+        
+        const dx = event.clientX - dragStartX;
+        const sensitivity = 0.01; // Adjust this value to control drag sensitivity
+        const delta = dx * sensitivity * currentController.step;
+        
+        const newValue = Number.parseFloat((currentController.value + delta).toFixed(2));
+        settings.updateControllerValue(currentVar, newValue);
+        
+        if (overlay) {
+            overlay.textContent = `${currentVar}: ${newValue}`;
+        }
+        
+        dragStartX = event.clientX;
+    }
+
+    function handleMouseUp() {
+        if (!isDragging) return;
+        
+        isDragging = false;
+        currentVar = null;
+        currentController = null;
+        element.classList.remove('dragging');
+        
+        const overlay = document.querySelector('.drag-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+
     onMount(() => {
         const languageSupport = language === 'css' ? sass() : html();
         
@@ -336,8 +431,15 @@
             parent: element
         });
 
+        element.addEventListener('mousedown', handleMouseDown);
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
         return () => {
             view.destroy();
+            element.removeEventListener('mousedown', handleMouseDown);
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
         };
     });
 </script>
@@ -356,5 +458,24 @@
     
     .editor-wrapper :global(.cm-scroller) {
         overflow: auto;
+    }
+    
+    .editor-wrapper.dragging {
+        cursor: ew-resize;
+    }
+    
+    :global(.drag-overlay) {
+        position: fixed;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 1000;
+        font-family: monospace;
+    }
+    
+    :global(.cm-sass-variable) {
+        cursor: ew-resize;
     }
 </style> 

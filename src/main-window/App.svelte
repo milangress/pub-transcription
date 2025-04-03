@@ -1,15 +1,15 @@
 <script>
-	import inputJson from "../../input-defaults/input.json"
-	import defaultSvgFilters from "../../input-defaults/svgFilters.js"
-	import defaultInlineStyle from "../../input-defaults/inlineStyle.js"
+	import defaultInlineStyle from "../../input-defaults/inlineStyle.js";
+	import inputJson from "../../input-defaults/input.json";
+	import defaultSvgFilters from "../../input-defaults/svgFilters.js";
 	
-	import BlockTxt from "./components/pageElement/BlockTxt.svelte"
-	import BlockImg from "./components/pageElement/BlockImg.svelte"
-	import ControllerManager from "./components/midi/ControllerManager.svelte"
-	import CodeEditor from "./components/CodeEditor.svelte"
-	import PrintStatusBar from './components/PrintStatusBar.svelte'
-	import { onMount, tick } from 'svelte'
-	import { writable } from 'svelte/store'
+	import { tick } from 'svelte';
+	import { writable } from 'svelte/store';
+	import CodeEditor from "./components/CodeEditor.svelte";
+	import ControllerManager from "./components/midi/ControllerManager.svelte";
+	import BlockTxt from "./components/pageElement/BlockTxt.svelte";
+	import PrintStatusBar from './components/PrintStatusBar.svelte';
+	import { settings } from './stores/settings.js';
 
 	console.log(inputJson)
 
@@ -58,12 +58,6 @@
 		}
 	]
 
-	let settings = {
-		controllerSettings: [...inputJson.controllers],
-		fontFamily: fontFamilys[0],
-		inlineStyle: defaultInlineStyle
-	}
-
 	let svgFiltersCode = defaultSvgFilters
 
 	let printerSettings = {
@@ -81,23 +75,36 @@
 	let isPrinting = writable(false)
 	let isHandlingOverflow = false  // Flag to prevent recursive overflow handling
 
+	// Initialize settings with default values
+	$: {
+		if ($settings.controllerSettings.length === 0 && inputJson.controllers) {
+			settings.init({
+				controllerSettings: [...inputJson.controllers],
+				fontFamily: fontFamilys[0],
+				inlineStyle: defaultInlineStyle
+			});
+		}
+	}
+
 	async function initSave() {
 		console.log("initSave")
 		const inlineStyle = await window.electronAPI.getStoreValue('inlineStyle')
-		if (inlineStyle) {
-			console.log('found inlineStyle')
-			settings.inlineStyle = inlineStyle
-		}
 		const svgFilters = await window.electronAPI.getStoreValue('svgFilters')
+		
+		settings.init({
+			inlineStyle: inlineStyle || defaultInlineStyle,
+			fontFamily: fontFamilys[0],
+			controllerSettings: [...inputJson.controllers]
+		});
+
 		if (svgFilters) {
 			console.log('found svgFilters')
 			svgFiltersCode = svgFilters
 		}
 	}
-	initSave()
 
 	async function saveInlineStyle() {
-		await window.electronAPI.setStoreValue('inlineStyle', settings.inlineStyle)
+		await window.electronAPI.setStoreValue('inlineStyle', $settings.inlineStyle)
 		await window.electronAPI.setStoreValue('svgFilters', svgFiltersCode)
 		codeEditorContentSaved = true
 		console.log("codeEditorContentSaved", codeEditorContentSaved)
@@ -148,7 +155,7 @@
 		return {
 			type: BlockTxt,
 			content: removeNEWKeyword,
-			settings: JSON.parse(JSON.stringify(settings)),
+			settings: JSON.parse(JSON.stringify($settings)),
 			id: Math.random()
 		}
 	}
@@ -250,7 +257,7 @@
 					left: 0,
 					right: 0
 				},
-				inlineStyle: settings.inlineStyle,
+				inlineStyle: $settings.inlineStyle,
 				svgFiltersCode: svgFiltersCode,
 				printId
 			};
@@ -296,11 +303,8 @@
 				if (mySynth) {
 					mySynth.channels[1].addListener("controlchange", e => {
 						if (e.controller.number === controller.knobNR) {
-							const sett = settings.controllerSettings.find((elm) => elm.name === controller.name)
-							// console.log(e.value, controller.range[1])
 							const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1])
-							sett.value = Number.parseFloat(value.toFixed(2))
-							settings = settings
+							settings.updateControllerValue(controller.var, Number.parseFloat(value.toFixed(2)))
 						}
 					});
 				}
@@ -324,23 +328,15 @@
 	}
 
 	function increaseFontSize() {
-		const newFontSize = settings.fontSize + 0.1
-		settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
+		const newFontSize = $settings.fontSize + 0.1
+		$settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
 	}
 
 	function decreaseFontSize() {
-		const newFontSize = settings.fontSize - 0.1
-		settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
+		const newFontSize = $settings.fontSize - 0.1
+		$settings.fontSize = Number.parseFloat(newFontSize.toFixed(1))
 	}
 
-	function addImage() {
-		console.log("addImage")
-		committedContent = [...committedContent, {
-			type: BlockImg,
-			content: 'https://picsum.photos/200/300',
-			id: Math.random()
-		}]
-	}
 
 	WebMidi
 			.enable()
@@ -394,7 +390,7 @@
 						bind:this={currentSentenceRef} 
 						this={currentSentence.type} 
 						content={currentSentence.content} 
-						settings={settings} 
+						settings={$settings} 
 						isCurrent
 					/>
 				{/if}
@@ -407,20 +403,20 @@
 		<div class="infobox">
 			<div class="dot" class:greenDot={codeEditorContentSaved}></div>
 			<CodeEditor 
-				bind:value={settings.inlineStyle} 
+				bind:value={$settings.inlineStyle} 
 				language="css"
-				controllerSettings={settings.controllerSettings}
+				controllerSettings={$settings.controllerSettings}
 				svgFiltersCode={svgFiltersCode}
 				fontFamilys={fontFamilys}
 			/>
 
 			<hr>
 
-			<BlockTxt content="Text Preview" settings="{settings}"/>
+			<BlockTxt content="Text Preview" settings="{$settings}"/>
 
 			<hr>
 
-			<select bind:value={settings.fontFamily}>
+			<select bind:value={$settings.fontFamily}>
 				{#each fontFamilys as fam}
 					<option value={fam}>
 						{fam.name}
@@ -428,7 +424,7 @@
 				{/each}
 			</select>
 
-			<ControllerManager bind:controllerSettings="{settings.controllerSettings}"></ControllerManager>
+			<ControllerManager bind:controllerSettings={$settings.controllerSettings}></ControllerManager>
 
 			<hr>
 			<div class="printControls">
@@ -442,7 +438,7 @@
 			<CodeEditor 
 				bind:value={svgFiltersCode} 
 				language="html"
-				controllerSettings={settings.controllerSettings}
+				controllerSettings={$settings.controllerSettings}
 				svgFiltersCode={svgFiltersCode}
 			/>
 			<div style="display: none">

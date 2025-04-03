@@ -5,9 +5,15 @@
 
     export let content = "Hello World"
     export let isCurrent = false
-    export let settings = {}
+    export let settings = {
+        fontFamily: { name: 'Garamondt-Regular' },
+        inlineStyle: '',
+        controllerSettings: []
+    }
 
     function transformSassToCSS(str, settings) {
+        if (!str) return '';
+        
         // Remove SASS structure (selector and braces)
         str = str.replace(/\..*{\n/gm, '')
         str = str.replace(/^}$/gm, '')
@@ -15,8 +21,8 @@
         str = str.replace(/\/\/.*$/gm, '')
         str = str.replace(/\/\*[\s\S]*?\*\//gm, '')
 
-        if (settings && Array.isArray(settings) && settings.length > 0) {
-            settings.forEach(setting => {
+        if (settings?.controllerSettings && Array.isArray(settings.controllerSettings) && settings.controllerSettings.length > 0) {
+            settings.controllerSettings.forEach(setting => {
                 // Replace $variable * number[unit] pattern
                 const varPattern = new RegExp('\\$' + setting.var + '\\s*\\*\\s*([\\d.]+)([a-z%]+)?', 'g')
                 str = str.replace(varPattern, (match, number, unit) => {
@@ -34,13 +40,14 @@
     }
 
     $: isCurrentClass = isCurrent ? 'current' : ''
-    $: replacedInlineStyles = transformSassToCSS(settings.inlineStyle, settings.controllerSettings)
+    $: replacedInlineStyles = transformSassToCSS(settings?.inlineStyle, settings)
+    $: fontFamilyName = settings?.fontFamily?.name || 'Garamondt-Regular'
 </script>
 
 <span
     class="{isCurrentClass}"
     style="{replacedInlineStyles}"
-    style:font-family="{settings.fontFamily.name}"
+    style:font-family="{fontFamilyName}"
     use:checkPosition={!isCurrent ? {
         onOverflow: () => dispatch('overflow')
     } : null}
