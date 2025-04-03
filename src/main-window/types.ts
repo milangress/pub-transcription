@@ -18,7 +18,6 @@ export interface PrinterSettings {
 export interface BlockTxtSettings {
     inlineStyle: string;
     controllerSettings: ControllerSetting[];
-    fontFamily?: FontFamily;
     svgFilters?: string;
 }
 
@@ -37,7 +36,6 @@ export interface Settings {
     controllerSettings: ControllerSetting[];
     inlineStyle: string;
     svgFilters: string;
-    fontFamily?: FontFamily;
 }
 
 export interface TxtObject {

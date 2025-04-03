@@ -88,7 +88,6 @@
 		const txtSettings: BlockTxtSettings = {
 			inlineStyle: $settings.inlineStyle,
 			controllerSettings: $settings.controllerSettings,
-			fontFamily: $settings.fontFamily,
 			svgFilters: $settings.svgFilters
 		}
 		return {
@@ -285,7 +284,7 @@
 
 			<hr>
 
-			<select bind:value={$settings.fontFamily}>
+			<select bind:value={fontFamilys}>
 				{#each fontFamilys as fam}
 					<option value={fam}>
 						{fam.name}
