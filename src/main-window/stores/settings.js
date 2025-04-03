@@ -1,5 +1,9 @@
 import { derived, get, writable } from 'svelte/store';
 
+import defaultInlineStyle from "../../../input-defaults/inlineStyle.js";
+import inputJson from "../../../input-defaults/input.json";
+import defaultSvgFilters from "../../../input-defaults/svgFilters.js";
+
 // Default settings structure
 const defaultSettings = {
     controllerSettings: [],
@@ -61,7 +65,7 @@ function createSettingsStore() {
         },
 
         // Load settings from electron store and defaults
-        async load(inputDefaults) {
+        async init() {
             if (initialized) return;
             
             try {
@@ -71,12 +75,12 @@ function createSettingsStore() {
                 
                 // Initialize with defaults and saved values
                 update(current => ({
-                    ...defaultSettings,
-                    ...current,
-                    controllerSettings: [...(inputDefaults.controllers || [])],
-                    inlineStyle: savedInlineStyle || inputDefaults.inlineStyle || '',
-                    svgFilters: savedSvgFilters || inputDefaults.svgFilters || '',
+                    controllerSettings: [...(inputJson.controllers || [])],
+                    inlineStyle: savedInlineStyle || defaultInlineStyle,
+                    svgFilters: savedSvgFilters || defaultSvgFilters,
                 }));
+
+                console.log("init settings", get(store))
                 
                 initialized = true;
                 console.log('Settings loaded successfully');
