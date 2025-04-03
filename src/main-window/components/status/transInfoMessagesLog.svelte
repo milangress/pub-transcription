@@ -1,19 +1,13 @@
-<script>
-    
-    let { state } = $state;
-    
-    // Initialize the messages array
-    state = {
-        messages: []
-    };
+<script>    
+    let messages = []
 
     // Listen for transcription status updates
     window.electronAPI.onTranscriptionStatus((event, value) => {
-        state.messages = [value, ...state.messages];
+        messages = [value, ...messages];
     });
 </script>
 
-{#each state.messages as item}
+{#each messages as item}
     <p>{item}</p>
 {/each}
 
