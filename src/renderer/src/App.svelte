@@ -5,8 +5,8 @@
   import BlockTxt from '@components/pageElement/BlockTxt.svelte'
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
   import { settings } from '@stores/settings.js'
+  import type { SvelteComponent } from 'svelte'
   import { tick } from 'svelte'
-  import { writable, type Writable } from 'svelte/store'
   import { WebMidi } from 'webmidi'
   import type {
       BlockTxtSettings,
@@ -16,7 +16,7 @@
       TxtObject
   } from './types'
 
-  let unwantedTragmentsDontCommit: string[] = [
+  let { unwantedTragmentsDontCommit = [
     '[ Silence ]',
     '[silence]',
     '[BLANK_AUDIO]',
@@ -27,19 +27,17 @@
     '(buzzer)',
     '(buzzing)',
     '.'
-  ]
+  ] } = $props();
 
   // Only Contains the final sentences
-  let committedContent: TxtObject[] = []
+  let committedContent = $state<TxtObject[]>([]);
 
   // Contains all incoming TTS sentences
-  let allIncomingTTSMessages: string[] = []
+  let allIncomingTTSMessages = $state<string[]>([]);
 
-  let currentSentence: TxtObject = {} as TxtObject
+  let currentSentence = $state<TxtObject>({} as TxtObject);
 
-  let currentSentenceRef: BlockTxt | null = null
-
-  let fontFamilys: FontFamily[] = [
+  let fontFamilys = $state<FontFamily[]>([
     { name: 'Garamondt-Regular' },
     { name: 'American Typewriter' },
     { name: 'Arial' },
@@ -51,28 +49,27 @@
     { name: 'Neureal-Regular' },
     { name: 'NIKITA-Regular' },
     { name: 'Yorkshire' }
-  ]
+  ]);
 
-  let printerSettings: PrinterSettings = {
+  let printerSettings = $state<PrinterSettings>({
     deviceName: 'Xerox_Phaser_5550N',
     forcePrint: false
-  }
-  let isSuccessfulPrint: boolean = true
+  });
+  
+  let isSuccessfulPrint = $state(true);
+  let printStatusBar = $state<PrintStatusBar | undefined>(undefined);
 
-  let printStatusBar: PrintStatusBar
-
-  // Store for sentences waiting to be committed while printing
-  let isPrinting: Writable<boolean> = writable(false)
-  let isHandlingOverflow: boolean = false // Flag to prevent recursive overflow handling
+  // State for sentences waiting to be committed while printing
+  let isPrinting = $state(false);
+  let isHandlingOverflow = $state(false); // Flag to prevent recursive overflow handling
 
   // Initialize settings when the app starts
-  $: {
+  $effect(() => {
     if (!$settings.controllerSettings.length) settings.init()
-  }
+  });
 
-  $: codeEditorContentSaved = settings.codeEditorContentSaved
-
-  $: currentContentList = [...committedContent, currentSentence]
+  let codeEditorContentSaved = $derived(settings.codeEditorContentSaved.subscribe);
+  let currentContentList = $derived([...committedContent, currentSentence]);
 
   window.electronAPI.onTranscriptionData((event: Event, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
@@ -110,7 +107,7 @@
       svgFilters: $settings.svgFilters
     }
     return {
-      type: BlockTxt,
+      type: BlockTxt as unknown as typeof SvelteComponent,
       content: removeNEWKeyword,
       settings: JSON.parse(JSON.stringify(txtSettings)), // Deep copy of current settings
       id: Math.random()
@@ -118,9 +115,11 @@
   }
 
   // Watch for code changes and mark as unsaved
-  $: if ($settings.inlineStyle || $settings.svgFilters) {
-    settings.markUnsaved()
-  }
+  $effect(() => {
+    if ($settings.inlineStyle || $settings.svgFilters) {
+      settings.markUnsaved()
+    }
+  });
 
   async function handleOverflow(overflowingItem: TxtObject): Promise<void> {
     // Don't handle overflow if we're already handling overflow
@@ -275,10 +274,9 @@
               on:overflow={() => handleOverflow(item)}
             />
           {/each}
-          {#if !$isPrinting && currentSentence?.type}
+          {#if !isPrinting && currentSentence?.type}
             <svelte:component
               this={currentSentence.type}
-              bind:this={currentSentenceRef}
               content={currentSentence.content}
               settings={$settings}
               isCurrent
@@ -291,7 +289,7 @@
 
   <div class="print-non" class:printFailed={!isSuccessfulPrint}>
     <div class="infobox">
-      <div class="dot" class:greenDot={$codeEditorContentSaved}></div>
+      <div class="dot" class:greenDot={codeEditorContentSaved}></div>
       <CodeEditor
         bind:value={$settings.inlineStyle}
         language="css"
@@ -335,10 +333,6 @@
       <div style="display: none">
         {@html $settings.svgFilters}
       </div>
-      <!--{#each allIncomingTTSMessages as item}-->
-      <!--	<p>{item}</p>-->
-      <!--{/each}-->
-      <!--<hr>-->
       <TransInfoMessagesLog />
     </div>
   </div>
@@ -368,9 +362,6 @@
   }
 
   page[size='A3'] {
-    /*aspect-ratio: 1/1.414;*/
-    /*width: 210mm;*/
-    /*height: 297mm;*/
     width: calc(297.3mm * 0.86);
     height: calc(420.2mm * 0.895);
     padding: 2cm;
@@ -445,8 +436,6 @@
       transform: none;
       top: 0;
       left: 0;
-      /*scale: 0.5;*/
-      /*background: none;*/
     }
     :global(body, page, main) {
       background: white;

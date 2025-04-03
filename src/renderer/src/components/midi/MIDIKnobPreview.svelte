@@ -1,5 +1,8 @@
 <script lang="ts">
-  export let knobNR: number = 0
+  let { knobNR = 0 } = $props<{
+    knobNR?: number;
+  }>();
+  
   const maxKnobs: number = 16
   const midiKnobs: number[] = [...Array(maxKnobs).keys()]
 </script>

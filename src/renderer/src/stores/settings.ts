@@ -31,12 +31,12 @@ function createSettingsStore(): SettingsStore {
   const codeEditorContentSaved = writable(true)
 
   // Debounce helper
-  function debounce<T extends (...args: any[]) => void>(
-    func: T,
+  function debounce<Args extends unknown[], R>(
+    func: (...args: Args) => R,
     delay: number
-  ): (...args: Parameters<T>) => void {
+  ): (...args: Args) => void {
     let timeout: NodeJS.Timeout
-    return function (this: any, ...args: Parameters<T>) {
+    return function (this: unknown, ...args: Args) {
       clearTimeout(timeout)
       timeout = setTimeout(() => func.apply(this, args), delay)
     }
@@ -93,7 +93,7 @@ function createSettingsStore(): SettingsStore {
         // Initialize with defaults and saved values
         const controllers = (inputJson.controllers || []) as ControllerSetting[]
 
-        update((current) => ({
+        update(() => ({
           ...defaultSettings,
           controllerSettings: controllers,
           inlineStyle: savedInlineStyle || defaultInlineStyle,

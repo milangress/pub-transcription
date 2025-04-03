@@ -1,8 +1,8 @@
 <script lang="ts">
-  let messages: string[] = []
+  let messages = $state<string[]>([]);
 
   // Listen for transcription status updates
-  window.electronAPI.onTranscriptionStatus((event: Event, value: string) => {
+  window.electronAPI.onTranscriptionStatus((_event: Event, value: string) => {
     messages = [value, ...messages]
   })
 </script>

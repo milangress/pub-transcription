@@ -7,12 +7,14 @@
     overflow: void
   }>()
 
-  export let content: string = 'Hello World'
-  export let isCurrent: boolean = false
-  export let settings: BlockTxtSettings = {
+  let { content = 'Hello World', isCurrent = false, settings = {
     inlineStyle: '',
     controllerSettings: []
-  }
+  } } = $props<{
+    content?: string;
+    isCurrent?: boolean;
+    settings?: BlockTxtSettings;
+  }>();
 
   function transformSassToCSS(
     str: string | undefined,
@@ -47,8 +49,8 @@
     return result.trim()
   }
 
-  $: isCurrentClass = isCurrent ? 'current' : ''
-  $: compiledStyle = transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings)
+  let isCurrentClass = $derived(isCurrent ? 'current' : '');
+  let compiledStyle = $derived(transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings));
 </script>
 
 <span

@@ -23,10 +23,10 @@
     text: string
   }
 
-  let printStatuses: Map<string, StatusEntry> = new Map()
-  let successPrintCount = 0
-  let successPdfCount = 0
-  let failureCount = 0
+  let printStatuses = $state(new Map<string, StatusEntry>());
+  let successPrintCount = $state(0);
+  let successPdfCount = $state(0);
+  let failureCount = $state(0);
 
   // Status emoji mapping based on action and status
   const STATUS_EMOJIS: StatusEmojis = {
@@ -50,13 +50,13 @@
     }
     console.log(`🔄 Updating status for ${printId} to ${newStatus}${text ? ` (${text})` : ''}`)
     printStatuses.set(printId, { emoji: newStatus, text })
-    printStatuses = printStatuses // Trigger reactivity
+    printStatuses = new Map(printStatuses) // Create new Map to trigger reactivity
   }
 
   function scheduleSuccessCleanup(id: string, type: 'print' | 'PDF'): void {
     setTimeout(() => {
       printStatuses.delete(id)
-      printStatuses = printStatuses // Trigger reactivity
+      printStatuses = new Map(printStatuses) // Create new Map to trigger reactivity
       console.log(`🧹 Cleaned up successful ${type} status: ${id}`)
     }, 20000)
   }
@@ -72,7 +72,7 @@
   onMount(() => {
     window.electronAPI.onPrintQueued(
       (
-        event: Event,
+        _event: Event,
         { success, error, printId }: { success: boolean; error?: string; printId: string }
       ) => {
         if (success) {
@@ -83,7 +83,7 @@
       }
     )
 
-    window.electronAPI.onPrintStatus((event: Event, message: PrintStatusMessage) => {
+    window.electronAPI.onPrintStatus((_event: Event, message: PrintStatusMessage) => {
       const { id, action, status, ...details } = message
       let emoji = '❓'
       let text = 'Unknown status'

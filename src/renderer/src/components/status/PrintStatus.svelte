@@ -7,8 +7,10 @@
     text?: string
   }
 
-  export let printId: string
-  export let status: Status
+  let { printId, status } = $props<{
+    printId: string;
+    status: Status;
+  }>();
 </script>
 
 <div class="status-item" title="{printId} – {status.text || 'Print status update'}">

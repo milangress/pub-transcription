@@ -6,7 +6,7 @@
     "src/renderer/src/**/*.svelte",
     "src/preload/*.d.ts"
   ],
-  "exclude": ["node_modules", "dist", "build", "public", "src/main", "src/preload", "src/renderer/src/assets"],
+  "exclude": ["node_modules", "dist", "build", "public", "src/main", "src/preload"],
   "compilerOptions": {
     "composite": true,
     "verbatimModuleSyntax": true,

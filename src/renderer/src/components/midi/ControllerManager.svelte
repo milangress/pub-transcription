@@ -1,15 +1,18 @@
-<script>
+<script lang="ts">
+  import type { ControllerSetting } from '@/types'
   import { settings } from '@stores/settings'
   import MIDIKnobPreview from './MIDIKnobPreview.svelte'
 
-  export let controllerSettings
+  let { controllerSettings } = $props<{
+    controllerSettings: ControllerSetting[];
+  }>();
 
-  function resetValueToDefault(item) {
+  function resetValueToDefault(item: ControllerSetting) {
     settings.resetController(item.var)
   }
 
-  let copySuccess = false
-  const copyContent = async (text) => {
+  let copySuccess = $state(false);
+  const copyContent = async (text: string) => {
     try {
       const varNameAsSass = '$' + text
       await navigator.clipboard.writeText(varNameAsSass)
@@ -23,8 +26,9 @@
     }
   }
 
-  function handleSliderChange(item, event) {
-    settings.updateControllerValue(item.var, parseFloat(event.target.value))
+  function handleSliderChange(item: ControllerSetting, event: Event) {
+    const target = event.target as HTMLInputElement;
+    settings.updateControllerValue(item.var, parseFloat(target.value))
   }
 </script>
 
@@ -45,8 +49,8 @@
         class="var"
         role="button"
         tabindex="0"
-        on:click={() => copyContent(item.var)}
-        on:keydown={(e) => e.key === 'Enter' && copyContent(item.var)}
+        onclick={() => copyContent(item.var)}
+        onkeydown={(e) => e.key === 'Enter' && copyContent(item.var)}
       >
         <p class:copySuccess>{item.var}</p>
       </div>
@@ -54,8 +58,8 @@
         class="value"
         role="button"
         tabindex="0"
-        on:click={() => resetValueToDefault(item)}
-        on:keydown={(e) => e.key === 'Enter' && resetValueToDefault(item)}
+        onclick={() => resetValueToDefault(item)}
+        onkeydown={(e) => e.key === 'Enter' && resetValueToDefault(item)}
       >
         <p>{item.value}</p>
       </div>
@@ -68,7 +72,7 @@
           max={item.range[1]}
           step={item.step}
           value={item.value}
-          on:input={(e) => handleSliderChange(item, e)}
+          oninput={(e) => handleSliderChange(item, e)}
         />
       </div>
     </div>

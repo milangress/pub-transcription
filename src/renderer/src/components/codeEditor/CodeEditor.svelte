@@ -1,9 +1,9 @@
 <script lang="ts">
   import {
-    autocompletion,
-    closeBrackets,
-    completionKeymap,
-    type Completion
+      autocompletion,
+      closeBrackets,
+      completionKeymap,
+      type Completion
   } from '@codemirror/autocomplete'
   import { defaultKeymap, toggleComment, toggleLineComment } from '@codemirror/commands'
   import { html } from '@codemirror/lang-html'
@@ -12,36 +12,38 @@
   import { linter, lintGutter, type Diagnostic } from '@codemirror/lint'
   import { EditorState } from '@codemirror/state'
   import {
-    Decoration,
-    EditorView,
-    keymap,
-    ViewPlugin,
-    WidgetType,
-    type DecorationSet
+      Decoration,
+      EditorView,
+      keymap,
+      ViewPlugin,
+      WidgetType,
+      type DecorationSet
   } from '@codemirror/view'
   import { basicSetup } from 'codemirror'
   import { createEventDispatcher, onMount } from 'svelte'
   import { settings } from '../../stores/settings.js'
   import type { ControllerSetting, FontFamily } from '../../types.js'
 
-  export let value: string = ''
-  export let language: 'css' | 'html' = 'css'
-  export let controllerSettings: ControllerSetting[] = []
-  export let svgFiltersCode: string = ''
-  export let fontFamilys: FontFamily[] = []
+  let { value = '', language = 'css', controllerSettings = [], svgFiltersCode = '', fontFamilys = [] } = $props<{
+    value?: string;
+    language?: 'css' | 'html';
+    controllerSettings?: ControllerSetting[];
+    svgFiltersCode?: string;
+    fontFamilys?: FontFamily[];
+  }>();
 
   const dispatch = createEventDispatcher<{
     change: string
   }>()
 
-  let element: HTMLDivElement
-  let view: EditorView
-  let filterIds: string[] = []
-  let isUpdatingFromPreview = false
-  let isDragging = false
-  let dragStartX = 0
-  let currentVar: string | null = null
-  let currentController: ControllerSetting | null = null
+  let element = $state<HTMLDivElement | undefined>();
+  let view = $state<EditorView | undefined>();
+  let filterIds = $state<string[]>([]);
+  let isUpdatingFromPreview = $state(false);
+  let isDragging = $state(false);
+  let dragStartX = $state(0);
+  let currentVar = $state<string | null>(null);
+  let currentController = $state<ControllerSetting | null>(null);
 
   function extractFilterIds(svgCode: string): string[] {
     const parser = new DOMParser()
@@ -50,10 +52,12 @@
     return Array.from(filters).map((filter) => filter.id)
   }
 
-  $: if (svgFiltersCode) {
-    filterIds = extractFilterIds(svgFiltersCode)
-    console.log('Available filters:', filterIds)
-  }
+  $effect(() => {
+    if (svgFiltersCode) {
+      filterIds = extractFilterIds(svgFiltersCode)
+      console.log('Available filters:', filterIds)
+    }
+  });
 
   function createCompletions(context: any) {
     // Check for font-family completion
@@ -136,15 +140,17 @@
     return null
   }
 
-  $: if (view && value !== view.state.doc.toString() && !isUpdatingFromPreview) {
-    view.dispatch({
-      changes: {
-        from: 0,
-        to: view.state.doc.length,
-        insert: value
-      }
-    })
-  }
+  $effect(() => {
+    if (view && value !== view.state.doc.toString() && !isUpdatingFromPreview) {
+      view.dispatch({
+        changes: {
+          from: 0,
+          to: view.state.doc.length,
+          insert: value
+        }
+      })
+    }
+  });
 
   // Remove all decoration-related code and keep only the linter
   const duplicatePropertiesLinter = linter((view) => {
@@ -190,7 +196,7 @@
                 actions: [
                   {
                     name: '// Comment',
-                    apply(view: EditorView, from: number, to: number) {
+                    apply(view: EditorView, _from: number, _to: number) {
                       const match = line.text.match(/^\s*/)
                       const indentLength = match ? match[0].length : 0
                       const lineStart = line.from + indentLength
@@ -205,13 +211,15 @@
           }
         },
         leave: (node: any) => {
-          if (node === currentRule) currentRule = null
+          if (node?.type?.name === 'RuleSet') {
+            currentRule = null
+          }
         }
       })
 
       return diagnostics
-    } catch (err) {
-      console.error('Error in linter:', err)
+    } catch (error) {
+      console.error('Error in linter:', error)
       return []
     }
   })
@@ -332,9 +340,11 @@
   )
 
   // Add reactive statement to force plugin update when settings change
-  $: if (view && controllerSettings) {
-    view.dispatch(view.state.update())
-  }
+  $effect(() => {
+    if (view && controllerSettings) {
+      view.dispatch(view.state.update())
+    }
+  });
 
   function handleMouseDown(event: MouseEvent) {
     if (!event.altKey) return
@@ -353,7 +363,7 @@
     let found = false
 
     while ((match = regex.exec(lineText)) !== null) {
-      const [fullMatch, varName, multiplier = '1'] = match
+      const [fullMatch, varName] = match
       const start = line.from + match.index
       const end = start + fullMatch.length
 
