@@ -460,10 +460,6 @@
         overflow: auto;
     }
     
-    .editor-wrapper.dragging {
-        cursor: ew-resize;
-    }
-    
     :global(.drag-overlay) {
         position: fixed;
         background: rgba(0, 0, 0, 0.8);
