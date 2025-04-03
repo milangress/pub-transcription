@@ -33,16 +33,4 @@
     .emoji {
         font-size: 1.2em;
     }
-    .text {
-        font-size: 0.8em;
-        color: #666;
-        max-width: 120px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        background: none;
-        border: none;
-        padding: 0;
-        cursor: default;
-    }
 </style> 
