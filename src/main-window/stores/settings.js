@@ -9,35 +9,6 @@ const defaultSettings = {
     fontSize: 1.0
 };
 
-// Helper to transform SASS to CSS
-function transformSassToCSS(str, controllerSettings) {
-    if (!str) return '';
-    
-    // Remove SASS structure (selector and braces)
-    str = str.replace(/\..*{\n/gm, '')
-    str = str.replace(/^}$/gm, '')
-    // Remove comments
-    str = str.replace(/\/\/.*$/gm, '')
-    str = str.replace(/\/\*[\s\S]*?\*\//gm, '')
-
-    if (controllerSettings && Array.isArray(controllerSettings) && controllerSettings.length > 0) {
-        controllerSettings.forEach(setting => {
-            // Replace $variable * number[unit] pattern
-            const varPattern = new RegExp('\\$' + setting.var + '\\s*\\*\\s*([\\d.]+)([a-z%]+)?', 'g')
-            str = str.replace(varPattern, (match, number, unit) => {
-                const result = setting.value * parseFloat(number)
-                return unit ? result + unit : result
-            })
-
-            // Replace plain $variable pattern
-            const plainVarPattern = new RegExp('\\$' + setting.var + '\\b', 'g')
-            str = str.replace(plainVarPattern, setting.value)
-        })
-    }
-
-    return str.trim()
-}
-
 // Create the base store
 function createSettingsStore() {
     const { subscribe, set, update } = writable(defaultSettings);
@@ -91,16 +62,6 @@ function createSettingsStore() {
             });
         },
 
-        // Get a snapshot of current settings for committed sentences
-        getSnapshot() {
-            const current = get(store);
-            return JSON.parse(JSON.stringify({
-                controllerSettings: current.controllerSettings,
-                fontFamily: current.fontFamily,
-                inlineStyle: current.inlineStyle
-            }));
-        },
-
         // Load settings from electron store and defaults
         async load(inputDefaults) {
             if (initialized) return;
@@ -142,11 +103,6 @@ function createSettingsStore() {
 
 // Create the main settings store
 export const settings = createSettingsStore();
-
-// Derived store for compiled CSS
-export const compiledStyle = derived(settings, $settings => 
-    transformSassToCSS($settings.inlineStyle, $settings.controllerSettings)
-);
 
 // Derived store for just the controller values
 export const controllerValues = derived(settings, $settings => 
