@@ -226,27 +226,7 @@
 		transInfoMessages = [value, ...transInfoMessages]
 	})
 
-	const mapRange = (value, x1, y1, x2, y2) => (value - x1) * (y2 - x2) / (y1 - x1) + x2;
-
-	function setupControllers() {
-		$settings.controllerSettings.forEach((controller) => {
-			console.log("controller", controller)
-			window.setTimeout(() => {
-				console.log('set synth')
-				console.log("mySynth", mySynth)
-
-				if (mySynth) {
-					mySynth.channels[1].addListener("controlchange", e => {
-						if (e.controller.number === controller.knobNR) {
-							const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1])
-							settings.updateControllerValue(controller.var, Number.parseFloat(value.toFixed(2)))
-						}
-					});
-				}
-			}, 5000)
-		})
-	}
-	setupControllers()
+	
 
 	function clearAll() {
 		console.log("🗑️ Clearing all content");
