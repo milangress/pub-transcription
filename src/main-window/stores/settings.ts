@@ -1,4 +1,6 @@
-import { derived, get, writable } from 'svelte/store';
+import { derived, get, writable, type Writable } from 'svelte/store';
+import { WebMidi } from 'webmidi';
+import type { ControllerSetting, Settings } from '../types';
 
 import defaultInlineStyle from "../../../input-defaults/inlineStyle.js";
 import inputJson from "../../../input-defaults/input.json";
@@ -7,22 +9,31 @@ import defaultSvgFilters from "../../../input-defaults/svgFilters.js";
 import { mapRange } from "../../utils/math.js";
 
 // Default settings structure
-const defaultSettings = {
+const defaultSettings: Settings = {
     controllerSettings: [],
     inlineStyle: '',
     svgFilters: '',
 };
 
+interface SettingsStore extends Writable<Settings> {
+    updateControllerValue: (varName: string, newValue: number) => void;
+    resetController: (varName: string) => void;
+    init: () => Promise<void>;
+    setupControllers: (webMidi: typeof WebMidi) => void;
+    markUnsaved: () => void;
+    codeEditorContentSaved: { subscribe: Writable<boolean>['subscribe'] };
+}
+
 // Create the base store
-function createSettingsStore() {
-    const { subscribe, set, update } = writable(defaultSettings);
+function createSettingsStore(): SettingsStore {
+    const { subscribe, set, update } = writable<Settings>(defaultSettings);
     let initialized = false;
     const codeEditorContentSaved = writable(true);
 
     // Debounce helper
-    function debounce(func, delay) {
-        let timeout;
-        return function(...args) {
+    function debounce<T extends (...args: any[]) => void>(func: T, delay: number): (...args: Parameters<T>) => void {
+        let timeout: NodeJS.Timeout;
+        return function(this: any, ...args: Parameters<T>) {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(this, args), delay);
         };
@@ -37,12 +48,13 @@ function createSettingsStore() {
         codeEditorContentSaved.set(true);
     }, 1000);
 
-    const store = {
+    const store: SettingsStore = {
         subscribe,
         set,
+        update,
         
         // Update a specific controller value
-        updateControllerValue(varName, newValue) {
+        updateControllerValue(varName: string, newValue: number) {
             update(settings => {
                 const controller = settings.controllerSettings.find(c => c.var === varName);
                 if (controller) {
@@ -56,7 +68,7 @@ function createSettingsStore() {
         },
 
         // Reset a controller to its default value
-        resetController(varName) {
+        resetController(varName: string) {
             update(settings => {
                 const controller = settings.controllerSettings.find(c => c.var === varName);
                 if (controller) {
@@ -77,7 +89,7 @@ function createSettingsStore() {
                 
                 // Initialize with defaults and saved values
                 update(current => ({
-                    controllerSettings: [...(inputJson.controllers || [])],
+                    controllerSettings: [...(inputJson.controllers || [])] as ControllerSetting[],
                     inlineStyle: savedInlineStyle || defaultInlineStyle,
                     svgFilters: savedSvgFilters || defaultSvgFilters,
                 }));
@@ -91,38 +103,42 @@ function createSettingsStore() {
             }
         },
 
-        setupControllers(WebMidi) {
+        setupControllers(webMidi: typeof WebMidi) {
+            if (!webMidi || !webMidi.inputs.length) {
+                console.warn("No MIDI device detected.");
+                return;
+            }
 
-            if (!WebMidi && !WebMidi.inputs.length) console.warn("No MIDI device detected.");
-            const mySynth = WebMidi.inputs[0];
-            store.controllerSettings.forEach((controller) => {
-                console.log("controller", controller)
+            const mySynth = webMidi.inputs[0];
+            const currentSettings = get(store);
+
+            currentSettings.controllerSettings.forEach((controller) => {
+                console.log("controller", controller);
                 window.setTimeout(() => {
-                    console.log('set synth')
-                    console.log("mySynth", mySynth)
+                    console.log('set synth');
+                    console.log("mySynth", mySynth);
     
                     mySynth.channels[1].addListener("controlchange", e => {
                         if (e.controller.number === controller.knobNR) {
-                            const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1])
-                            settings.updateControllerValue(controller.var, Number.parseFloat(value.toFixed(2)))
+                            const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1]);
+                            store.updateControllerValue(controller.var, Number.parseFloat(value.toFixed(2)));
                         }
                     });
                     
-                }, 5000)
-            })
+                }, 5000);
+            });
         },
 
         // Mark content as unsaved and trigger save
         markUnsaved() {
             codeEditorContentSaved.set(false);
             debouncedSave();
-        }
-    };
+        },
 
-    return {
-        ...store,
         codeEditorContentSaved: { subscribe: codeEditorContentSaved.subscribe }
     };
+
+    return store;
 }
 
 // Create the main settings store
