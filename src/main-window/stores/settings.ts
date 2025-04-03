@@ -88,8 +88,11 @@ function createSettingsStore(): SettingsStore {
                 const savedSvgFilters = await window.electronAPI.getStoreValue('svgFilters');
                 
                 // Initialize with defaults and saved values
+                const controllers = (inputJson.controllers || []) as ControllerSetting[];
+                
                 update(current => ({
-                    controllerSettings: [...(inputJson.controllers || [])] as ControllerSetting[],
+                    ...defaultSettings,
+                    controllerSettings: controllers,
                     inlineStyle: savedInlineStyle || defaultInlineStyle,
                     svgFilters: savedSvgFilters || defaultSvgFilters,
                 }));
