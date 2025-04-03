@@ -3,10 +3,8 @@ import { derived, get, writable } from 'svelte/store';
 // Default settings structure
 const defaultSettings = {
     controllerSettings: [],
-    fontFamily: { name: 'Garamondt-Regular' },
     inlineStyle: '',
     svgFilters: '',
-    fontSize: 1.0
 };
 
 // Create the base store
@@ -78,7 +76,6 @@ function createSettingsStore() {
                     controllerSettings: [...(inputDefaults.controllers || [])],
                     inlineStyle: savedInlineStyle || inputDefaults.inlineStyle || '',
                     svgFilters: savedSvgFilters || inputDefaults.svgFilters || '',
-                    fontFamily: current.fontFamily || defaultSettings.fontFamily
                 }));
                 
                 initialized = true;
