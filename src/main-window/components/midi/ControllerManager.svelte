@@ -1,29 +1,33 @@
 <script>
-    import MIDIKnobPreview from "./MIDIKnobPreview.svelte"
+    import { settings } from '../../stores/settings.js';
+    import MIDIKnobPreview from "./MIDIKnobPreview.svelte";
 
-    export let controllerSettings
+    export let controllerSettings;
 
     function resetValueToDefault(item) {
-        controllerSettings.find(x => x.name === item.name).value = item.default
-        controllerSettings = controllerSettings
-
+        settings.resetController(item.var);
     }
 
-    let copySuccess = false
+    let copySuccess = false;
     const copyContent = async (text) => {
         try {
-            const varNameAsSass = "$" + text
+            const varNameAsSass = "$" + text;
             await navigator.clipboard.writeText(varNameAsSass);
             console.log('Content copied to clipboard');
-            copySuccess = true
+            copySuccess = true;
             setTimeout(() => {
-                copySuccess = false
-            }, 100)
+                copySuccess = false;
+            }, 100);
         } catch (err) {
             console.error('Failed to copy: ', err);
         }
     }
+
+    function handleSliderChange(item, event) {
+        settings.updateControllerValue(item.var, parseFloat(event.target.value));
+    }
 </script>
+
 <hr>
 <div class="controller-wrapper">
 {#each controllerSettings as item}
@@ -52,7 +56,16 @@
             <p>{item.value}</p>
         </div>
         <div class="input-slider">
-            <input type="range" id={item.name} name={item.name} min={item.range[0]} max={item.range[1]} step={item.step} bind:value={item.value}>
+            <input 
+                type="range" 
+                id={item.name} 
+                name={item.name} 
+                min={item.range[0]} 
+                max={item.range[1]} 
+                step={item.step} 
+                value={item.value}
+                on:input={(e) => handleSliderChange(item, e)}
+            >
         </div>
     </div>
 {/each}
