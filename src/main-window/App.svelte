@@ -5,6 +5,7 @@
 	import ControllerManager from "./components/midi/ControllerManager.svelte";
 	import BlockTxt from "./components/pageElement/BlockTxt.svelte";
 	import PrintStatusBar from './components/PrintStatusBar.svelte';
+	import TransInfoMessagesLog from './components/TransInfoMessagesLog.svelte';
 	import { settings } from './stores/settings.js';
 
 
@@ -222,12 +223,6 @@
 		}
 	}
 
-	window.electronAPI.onTranscriptionStatus((event, value) => {
-		transInfoMessages = [value, ...transInfoMessages]
-	})
-
-	
-
 	function clearAll() {
 		console.log("🗑️ Clearing all content");
 		committedContent = []
@@ -335,9 +330,7 @@
 	<!--	<p>{item}</p>-->
 	<!--{/each}-->
 	<!--<hr>-->
-	{#each transInfoMessages as item}
-		<p>{item}</p>
-	{/each}
+	<TransInfoMessagesLog />
 		</div>
 	</div>
 
