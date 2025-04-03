@@ -1,25 +1,32 @@
-<script>
+<script lang="ts">
   import LogContainer from '@components/print-window/LogContainer.svelte'
   import PageWrapper from '@components/print-window/PageWrapper.svelte'
   import PreviewButton from '@components/ui/PreviewButton.svelte'
   import { onMount } from 'svelte'
 
-  let status = 'Waiting for print job...'
-  let lastJobTime = 'Never'
-  let stylesLoaded = 'No'
-  let currentScale = 1
-  let children = 0
-  let printLogs = []
-  let currentPrintId = null
-  let isPrintPreview = false
-  let previewTimer
-  let currentAttempt = 0
-  let maxRetries = 0
-  let queueLength = 0
-  let isQueueProcessing = false
-  let printStartTime = null
+  let status = $state('Waiting for print job...')
+  let lastJobTime = $state('Never')
+  let stylesLoaded = $state('No')
+  let currentScale = $state(1)
+  let children = $state<NodeListOf<HTMLSpanElement> | null>(null)
+  let printLogs = $state<Array<{
+    timestamp: string
+    message: string
+    pdfUrl: string | null
+    spanCount: number | null
+    type: string
+    printId: string | null
+  }>>([])
+  let currentPrintId = $state<string | null>(null)
+  let isPrintPreview = $state(false)
+  let previewTimer = $state<NodeJS.Timeout | null>(null)
+  let currentAttempt = $state(0)
+  let maxRetries = $state(0)
+  let queueLength = $state(0)
+  let isQueueProcessing = $state(false)
+  let printStartTime = $state<number | null>(null)
 
-  function addLogEntry(message, pdfUrl = null, spanCount = null, type = 'client') {
+  function addLogEntry(message: string, pdfUrl: string | null = null, spanCount: number | null = null, type = 'client') {
     const timestamp = new Date().toLocaleTimeString()
     printLogs = [
       {
@@ -34,7 +41,7 @@
     ]
   }
 
-  function updateLogEntryWithPdfUrl(printId, pdfUrl) {
+  function updateLogEntryWithPdfUrl(printId: string, pdfUrl: string) {
     printLogs = printLogs.map((log) => {
       if (log.printId === printId) {
         return { ...log, pdfUrl }
@@ -245,18 +252,18 @@
           container.innerHTML = content
           children = container.querySelectorAll('span')
 
-          if (children.length === 0) {
+          if (children && children.length === 0) {
             console.warn('⚠️ Print content contains no text spans')
           }
 
           status = 'Content loaded, waiting 5 seconds before print...'
-          addLogEntry('Content loaded, preparing to print', null, children.length)
+          addLogEntry('Content loaded, preparing to print', null, children?.length ?? 0)
 
           // Wait for debug/inspection
           await new Promise((resolve) => setTimeout(resolve, 5000))
 
           status = 'Printing...'
-          addLogEntry('Starting print process...', null, children.length)
+          addLogEntry('Starting print process...', null, children?.length ?? 0)
 
           console.log('Executing print with settings:', { ...settings, printId: currentPrintId })
 
