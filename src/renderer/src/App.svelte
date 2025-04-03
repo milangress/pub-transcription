@@ -16,9 +16,6 @@
       TxtObject
   } from './types'
 
-  let loremIpsum: string =
-    'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
-
   let unwantedTragmentsDontCommit: string[] = [
     '[ Silence ]',
     '[silence]',

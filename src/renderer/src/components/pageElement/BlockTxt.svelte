@@ -1,6 +1,6 @@
 <script lang="ts">
+  import type { BlockTxtSettings, ControllerSetting } from '@/types'
   import { createEventDispatcher } from 'svelte'
-  import type { BlockTxtSettings, ControllerSetting } from '../../types'
   import { checkPosition } from './checkPosition.js'
 
   const dispatch = createEventDispatcher<{

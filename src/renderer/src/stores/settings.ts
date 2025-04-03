@@ -2,11 +2,11 @@ import { derived, get, writable, type Writable } from 'svelte/store'
 import { WebMidi } from 'webmidi'
 import type { ControllerSetting, Settings } from '../types'
 
-import defaultInlineStyle from '../../../input-defaults/inlineStyle.js'
-import inputJson from '../../../input-defaults/input.json'
-import defaultSvgFilters from '../../../input-defaults/svgFilters.js'
+import defaultInlineStyle from '@assets/input-defaults/inlineStyle.js'
+import inputJson from '@assets/input-defaults/input.json'
+import defaultSvgFilters from '@assets/input-defaults/svgFilters.js'
 
-import { mapRange } from '../../utils/math.js'
+import { mapRange } from '@utils/math.js'
 
 // Default settings structure
 const defaultSettings: Settings = {

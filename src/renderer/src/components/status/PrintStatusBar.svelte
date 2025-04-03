@@ -1,8 +1,8 @@
 <script lang="ts">
+  import type { PrintStatusMessage } from '@preload/types.d.ts'
   import { onMount } from 'svelte'
   import { fly } from 'svelte/transition'
-  import type { PrintStatusMessage } from '../../../electron/types'
-  import PrintStatus from '../print-window/PrintStatus.svelte'
+  import PrintStatus from './PrintStatus.svelte'
 
   interface StatusEmojis {
     LOCAL_REQUEST: string

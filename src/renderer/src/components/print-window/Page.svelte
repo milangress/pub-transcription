@@ -1,6 +1,4 @@
 <script>
-  import { onMount } from 'svelte'
-
   // Props
   export let scale = 1
   export let onScaleChange = undefined

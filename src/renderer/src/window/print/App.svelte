@@ -1,6 +1,6 @@
 <script>
   import LogContainer from '@components/print-window/LogContainer.svelte'
-  import PageWrapper from '@components/shared/page/PageWrapper.svelte'
+  import PageWrapper from '@components/print-window/PageWrapper.svelte'
   import PreviewButton from '@components/ui/PreviewButton.svelte'
   import { onMount } from 'svelte'
 

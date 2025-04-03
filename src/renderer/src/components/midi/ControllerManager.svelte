@@ -1,5 +1,5 @@
 <script>
-  import { settings } from '../../stores/settings.js'
+  import { settings } from '@stores/settings'
   import MIDIKnobPreview from './MIDIKnobPreview.svelte'
 
   export let controllerSettings
