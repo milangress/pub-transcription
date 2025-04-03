@@ -8,7 +8,7 @@
 	import PrintStatusBar from './components/PrintStatusBar.svelte';
 	import TransInfoMessagesLog from './components/status/TransInfoMessagesLog.svelte';
 	import { settings } from './stores/settings.js';
-	import type { FontFamily, PrinterSettings, PrintSettings, TxtObject } from './types';
+	import type { BlockTxtSettings, FontFamily, PrinterSettings, PrintSettings, TxtObject } from './types';
 
 	let loremIpsum: string = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
 
@@ -22,7 +22,7 @@
 
 	let currentSentence: TxtObject = {} as TxtObject
 
-	let currentSentenceRef: HTMLElement | null = null
+	let currentSentenceRef: BlockTxt | null = null
 
 	let fontFamilys: FontFamily[] = [
 		{ name: 'Garamondt-Regular' },
@@ -85,10 +85,16 @@
 
 	function formatTTSasTxtObject(tts: string): TxtObject {
 		const removeNEWKeyword = String(tts).replace('NEW', '').trim()
+		const txtSettings: BlockTxtSettings = {
+			inlineStyle: $settings.inlineStyle,
+			controllerSettings: $settings.controllerSettings,
+			fontFamily: $settings.fontFamily,
+			svgFilters: $settings.svgFilters
+		}
 		return {
 			type: BlockTxt,
 			content: removeNEWKeyword,
-			settings: JSON.parse(JSON.stringify($settings)), // Deep copy of current settings
+			settings: JSON.parse(JSON.stringify(txtSettings)), // Deep copy of current settings
 			id: Math.random()
 		}
 	}
@@ -197,7 +203,6 @@
 				},
 				inlineStyle: $settings.inlineStyle,
 				svgFilters: $settings.svgFilters
-				
 			};
 			
 			window.electronAPI.print(pageContent, printSettings);
