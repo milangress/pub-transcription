@@ -1,15 +1,35 @@
-<script>
-    import PrintStatus from './PrintStatus.svelte';
+<script lang="ts">
     import { onMount } from 'svelte';
-    import { fade } from 'svelte/transition';
     import { fly } from 'svelte/transition';
-    let printStatuses = new Map();
+    import type { PrintStatusMessage } from '../../../electron/types';
+    import PrintStatus from './PrintStatus.svelte';
+
+    interface StatusEmojis {
+        LOCAL_REQUEST: string;
+        QUEUED: string;
+        PRINT_START: string;
+        PRINT_COMPLETE: {
+            SUCCESS: string;
+            ERROR: string;
+        };
+        PDF_SAVE: {
+            SUCCESS: string;
+        };
+        PRINT_ERROR: string;
+    }
+
+    interface StatusEntry {
+        emoji: string;
+        text: string;
+    }
+
+    let printStatuses: Map<string, StatusEntry> = new Map();
     let successPrintCount = 0;
     let successPdfCount = 0;
     let failureCount = 0;
     
     // Status emoji mapping based on action and status
-    const STATUS_EMOJIS = {
+    const STATUS_EMOJIS: StatusEmojis = {
         LOCAL_REQUEST: '🥚',
         QUEUED: '🐣',
         PRINT_START: '🎀',
@@ -23,7 +43,7 @@
         PRINT_ERROR: '🥵'
     };
     
-    function updateStatus(printId, newStatus, text = '') {
+    function updateStatus(printId: string, newStatus: string, text = ''): void {
         if (!printId) {
             console.warn('⚠️ Attempted to update status without printId');
             return;
@@ -33,7 +53,7 @@
         printStatuses = printStatuses; // Trigger reactivity
     }
 
-    function scheduleSuccessCleanup(id, type) {
+    function scheduleSuccessCleanup(id: string, type: 'print' | 'PDF'): void {
         setTimeout(() => {
             printStatuses.delete(id);
             printStatuses = printStatuses; // Trigger reactivity
@@ -41,16 +61,16 @@
         }, 20000);
     }
 
-    export function addPrintRequest() {
+    export function addPrintRequest(): number {
         const printId = Date.now();
-        updateStatus(printId, STATUS_EMOJIS.LOCAL_REQUEST, 'Print request created');
+        updateStatus(printId.toString(), STATUS_EMOJIS.LOCAL_REQUEST, 'Print request created');
         console.log(`🥚 Added new print request with ID: ${printId}`);
         return printId;
     }
 
     // Add print request handler
     onMount(() => {
-        window.electronAPI.onPrintQueued((event, { success, error, printId }) => {
+        window.electronAPI.onPrintQueued((event: Event, { success, error, printId }: { success: boolean; error?: string; printId: string }) => {
             if (success) {
                 updateStatus(printId, '🐣', 'Print job queued successfully');
             } else {
@@ -58,7 +78,7 @@
             }
         });
 
-        window.electronAPI.onPrintStatus((event, message) => {
+        window.electronAPI.onPrintStatus((event: Event, message: PrintStatusMessage) => {
             const { id, action, status, ...details } = message;
             let emoji = '❓';
             let text = 'Unknown status';

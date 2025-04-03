@@ -1,7 +1,7 @@
-<script>
-    export let knobNR = 0
-    let maxKnobs = 16
-    let midiKnobs = [...Array(maxKnobs).keys()]
+<script lang="ts">
+    export let knobNR: number = 0;
+    const maxKnobs: number = 16;
+    const midiKnobs: number[] = [...Array(maxKnobs).keys()];
 </script>
 
 <div class="midiController">
