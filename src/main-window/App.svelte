@@ -1,8 +1,4 @@
 <script>
-	import defaultInlineStyle from "../../input-defaults/inlineStyle.js";
-	import inputJson from "../../input-defaults/input.json";
-	import defaultSvgFilters from "../../input-defaults/svgFilters.js";
-	
 	import { tick } from 'svelte';
 	import { writable } from 'svelte/store';
 	import CodeEditor from "./components/CodeEditor.svelte";
@@ -11,7 +7,6 @@
 	import PrintStatusBar from './components/PrintStatusBar.svelte';
 	import { settings } from './stores/settings.js';
 
-	console.log(inputJson)
 
 	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
 
@@ -72,13 +67,7 @@
 
 	// Initialize settings when the app starts
 	$: {
-		if (!$settings.controllerSettings.length) {
-			settings.load({
-				controllers: inputJson.controllers,
-				inlineStyle: defaultInlineStyle,
-				svgFilters: defaultSvgFilters
-			});
-		}
+		if (!$settings.controllerSettings.length) settings.init();
 	}
 
 	$: codeEditorContentSaved = settings.codeEditorContentSaved;
@@ -119,14 +108,6 @@
 		}
 	}
 
-	// Update the onKeyDown handler to mark content as unsaved
-	function onKeyDown(e) {
-		const inputSettings = inputJson.keys[e.key]
-		if (inputSettings) {
-			eval(`${inputSettings.function}()`)
-		}
-		settings.markUnsaved();
-	}
 
 	// Watch for code changes and mark as unsaved
 	$: if ($settings.inlineStyle || $settings.svgFilters) {
@@ -248,7 +229,7 @@
 	const mapRange = (value, x1, y1, x2, y2) => (value - x1) * (y2 - x2) / (y1 - x1) + x2;
 
 	function setupControllers() {
-		inputJson.controllers.forEach((controller) => {
+		$settings.controllerSettings.forEach((controller) => {
 			console.log("controller", controller)
 			window.setTimeout(() => {
 				console.log('set synth')
