@@ -15,11 +15,14 @@
         "noImplicitAny": false,
         "isolatedModules": true,
         "verbatimModuleSyntax": true,
+        "preserveValueImports": false,
+        "importsNotUsedAsValues": "remove",
         "types": ["svelte", "node"],
         "baseUrl": ".",
         "paths": {
             "@/*": ["src/*"]
-        }
+        },
+        "outDir": "dist"
     },
     "include": [
         "src/**/*.ts",
@@ -31,6 +34,6 @@
     "exclude": [
         "node_modules/*",
         "public/*",
-        "**/*.js"
+        "dist/*"
     ]
 } 
