@@ -1,32 +1,37 @@
-<script>
-    import { autocompletion, closeBrackets, completionKeymap } from "@codemirror/autocomplete";
+<script lang="ts">
+    import { autocompletion, closeBrackets, completionKeymap, type Completion } from "@codemirror/autocomplete";
     import { defaultKeymap, toggleComment, toggleLineComment } from "@codemirror/commands";
     import { html } from "@codemirror/lang-html";
     import { sass, sassLanguage } from "@codemirror/lang-sass";
     import { syntaxTree } from "@codemirror/language";
-    import { linter, lintGutter } from "@codemirror/lint";
+    import { linter, lintGutter, type Diagnostic } from "@codemirror/lint";
     import { EditorState } from "@codemirror/state";
-    import { Decoration, EditorView, keymap, ViewPlugin, WidgetType } from "@codemirror/view";
+    import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type DecorationSet } from "@codemirror/view";
     import { basicSetup } from "codemirror";
     import { createEventDispatcher, onMount } from 'svelte';
     import { settings } from '../stores/settings.js';
+    import type { ControllerSetting, FontFamily } from '../types';
 
-    export let value = "";
-    export let language = "css";
-    export let controllerSettings = [];
-    export let svgFiltersCode = "";
-    export let fontFamilys = [];
-    const dispatch = createEventDispatcher();
-    let element;
-    let view;
-    let filterIds = [];
+    export let value: string = "";
+    export let language: "css" | "html" = "css";
+    export let controllerSettings: ControllerSetting[] = [];
+    export let svgFiltersCode: string = "";
+    export let fontFamilys: FontFamily[] = [];
+
+    const dispatch = createEventDispatcher<{
+        change: string;
+    }>();
+
+    let element: HTMLDivElement;
+    let view: EditorView;
+    let filterIds: string[] = [];
     let isUpdatingFromPreview = false;
     let isDragging = false;
     let dragStartX = 0;
-    let currentVar = null;
-    let currentController = null;
+    let currentVar: string | null = null;
+    let currentController: ControllerSetting | null = null;
 
-    function extractFilterIds(svgCode) {
+    function extractFilterIds(svgCode: string): string[] {
         const parser = new DOMParser();
         const doc = parser.parseFromString(svgCode, 'text/html');
         const filters = doc.querySelectorAll('filter[id]');
@@ -38,29 +43,29 @@
         console.log('Available filters:', filterIds);
     }
 
-    function createCompletions(context) {
+    function createCompletions(context: any) {
         // Check for font-family completion
-        let before = context.matchBefore(/font-family:\s*[^;]*/)
+        let before = context.matchBefore(/font-family:\s*[^;]*/);
         if (before) {
-            let word = context.matchBefore(/[^:\s;]*$/)
-            if (!word && !context.explicit) return null
+            let word = context.matchBefore(/[^:\s;]*$/);
+            if (!word && !context.explicit) return null;
 
-            const options = fontFamilys.map(font => ({
+            const options: Completion[] = fontFamilys.map(font => ({
                 label: font.name,
                 type: 'class',
                 boost: 1
             }));
 
             return {
-                from: word.from,
+                from: word?.from ?? before.from,
                 options,
                 validFor: /^[^;]*$/
-            }
+            };
         }
 
         // Check for MIDI variable completion
-        let varWord = context.matchBefore(/\$\w*/)
-        if (varWord && !(varWord.from == varWord.to && !context.explicit)) {
+        let varWord = context.matchBefore(/\$\w*/);
+        if (varWord && varWord.from !== null && !(varWord.from === varWord.to && !context.explicit)) {
             return {
                 from: varWord.from,
                 validFor: /^\$\w*$/,
@@ -70,12 +75,12 @@
                     detail: `Current value: ${setting.value}`,
                     boost: 1
                 }))
-            }
+            };
         }
 
         // Check for filter completion
-        let filterWord = context.matchBefore(/url\(#[^)]*/)
-        if (filterWord && !(filterWord.from == filterWord.to && !context.explicit)) {
+        let filterWord = context.matchBefore(/url\(#[^)]*/);
+        if (filterWord && filterWord.from !== null && !(filterWord.from === filterWord.to && !context.explicit)) {
             console.log('Filter completion triggered');
             const hashIndex = filterWord.text.lastIndexOf('#');
             
@@ -97,7 +102,7 @@
                         el.textContent = 'Preview';
                         return el;
                     },
-                    apply: (view, completion, from, to) => {
+                    apply: (view: EditorView, completion: Completion, from: number, to: number) => {
                         const insert = hasClosing ? completion.label : `${completion.label});`;
                         view.dispatch({
                             changes: {
@@ -108,7 +113,7 @@
                         });
                     }
                 }))
-            }
+            };
         }
 
         // Let the default completions handle everything else
@@ -128,12 +133,12 @@
     // Remove all decoration-related code and keep only the linter
     const duplicatePropertiesLinter = linter(view => {
         try {
-            const diagnostics = [];
-            const properties = new Map();
-            let currentRule = null;
+            const diagnostics: Diagnostic[] = [];
+            const properties = new Map<string, Map<string, Array<{ node: any; line: any }>>>();
+            let currentRule: any = null;
             
             syntaxTree(view.state).iterate({
-                enter: (node) => {
+                enter: (node: any) => {
                     if (node?.type?.name === "RuleSet") {
                         currentRule = node;
                     }
@@ -143,18 +148,18 @@
                         if (!property) return;
                         
                         const line = view.state.doc.lineAt(node.from);
-                        if (line.text.trim().startsWith('//')) return;
+                        if (!line || line.text.trim().startsWith('//')) return;
                         
                         const ruleKey = currentRule ? currentRule.from : 'global';
                         if (!properties.has(ruleKey)) {
                             properties.set(ruleKey, new Map());
                         }
                         
-                        const ruleProperties = properties.get(ruleKey);
+                        const ruleProperties = properties.get(ruleKey)!;
                         if (!ruleProperties.has(property)) {
                             ruleProperties.set(property, [{ node, line }]);
                         } else {
-                            const existing = ruleProperties.get(property);
+                            const existing = ruleProperties.get(property)!;
                             existing.push({ node, line });
                             console.log(`Found duplicate '${property}' on line ${line.number} (first used on line ${existing[0].line.number})`);
                             
@@ -166,7 +171,7 @@
                                 message: `Duplicate '${property}' (-> ${existing[0].line.number})`,
                                 actions: [{
                                     name: "// Comment",
-                                    apply(view, from, to) {
+                                    apply(view: EditorView, from: number, to: number) {
                                         const lineStart = line.from + line.text.match(/^\s*/)[0].length;
                                         view.dispatch({
                                             changes: { from: lineStart, insert: "// " }
@@ -177,7 +182,7 @@
                         }
                     }
                 },
-                leave: (node) => {
+                leave: (node: any) => {
                     if (node === currentRule) currentRule = null;
                 }
             });
@@ -189,12 +194,11 @@
         }
     });
 
-
     // Helper to transform SASS values
-    function transformSassValue(str, settings) {
+    function transformSassValue(str: string, settings: ControllerSetting[]): string | null {
         if (!settings || !Array.isArray(settings) || settings.length === 0) return null;
         
-        const values = [];
+        const values: string[] = [];
         let foundAny = false;
         
         // Find all $variables in the string
@@ -209,9 +213,9 @@
                 foundAny = true;
                 if (number) {
                     const result = setting.value * parseFloat(number);
-                    values.push(unit ? result + unit : result);
+                    values.push(unit ? result + unit : result.toString());
                 } else {
-                    values.push(setting.value);
+                    values.push(setting.value.toString());
                 }
             }
         }
@@ -220,16 +224,18 @@
     }
 
     class ValueWidget extends WidgetType {
-        constructor(value) {
+        value: string;
+
+        constructor(value: string) {
             super();
             this.value = value;
         }
 
-        eq(other) {
+        eq(other: ValueWidget): boolean {
             return other.value === this.value;
         }
 
-        toDOM() {
+        toDOM(): HTMLElement {
             const span = document.createElement("span");
             span.className = "cm-sass-value";
             span.style.cssText = `
@@ -244,11 +250,11 @@
             return span;
         }
 
-        ignoreEvent() { return true; }
+        ignoreEvent(): boolean { return true; }
     }
 
-    function createValueDecorations(view) {
-        const widgets = [];
+    function createValueDecorations(view: EditorView): DecorationSet {
+        const widgets: any[] = [];
         const settings = controllerSettings;
 
         for (let {from, to} of view.visibleRanges) {
@@ -278,20 +284,17 @@
     const EditorTheme = EditorView.theme({
         '.ͼk': {
             backgroundColor: 'rgba(0, 0, 0, 0.1)',
-            // outline: '1px solid lightblue',
-            // borderRadius: '0.2em',
-            // padding: '0em 0.2em'
         }
     });
 
     const sassValuePlugin = ViewPlugin.fromClass(class {
-        decorations;
+        decorations: DecorationSet;
 
-        constructor(view) {
+        constructor(view: EditorView) {
             this.decorations = createValueDecorations(view);
         }
 
-        update(update) {
+        update(update: { view: EditorView }) {
             this.decorations = createValueDecorations(update.view);
         }
     }, {
@@ -303,7 +306,7 @@
         view.dispatch(view.state.update());
     }
 
-    function handleMouseDown(event) {
+    function handleMouseDown(event: MouseEvent) {
         if (!event.altKey) return;
         
         // Get the position in the editor
@@ -337,7 +340,7 @@
                     element.classList.add('dragging');
                     
                     // Create and show the drag overlay
-                    const overlay = document.createElement('div');
+                    const overlay = document.createElement('div') as HTMLDivElement;
                     overlay.className = 'drag-overlay';
                     overlay.textContent = `${varName}: ${controller.value}`;
                     document.body.appendChild(overlay);
@@ -357,14 +360,14 @@
         }
     }
 
-    function handleMouseMove(event) {
-        if (!isDragging || !currentController) return;
+    function handleMouseMove(event: MouseEvent) {
+        if (!isDragging || !currentController || !currentVar) return;
         
-        const overlay = document.querySelector('.drag-overlay');
-        if (overlay) {
-            overlay.style.left = `${event.clientX + 10}px`;
-            overlay.style.top = `${event.clientY - 25}px`;
-        }
+        const overlay = document.querySelector('.drag-overlay') as HTMLDivElement | null;
+        if (!overlay) return;
+        
+        overlay.style.left = `${event.clientX + 10}px`;
+        overlay.style.top = `${event.clientY - 25}px`;
         
         const dx = event.clientX - dragStartX;
         const sensitivity = 0.01; // Adjust this value to control drag sensitivity
@@ -373,9 +376,7 @@
         const newValue = Number.parseFloat((currentController.value + delta).toFixed(2));
         settings.updateControllerValue(currentVar, newValue);
         
-        if (overlay) {
-            overlay.textContent = `${currentVar}: ${newValue}`;
-        }
+        overlay.textContent = `${currentVar}: ${newValue}`;
         
         dragStartX = event.clientX;
     }
