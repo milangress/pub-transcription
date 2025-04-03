@@ -3,7 +3,8 @@
 /// <reference path="../electron/types.d.ts" />
 
 declare module "*.svelte" {
-    const component: any;
+    import type { ComponentType } from "svelte";
+    const component: ComponentType;
     export default component;
 }
 
@@ -17,4 +18,27 @@ declare module "svelte" {
         intro?: boolean;
         $$inline?: boolean;
     }
-} 
+}
+
+// Add environment variables type support
+interface ImportMetaEnv {
+    VITE_APP_TITLE: string;
+    // Add other env variables here
+}
+
+interface ImportMeta {
+    readonly env: ImportMetaEnv;
+}
+
+// Add any global types here
+declare global {
+    interface Window {
+        electron?: {
+            // Add your IPC methods here
+            send: (channel: string, data?: any) => void;
+            receive: (channel: string, func: Function) => void;
+        };
+    }
+}
+
+export { };
