@@ -10,9 +10,16 @@ export interface FontFamily {
     name: string;
 }
 
-export interface PrinterSettings extends Omit<ElectronPrintSettings, 'printId'> {
+export interface PrinterSettings {
     deviceName: string;
     forcePrint: boolean;
+}
+
+export interface BlockTxtSettings {
+    inlineStyle: string;
+    controllerSettings: ControllerSetting[];
+    fontFamily?: FontFamily;
+    svgFilters?: string;
 }
 
 export interface ControllerSetting {
@@ -23,19 +30,15 @@ export interface ControllerSetting {
     step: number;
     knobNR: number;
     range: [number, number];
-    keys: {
-        up: string;
-        down: string;
-    };
+    keys?: string[];
 }
 
 export interface Settings {
     controllerSettings: ControllerSetting[];
     inlineStyle: string;
     svgFilters: string;
+    fontFamily?: FontFamily;
 }
-
-export interface BlockTxtSettings extends Settings {}
 
 export interface TxtObject {
     type: typeof SvelteComponent;
@@ -45,11 +48,7 @@ export interface TxtObject {
 }
 
 // Re-export electron types
-export type {
-    PrintRequest, PrintSettings,
-    PrintStatusMessage,
-    QueueStatus
-} from '../../electron/types';
+export type { PrintRequest, ElectronPrintSettings as PrintSettings, PrintStatusMessage, QueueStatus };
 
 declare global {
     interface Window {

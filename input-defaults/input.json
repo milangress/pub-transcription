@@ -18,11 +18,7 @@
       "default": 0,
       "step": 5,
       "knobNR": 0,
-      "range": [0, 255],
-      "keys": {
-        "up": "l",
-        "down": "L"
-      }
+      "range": [0, 255]
     },
     {
       "name": "BGGreen",
@@ -31,11 +27,7 @@
       "default": 0,
       "step": 5,
       "knobNR": 1,
-      "range": [0, 255],
-      "keys": {
-        "up": "l",
-        "down": "L"
-      }
+      "range": [0, 255]
     },
     {
       "name": "BGBlue",
@@ -44,11 +36,7 @@
       "default": 0,
       "step": 5,
       "knobNR": 2,
-      "range": [0, 255],
-      "keys": {
-        "up": "l",
-        "down": "L"
-      }
+      "range": [0, 255]
     },
     {
       "name": "BGAlpha",
@@ -57,11 +45,7 @@
       "default": 0,
       "step": 0.05,
       "knobNR": 3,
-      "range": [0, 1],
-      "keys": {
-        "up": "l",
-        "down": "L"
-      }
+      "range": [0, 1]
     },
     {
       "name": "midi1",
@@ -70,11 +54,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 4,
-      "range": [0, 1],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0, 1]
     },
     {
       "name": "midi2",
@@ -83,11 +63,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 5,
-      "range": [0, 1],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0, 1]
     },
     {
       "name": "midi3",
@@ -96,11 +72,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 6,
-      "range": [0, 1],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0, 1]
     },
     {
       "name": "midi4",
@@ -109,11 +81,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 7,
-      "range": [0, 1],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0, 1]
     },
     {
       "name": "midi5",
@@ -122,11 +90,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 8,
-      "range": [0, 10],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0, 10]
     },
     {
       "name": "midi6",
@@ -135,11 +99,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 9,
-      "range": [0, 10],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0, 10]
     },
     {
       "name": "midi7",
@@ -148,11 +108,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 10,
-      "range": [0, 10],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0, 10]
     },
     {
       "name": "midi8",
@@ -161,11 +117,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 11,
-      "range": [0, 10],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0, 10]
     },
 
     {
@@ -175,11 +127,7 @@
       "default": 1,
       "step": 0.1,
       "knobNR": 15,
-      "range": [0.5, 4],
-      "keys": {
-        "up": "y",
-        "down": "Y"
-      }
+      "range": [0.5, 4]
     },
     {
       "name": "rotation",
@@ -188,11 +136,7 @@
       "default": 0,
       "step": 1,
       "knobNR": 12,
-      "range": [-20, 20],
-      "keys": {
-        "up": "x",
-        "down": "X"
-      }
+      "range": [-20, 20]
     }
   ]
 }
