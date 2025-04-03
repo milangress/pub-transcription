@@ -1,8 +1,8 @@
 <script>
   import { onMount } from 'svelte'
+  import LogContainer from '../../components/print-window/LogContainer.svelte'
+  import PreviewButton from '../../components/ui/PreviewButton.svelte'
   import PageWrapper from '../shared/page/PageWrapper.svelte'
-  import LogContainer from './LogContainer.svelte'
-  import PreviewButton from './PreviewButton.svelte'
 
   let status = 'Waiting for print job...'
   let lastJobTime = 'Never'

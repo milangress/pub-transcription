@@ -1,9 +1,9 @@
 <script lang="ts">
   import {
-    autocompletion,
-    closeBrackets,
-    completionKeymap,
-    type Completion
+      autocompletion,
+      closeBrackets,
+      completionKeymap,
+      type Completion
   } from '@codemirror/autocomplete'
   import { defaultKeymap, toggleComment, toggleLineComment } from '@codemirror/commands'
   import { html } from '@codemirror/lang-html'
@@ -12,17 +12,17 @@
   import { linter, lintGutter, type Diagnostic } from '@codemirror/lint'
   import { EditorState } from '@codemirror/state'
   import {
-    Decoration,
-    EditorView,
-    keymap,
-    ViewPlugin,
-    WidgetType,
-    type DecorationSet
+      Decoration,
+      EditorView,
+      keymap,
+      ViewPlugin,
+      WidgetType,
+      type DecorationSet
   } from '@codemirror/view'
   import { basicSetup } from 'codemirror'
   import { createEventDispatcher, onMount } from 'svelte'
-  import { settings } from '../stores/settings.js'
-  import type { ControllerSetting, FontFamily } from '../types'
+  import { settings } from '../../stores/settings.js'
+  import type { ControllerSetting, FontFamily } from '../../types.js'
 
   export let value: string = ''
   export let language: 'css' | 'html' = 'css'
