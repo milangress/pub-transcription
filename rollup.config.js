@@ -1,10 +1,12 @@
-import svelte from 'rollup-plugin-svelte';
 import commonjs from '@rollup/plugin-commonjs';
-import resolve from '@rollup/plugin-node-resolve';
-import livereload from 'rollup-plugin-livereload';
-import terser from '@rollup/plugin-terser';
 import json from '@rollup/plugin-json';
+import resolve from '@rollup/plugin-node-resolve';
+import terser from '@rollup/plugin-terser';
+import typescript from '@rollup/plugin-typescript';
 import css from 'rollup-plugin-css-only';
+import livereload from 'rollup-plugin-livereload';
+import svelte from 'rollup-plugin-svelte';
+import sveltePreprocess from 'svelte-preprocess';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -42,6 +44,7 @@ export default [
 		},
 		plugins: [
 			svelte({
+				preprocess: sveltePreprocess({ sourceMap: !production }),
 				compilerOptions: {
 					// enable run-time checks when not in production
 					dev: !production
@@ -61,6 +64,10 @@ export default [
 				dedupe: ['svelte']
 			}),
 			commonjs(),
+			typescript({
+				sourceMap: !production,
+				inlineSources: !production
+			}),
 
 			// In dev mode, call `npm run start` once
 			// the bundle has been generated
