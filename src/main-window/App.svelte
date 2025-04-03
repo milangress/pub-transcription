@@ -5,7 +5,7 @@
 	import ControllerManager from "./components/midi/ControllerManager.svelte";
 	import BlockTxt from "./components/pageElement/BlockTxt.svelte";
 	import PrintStatusBar from './components/PrintStatusBar.svelte';
-	import TransInfoMessagesLog from './components/TransInfoMessagesLog.svelte';
+	import TransInfoMessagesLog from './components/status/TransInfoMessagesLog.svelte';
 	import { settings } from './stores/settings.js';
 
 
