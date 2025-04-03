@@ -58,8 +58,6 @@
 	}
 	let isSuccessfulPrint = true
 
-	let mySynth = null
-
 	let printStatusBar;
 
 	// Store for sentences waiting to be committed while printing
@@ -243,7 +241,7 @@
 			WebMidi.inputs.forEach((device, index) => {
 				console.log(`MIDI DEVICE: ${index}: ${device.name} <br>`)
 			});
-			mySynth = WebMidi.inputs[0];
+			settings.setupControllers(WebMidi)
 		}
 	}
 
