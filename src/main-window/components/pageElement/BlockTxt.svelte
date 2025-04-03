@@ -11,7 +11,7 @@
         controllerSettings: []
     }
 
-    function transformSassToCSS(str, settings) {
+    function transformSassToCSS(str, controllerSettings) {
         if (!str) return '';
         
         // Remove SASS structure (selector and braces)
@@ -21,8 +21,8 @@
         str = str.replace(/\/\/.*$/gm, '')
         str = str.replace(/\/\*[\s\S]*?\*\//gm, '')
 
-        if (settings?.controllerSettings && Array.isArray(settings.controllerSettings) && settings.controllerSettings.length > 0) {
-            settings.controllerSettings.forEach(setting => {
+        if (controllerSettings && Array.isArray(controllerSettings) && controllerSettings.length > 0) {
+            controllerSettings.forEach(setting => {
                 // Replace $variable * number[unit] pattern
                 const varPattern = new RegExp('\\$' + setting.var + '\\s*\\*\\s*([\\d.]+)([a-z%]+)?', 'g')
                 str = str.replace(varPattern, (match, number, unit) => {
@@ -40,13 +40,13 @@
     }
 
     $: isCurrentClass = isCurrent ? 'current' : ''
-    $: replacedInlineStyles = transformSassToCSS(settings?.inlineStyle, settings)
     $: fontFamilyName = settings?.fontFamily?.name || 'Garamondt-Regular'
+    $: compiledStyle = transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings)
 </script>
 
 <span
     class="{isCurrentClass}"
-    style="{replacedInlineStyles}"
+    style="{compiledStyle}"
     style:font-family="{fontFamilyName}"
     use:checkPosition={!isCurrent ? {
         onOverflow: () => dispatch('overflow')
