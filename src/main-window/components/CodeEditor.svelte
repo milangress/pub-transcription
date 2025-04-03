@@ -172,7 +172,9 @@
                                 actions: [{
                                     name: "// Comment",
                                     apply(view: EditorView, from: number, to: number) {
-                                        const lineStart = line.from + line.text.match(/^\s*/)[0].length;
+                                        const match = line.text.match(/^\s*/);
+                                        const indentLength = match ? match[0].length : 0;
+                                        const lineStart = line.from + indentLength;
                                         view.dispatch({
                                             changes: { from: lineStart, insert: "// " }
                                         });
