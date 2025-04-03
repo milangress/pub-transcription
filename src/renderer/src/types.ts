@@ -1,10 +1,10 @@
-import type { SvelteComponent } from 'svelte'
 import type {
   PrintSettings as ElectronPrintSettings,
   PrintRequest,
   PrintStatusMessage,
   QueueStatus
-} from '../../electron/types'
+} from '@preload/types.d.ts'
+import type { SvelteComponent } from 'svelte'
 
 export interface FontFamily {
   name: string

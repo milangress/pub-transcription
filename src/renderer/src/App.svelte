@@ -1,13 +1,13 @@
 <script lang="ts">
+  import CodeEditor from '@components/codeEditor/CodeEditor.svelte'
+  import ControllerManager from '@components/midi/ControllerManager.svelte'
+  import BlockTxt from '@components/pageElement/BlockTxt.svelte'
+  import PrintStatusBar from '@components/PrintStatusBar.svelte'
+  import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
+  import { settings } from '@stores/settings.js'
   import { tick } from 'svelte'
   import { writable, type Writable } from 'svelte/store'
   import { WebMidi } from 'webmidi'
-  import CodeEditor from '../components/codeEditor/CodeEditor.svelte'
-  import ControllerManager from '../components/midi/ControllerManager.svelte'
-  import BlockTxt from '../components/pageElement/BlockTxt.svelte'
-  import TransInfoMessagesLog from '../components/status/TransInfoMessagesLog.svelte'
-  import PrintStatusBar from './components/PrintStatusBar.svelte'
-  import { settings } from './stores/settings.js'
   import type {
       BlockTxtSettings,
       FontFamily,
