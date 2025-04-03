@@ -7,6 +7,13 @@
   resolved "https://registry.npmjs.org/7zip-bin/-/7zip-bin-5.2.0.tgz"
   integrity sha512-ukTPVhqG4jNzMro2qA9HSCSSVJN3aN7tlb+hfqYCt3ER0yWroeA2VR38MNrOHLQ/cVj+DaIMad0kFCtWWowh/A==
 
+"@babel/runtime@^7.20.6":
+  version "7.27.0"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.27.0.tgz#fbee7cf97c709518ecc1f590984481d5460d4762"
+  integrity sha512-VtPOkrdPHZsKc/clNqyi9WUA8TINkZ4cGk63UUE3u4pmB2k+ZMQRDuIOagv8UVd6j7k0T3+RRIb7beKTebNbcw==
+  dependencies:
+    regenerator-runtime "^0.14.0"
+
 "@babel/runtime@^7.21.0":
   version "7.26.7"
   resolved "https://registry.npmjs.org/@babel/runtime/-/runtime-7.26.7.tgz"
@@ -683,6 +690,11 @@
   resolved "https://registry.npmjs.org/@types/verror/-/verror-1.10.10.tgz"
   integrity sha512-l4MM0Jppn18hb9xmM6wwD1uTdShpf9Pn80aXTStnK1C94gtPvJcV2FrDmbOQUAQfJ1cKZHktkQUDwEqaAKXMMg==
 
+"@types/webmidi@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@types/webmidi/-/webmidi-2.1.0.tgz#085ec7279a9c9c13453589db9ecebbcfa4bf771b"
+  integrity sha512-k898MjEUSHB+6rSeCPQk/kLgie0wgWZ2t78GlWj86HbTQ+XmtbBafYg5LNjn8bVHfItEhPGZPf579Xfc6keV6w==
+
 "@types/yauzl@^2.9.1":
   version "2.10.3"
   resolved "https://registry.npmjs.org/@types/yauzl/-/yauzl-2.10.3.tgz"
@@ -1268,6 +1280,13 @@ dir-compare@^3.0.0:
   dependencies:
     buffer-equal "^1.0.0"
     minimatch "^3.0.4"
+
+djipevents@^2.0.7:
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/djipevents/-/djipevents-2.0.7.tgz#4805dcb8dcf0b4a2c6e51eaecdfc218bb8f202fb"
+  integrity sha512-KNFYaU85imxOCKOUsIR70Iz9E19r96/X7LSH+u0tSoZdpWcBdzoqtTsU+wuLhc6GMpSFob+KInkZAbfKi01Bjg==
+  dependencies:
+    "@babel/runtime" "^7.20.6"
 
 dmg-builder@24.13.3:
   version "24.13.3"
@@ -1896,6 +1915,11 @@ jake@^10.8.5:
     filelist "^1.0.4"
     minimatch "^3.1.2"
 
+jazz-midi@^1.7.9:
+  version "1.7.9"
+  resolved "https://registry.yarnpkg.com/jazz-midi/-/jazz-midi-1.7.9.tgz#ad564e85acf12414aec7ef7d879ad61a5d7f6896"
+  integrity sha512-c8c4BBgwxdsIr1iVm53nadCrtH7BUlnX3V95ciK/gbvXN/ndE5+POskBalXgqlc/r9p2XUbdLTrgrC6fou5p9w==
+
 joi@^17.6.0:
   version "17.13.3"
   resolved "https://registry.npmjs.org/joi/-/joi-17.13.3.tgz"
@@ -1959,6 +1983,14 @@ jsonfile@^6.0.1:
     universalify "^2.0.0"
   optionalDependencies:
     graceful-fs "^4.1.6"
+
+jzz@^1.8.5:
+  version "1.9.2"
+  resolved "https://registry.yarnpkg.com/jzz/-/jzz-1.9.2.tgz#aaf3ca35cb24f63f5b2e845bce48132233f87898"
+  integrity sha512-JP+5zpXd1VZKyPdP1rKxaSLg/lfh23fwguDas5GxZb4Ax2AV1CJZ22GCGdSHBBtdGOdjQWDprXgoSHf0qx9GWg==
+  dependencies:
+    "@types/webmidi" "^2.1.0"
+    jazz-midi "^1.7.9"
 
 keyv@^4.0.0:
   version "4.5.4"
@@ -2971,6 +3003,15 @@ wavefile@^11.0.0:
   version "11.0.0"
   resolved "https://registry.npmjs.org/wavefile/-/wavefile-11.0.0.tgz"
   integrity sha512-/OBiAALgWU24IG7sC84cDO/KfFuvajWc5Uec0oV2zrpOOZZDgGdOwHwgEzOrwh8jkubBk7PtZfQBIcI1OaE5Ng==
+
+webmidi@^3.1.12:
+  version "3.1.12"
+  resolved "https://registry.yarnpkg.com/webmidi/-/webmidi-3.1.12.tgz#448f2faf35a537b30cc2caf2aa22b5503d7fd719"
+  integrity sha512-X1lACggXm2BxuAPdx5wleh8S2kygduHbtR2ti5sGhivLkX6Muv/sLAYmPuIaNLOUddyxr71+3tsq8m5dKXoT4A==
+  dependencies:
+    djipevents "^2.0.7"
+  optionalDependencies:
+    jzz "^1.8.5"
 
 which@^2.0.1:
   version "2.0.2"
