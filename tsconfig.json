@@ -1,8 +1,9 @@
 {
+    "extends": "@tsconfig/svelte/tsconfig.json",
     "compilerOptions": {
         "target": "ES2020",
         "module": "ES2020",
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "allowJs": true,
         "checkJs": true,
         "esModuleInterop": true,
@@ -10,21 +11,24 @@
         "resolveJsonModule": true,
         "skipLibCheck": true,
         "sourceMap": true,
-        "strict": false,
+        "strict": true,
         "noImplicitAny": false,
-        "noEmit": true,
+        "isolatedModules": true,
+        "types": ["svelte", "node"],
         "baseUrl": ".",
         "paths": {
-            "*": ["node_modules/*"]
+            "@/*": ["src/*"]
         }
     },
     "include": [
-        "src/**/*.{js,ts,svelte}",
-        "electron/**/*.{js,ts}"
+        "src/**/*.ts",
+        "src/**/*.js",
+        "src/**/*.svelte",
+        "electron/**/*.ts",
+        "electron/**/*.js"
     ],
     "exclude": [
         "node_modules/*",
-        "__sapper__/*",
         "public/*"
     ]
 } 
