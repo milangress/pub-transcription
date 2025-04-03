@@ -35,6 +35,7 @@ export interface PrintSettings {
     margins?: PrintMargins;
     inlineStyle?: string;
     svgFiltersCode?: string;
+    svgFilters?: string;
 }
 
 /**
@@ -79,40 +80,28 @@ export interface PrintCompletionEvent {
 declare global {
     interface Window {
         electronAPI: {
-            /**
-             * Send content to be printed
-             */
-            print: (content: string, settings: PrintSettings) => void;
-
-            /**
-             * Execute a print job and return a promise
-             */
-            executePrint: (content: string, settings: PrintSettings) => Promise<boolean>;
-
-            /**
-             * Send print status updates
-             */
-            sendPrintStatus: (status: PrintStatusMessage) => void;
-
-            /**
-             * Toggle print preview mode
-             */
-            togglePrintPreview: (enable: boolean) => Promise<boolean>;
-
-            /**
-             * Listen for print status updates
-             */
+            // Transcription-related channels
+            onTranscriptionData: (callback: (event: Event, data: string) => void) => void;
+            onTranscriptionStatus: (callback: (event: Event, status: any) => void) => void;
+            
+            // Print-related channels
             onPrintStatus: (callback: (event: Event, status: PrintStatusMessage) => void) => void;
-
-            /**
-             * Listen for print queue updates
-             */
-            onQueueStatus: (callback: (event: Event, status: QueueStatus) => void) => void;
-
-            /**
-             * Listen for print job events
-             */
+            onPrintQueued: (callback: (event: Event, data: { success: boolean; printId: string; error?: string }) => void) => void;
             onPrintJob: (callback: (event: Event, data: PrintRequest & { attempt?: number; maxRetries?: number }) => void) => void;
+            onQueueStatus: (callback: (event: Event, status: QueueStatus) => void) => void;
+            
+            // Print functions
+            print: (content: string, settings: PrintSettings) => void;
+            executePrint: (content: string, settings: PrintSettings) => Promise<boolean>;
+            sendPrintStatus: (status: PrintStatusMessage) => void;
+            togglePrintPreview: (enable: boolean) => Promise<boolean>;
+            
+            // Store functions
+            getStoreValue: (key: string) => Promise<any>;
+            setStoreValue: (key: string, value: any) => Promise<void>;
+            
+            // Other utilities
+            openPDFFolder: () => Promise<void>;
         }
     }
 } 

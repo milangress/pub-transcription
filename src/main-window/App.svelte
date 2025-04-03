@@ -1,65 +1,54 @@
-<script>
+<script lang="ts">
 	import { tick } from 'svelte';
-	import { writable } from 'svelte/store';
+	import { writable, type Writable } from 'svelte/store';
+	import { WebMidi } from 'webmidi';
 	import CodeEditor from "./components/CodeEditor.svelte";
 	import ControllerManager from "./components/midi/ControllerManager.svelte";
 	import BlockTxt from "./components/pageElement/BlockTxt.svelte";
 	import PrintStatusBar from './components/PrintStatusBar.svelte';
 	import TransInfoMessagesLog from './components/status/TransInfoMessagesLog.svelte';
 	import { settings } from './stores/settings.js';
+	import type { FontFamily, PrinterSettings, PrintSettings, TxtObject } from './types';
 
+	let loremIpsum: string = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
 
-	let loremIpsum = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec euismod, nisl nec aliquam ultricies, nunc nisl aliquet nunc, nec aliquam n'
-
-	let unwantedTragmentsDontCommit = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)', '(buzzing)', '.']
+	let unwantedTragmentsDontCommit: string[] = ['[ Silence ]', '[silence]', '[BLANK_AUDIO]', '[ [ [ [','[ [ [','[ [', '[', '(buzzer)', '(buzzing)', '.']
 
 	// Only Contains the final sentences
-	let committedContent = []
+	let committedContent: TxtObject[] = []
 
 	// Contains all incoming TTS sentences
-	let allIncomingTTSMessages = []
+	let allIncomingTTSMessages: string[] = []
 
-	let currentSentence = {}
+	let currentSentence: TxtObject = {} as TxtObject
 
-	let currentSentenceRef = null
+	let currentSentenceRef: HTMLElement | null = null
 
-	let fontFamilys = [
-		{
-			name: 'Garamondt-Regular',
-		}, {
-			name: 'American Typewriter',
-		}, {
-			name: 'Arial',
-		}, {
-			name: 'Arial Black',
-		}, {
-			name: 'Arial Narrow',
-		}, {
-			name: 'SpaceMono'
-		}, {
-			name: 'Unifont'
-		}, {
-			name: 'OracleGM-RegularMono'
-		}, {
-			name: 'Neureal-Regular'
-		}, {
-			name: 'NIKITA-Regular'
-		}, {
-			name: 'Yorkshire'
-		}
+	let fontFamilys: FontFamily[] = [
+		{ name: 'Garamondt-Regular' },
+		{ name: 'American Typewriter' },
+		{ name: 'Arial' },
+		{ name: 'Arial Black' },
+		{ name: 'Arial Narrow' },
+		{ name: 'SpaceMono' },
+		{ name: 'Unifont' },
+		{ name: 'OracleGM-RegularMono' },
+		{ name: 'Neureal-Regular' },
+		{ name: 'NIKITA-Regular' },
+		{ name: 'Yorkshire' }
 	]
 
-	let printerSettings = {
+	let printerSettings: PrinterSettings = {
 		deviceName: 'Xerox_Phaser_5550N',
 		forcePrint: false
 	}
-	let isSuccessfulPrint = true
+	let isSuccessfulPrint: boolean = true
 
-	let printStatusBar;
+	let printStatusBar: PrintStatusBar;
 
 	// Store for sentences waiting to be committed while printing
-	let isPrinting = writable(false)
-	let isHandlingOverflow = false  // Flag to prevent recursive overflow handling
+	let isPrinting: Writable<boolean> = writable(false)
+	let isHandlingOverflow: boolean = false  // Flag to prevent recursive overflow handling
 
 	// Initialize settings when the app starts
 	$: {
@@ -70,7 +59,7 @@
 
 	$: currentContentList = [...committedContent, currentSentence]
 
-	window.electronAPI.onTranscriptionData((event, value) => {
+	window.electronAPI.onTranscriptionData((event: Event, value: string) => {
 		allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
 		const formattedSentence = formatTTSasTxtObject(value)
 
@@ -81,7 +70,7 @@
 		
 		if (String(value).endsWith('NEW')) {
 			// Final sentence received
-			currentSentence = {} // Clear current visualization
+			currentSentence = {} as TxtObject // Clear current visualization
 			
 			// Only commit if it's not in the unwanted list
 			if (!unwantedTragmentsDontCommit.some(x => x.toLowerCase() === formattedSentence.content.toLowerCase().trim())) {
@@ -94,7 +83,7 @@
 		}
 	})
 
-	function formatTTSasTxtObject(tts) {
+	function formatTTSasTxtObject(tts: string): TxtObject {
 		const removeNEWKeyword = String(tts).replace('NEW', '').trim()
 		return {
 			type: BlockTxt,
@@ -104,13 +93,12 @@
 		}
 	}
 
-
 	// Watch for code changes and mark as unsaved
 	$: if ($settings.inlineStyle || $settings.svgFilters) {
 		settings.markUnsaved();
 	}
 
-	async function handleOverflow(overflowingItem) {
+	async function handleOverflow(overflowingItem: TxtObject): Promise<void> {
 		// Don't handle overflow if we're already handling overflow
 		if (isHandlingOverflow) return;
 
@@ -160,7 +148,7 @@
 		}
 	}
 
-	async function printFile() {
+	async function printFile(): Promise<void> {
 		console.log("🖨️ Starting print process");
 		await tick(); // Wait for DOM update
 		
@@ -176,7 +164,7 @@
 			const currentElements = pageElement.querySelectorAll('.current');
 			currentElements.forEach(element => {
 				element.remove();
-				console.log("removed current element", element.textContent.trim())
+				console.log("removed current element", element.textContent?.trim())
 			});
 
 			const pageContent = pageElement.innerHTML;
@@ -187,13 +175,14 @@
 			}
 
 			// Create a print request in the status bar
-			const printId = printStatusBar.addPrintRequest();
+			const printId = printStatusBar.addPrintRequest().toString(); // Convert to string
 			console.log(`📝 Created print request with ID: ${printId}`);
 
-			console.log("Printing text: ", pageElement.textContent.trim())
+			console.log("Printing text: ", pageElement.textContent?.trim())
 
-			const printSettings = {
+			const printSettings: PrintSettings = {
 				...printerSettings,
+				printId,
 				silent: true,
 				printBackground: true,
 				printSelectionOnly: false,
@@ -207,41 +196,39 @@
 					right: 0
 				},
 				inlineStyle: $settings.inlineStyle,
-				svgFilters: $settings.svgFilters,
-				printId
+				svgFilters: $settings.svgFilters
+				
 			};
 			
-			await window.electronAPI.print(pageContent, printSettings);
+			window.electronAPI.print(pageContent, printSettings);
+			committedContent = []
 		} catch (error) {
-			console.error('❌ Print error:', error);
+			console.error('❌ Error during print:', error);
 			isSuccessfulPrint = false;
 		}
 	}
 
-	function clearAll() {
+	// Initialize WebMidi
+	WebMidi.enable().catch(err => console.error('WebMidi could not be enabled:', err));
+
+	// Listen for WebMidi events
+	WebMidi.addListener('connected', e => {
+		console.log('WebMidi device connected:', e);
+		settings.setupControllers(WebMidi)
+	});
+
+	WebMidi.addListener('disconnected', e => {
+		console.log('WebMidi device disconnected:', e);
+	});
+
+	function openPDFFolder(): void {
+		window.electronAPI.openPDFFolder();
+	}
+
+	function clearAll(): void {
 		console.log("🗑️ Clearing all content");
-		committedContent = []
+		committedContent = [];
 	}
-
-
-
-	WebMidi
-			.enable()
-			.then(onEnabled)
-			.catch(err => alert(err));
-
-	function onEnabled() {
-
-		if (WebMidi.inputs.length < 1) {
-			console.warn("No MIDI device detected.")
-		} else {
-			WebMidi.inputs.forEach((device, index) => {
-				console.log(`MIDI DEVICE: ${index}: ${device.name} <br>`)
-			});
-			settings.setupControllers(WebMidi)
-		}
-	}
-
 </script>
 
 <!-- svelte:head meta title -->
