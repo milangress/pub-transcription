@@ -41,10 +41,10 @@
         <p><strong>{item.name}</strong></p>
         <p>{item.range[0]}/{item.range[1]}</p>
       </div>
-      <div class="key-input">
+      <!-- <div class="key-input">
         <p>-{item.keys.down} +{item.keys.up}</p>
         <p>+-{item.step}</p>
-      </div>
+      </div> -->
       <div
         class="var"
         role="button"
