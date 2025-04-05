@@ -62,6 +62,10 @@ export function createStreamProcess(
         console.log('\x1b[34m%s\x1b[0m', `[${mergedOptions.name}] [send] ${message}`)
         sendToWindowIfAvailable('transcription-status', message)
       }
+    },
+    error: (message: string | object): void => {
+      const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message
+      console.error('\x1b[31m%s\x1b[0m', `[${mergedOptions.name}] [error] ${text}`)
     }
   }
 
@@ -69,7 +73,7 @@ export function createStreamProcess(
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send(channel, message)
     } else {
-      log.msg(`mainWindow Unavailable! Message: ${message}`)
+      log.error(`mainWindow Unavailable! Message: ${message}`)
     }
   }
 
@@ -118,12 +122,12 @@ export function createStreamProcess(
   })
 
   ls.on('error', (error: Error) => {
-    log.msg(`error: ${error.message}`)
+    log.error(`Process error: ${error.message}`)
     log.toWindow(error.message)
   })
 
   ls.on('close', (code: number | null) => {
-    log.msg(`Process exited with code ${code}`)
+    log.error(`Process exited with code ${code}`)
     activeStreamProcess = null
   })
 
