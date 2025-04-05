@@ -21,19 +21,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'yarn'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Download Whisper model
-        run: yarn dlwisper
+        run: pnpm dlwisper
 
       - name: Build app
-        run: yarn build
+        run: pnpm build
 
       - name: Build Electron app
-        run: yarn electron-pack
+        run: pnpm electron-pack
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
