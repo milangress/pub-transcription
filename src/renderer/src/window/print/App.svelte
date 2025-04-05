@@ -88,7 +88,8 @@
           }
         } catch (error) {
           console.error('Preview end error:', error)
-          addLogEntry(`Preview end error: ${error.message}`, null, null, 'server')
+          const message = error instanceof Error ? error.message : String(error)
+          addLogEntry(`Preview end error: ${message}`, null, null, 'server')
         } finally {
           isPrintPreview = false
           previewTimer = null
@@ -96,7 +97,8 @@
       }, 5000)
     } catch (error) {
       console.error('Preview error:', error)
-      addLogEntry(`Preview error: ${error.message}`, null, null, 'server')
+      const message = error instanceof Error ? error.message : String(error)
+      addLogEntry(`Preview error: ${message}`, null, null, 'server')
       isPrintPreview = false
       if (previewTimer) {
         clearTimeout(previewTimer)
@@ -118,8 +120,9 @@
       // Status updates will come from main process
     } catch (error) {
       console.error('❌ Print error:', error)
-      addLogEntry(`Error: ${error.message}`, null, null, 'error')
-      throw error // Propagate error for queue handling
+      const message = error instanceof Error ? error.message : String(error)
+      addLogEntry(`Error: ${message}`, null, null, 'error')
+      throw error instanceof Error ? error : new Error(String(error)) // Propagate error for queue handling
     }
   }
 
@@ -148,7 +151,7 @@
 
         case 'PRINT_COMPLETE':
           if (printStatus === 'SUCCESS') {
-            const duration = ((Date.now() - printStartTime) / 1000).toFixed(2)
+            const duration = printStartTime ? ((Date.now() - printStartTime) / 1000).toFixed(2) : '0.00'
             status = message || `🖨️ Print completed successfully (${duration}s)`
             addLogEntry(
               message || `Print completed successfully (${duration}s)`,
@@ -281,8 +284,9 @@
           await executePrint(container.innerHTML, settings)
         } catch (error) {
           console.error('❌ Print job error:', error)
-          status = `Error: ${error.message}`
-          addLogEntry(`Error: ${error.message}`, null, null, 'error')
+          const message = error instanceof Error ? error.message : String(error)
+          status = `Error: ${message}`
+          addLogEntry(`Error: ${message}`, null, null, 'error')
         }
       }
     )
