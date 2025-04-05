@@ -1,3 +1,35 @@
+import { BrowserWindow } from 'electron'
+import { EventEmitter } from 'events'
+import type { PrintSettings, QueueStatus } from '../types'
+
+interface PrintJob {
+  content: string
+  settings: PrintSettings
+  resolve: (value: unknown) => void
+  reject: (error: Error) => void
+  retries: number
+  addedAt: number
+}
+
+interface PrintJobResult {
+  success: boolean
+  error?: string
+  retrying?: boolean
+}
+
+interface ExtendedQueueStatus extends QueueStatus {
+  currentJob: {
+    addedAt: number
+    retries: number
+    settings: PrintSettings
+  } | null
+}
+
+interface PrintQueueResult {
+  queued: boolean
+  completion: Promise<unknown>
+}
+
 /**
  * PrintQueue manages a queue of print jobs for electron windows.
  * Handles print job processing, retries, timeouts and window management.
@@ -8,30 +40,34 @@
  * - Auto-recreation of print windows if destroyed
  * - Queue status updates via IPC
  * - Graceful cleanup of pending jobs
- *
- * @param {BrowserWindow} printWindow - The electron window used for printing
- * @param {Function} createWindowCallback - Callback to create a new print window if needed
- * @param {EventEmitter} printEvents - Event emitter for print events
  */
-class PrintQueue {
-  constructor(printWindow, createWindowCallback, printEvents) {
-    this.queue = []
-    this.isProcessing = false
-    this.maxRetries = 3
-    this.timeout = 5 * 60 * 1000 // 5 minutes timeout
+export class PrintQueue {
+  private queue: PrintJob[] = []
+  private isProcessing = false
+  private readonly maxRetries = 3
+  private readonly timeout = 5 * 60 * 1000 // 5 minutes timeout
+  private readonly createWindowCallback: () => BrowserWindow
+  private readonly printEvents: EventEmitter
+  private printWindow: BrowserWindow | null = null
+
+  constructor(
+    printWindow: BrowserWindow | null,
+    createWindowCallback: () => BrowserWindow,
+    printEvents: EventEmitter
+  ) {
     this.createWindowCallback = createWindowCallback
     this.printEvents = printEvents
     this.setPrintWindow(printWindow)
   }
 
-  setPrintWindow(window) {
+  setPrintWindow(window: BrowserWindow | null): void {
     this.printWindow = window
     this.updateQueueStatus()
   }
 
-  async add(content, settings) {
+  async add(content: string, settings: PrintSettings): Promise<PrintQueueResult> {
     const jobPromise = new Promise((resolve, reject) => {
-      const job = {
+      const job: PrintJob = {
         content,
         settings,
         resolve,
@@ -53,14 +89,14 @@ class PrintQueue {
     }
   }
 
-  updateQueueStatus() {
+  private updateQueueStatus(): void {
     const status = this.getQueueStatus()
     if (this.printWindow && !this.printWindow.isDestroyed()) {
       this.printWindow.webContents.send('queue-status', status)
     }
   }
 
-  async processNext() {
+  private async processNext(): Promise<void> {
     if (this.isProcessing || this.queue.length === 0) return
 
     this.isProcessing = true
@@ -73,7 +109,7 @@ class PrintQueue {
         if (this.createWindowCallback) {
           this.printWindow = this.createWindowCallback()
           // Wait for print window to be ready
-          await new Promise((resolve) => {
+          await new Promise<void>((resolve) => {
             const checkReady = setInterval(() => {
               if (this.printWindow && !this.printWindow.webContents.isLoading()) {
                 clearInterval(checkReady)
@@ -87,7 +123,7 @@ class PrintQueue {
       }
 
       // Send content to print window and wait for response
-      const result = await new Promise((resolve, reject) => {
+      const result = await new Promise<PrintJobResult>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
           cleanup()
 
@@ -106,12 +142,20 @@ class PrintQueue {
           }
         }, this.timeout)
 
-        const cleanup = () => {
+        const cleanup = (): void => {
           this.printEvents.removeListener('print-complete', handleComplete)
           clearTimeout(timeoutId)
         }
 
-        const handleComplete = ({ printId, success, error }) => {
+        const handleComplete = ({
+          printId,
+          success,
+          error
+        }: {
+          printId: string
+          success: boolean
+          error?: string
+        }): void => {
           if (printId !== job.settings.printId) return
           cleanup()
           if (success) {
@@ -144,7 +188,11 @@ class PrintQueue {
           })
         } catch (error) {
           cleanup()
-          reject(new Error('Failed to send job to print window: ' + error.message))
+          reject(
+            new Error(
+              `Failed to send job to print window: ${error instanceof Error ? error.message : String(error)}`
+            )
+          )
         }
       })
 
@@ -157,7 +205,7 @@ class PrintQueue {
       }
     } catch (error) {
       console.error('Print job error:', error)
-      job.reject(error)
+      job.reject(error instanceof Error ? error : new Error(String(error)))
     } finally {
       // Always clean up the current job
       this.queue.shift()
@@ -177,7 +225,7 @@ class PrintQueue {
     }
   }
 
-  getQueueStatus() {
+  getQueueStatus(): ExtendedQueueStatus {
     return {
       queueLength: this.queue.length,
       isProcessing: this.isProcessing,
@@ -191,7 +239,7 @@ class PrintQueue {
     }
   }
 
-  cleanup() {
+  cleanup(): void {
     if (this.queue.length > 0) {
       console.log(`Cleaning up ${this.queue.length} remaining print jobs`)
     }
@@ -199,5 +247,3 @@ class PrintQueue {
     this.isProcessing = false
   }
 }
-
-module.exports = PrintQueue
