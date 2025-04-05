@@ -5,8 +5,8 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.svelte",
     "src/preload/*.d.ts"
-, "src/preload/types.ts"  ],
-  "exclude": ["n, "src/preload/types.ts"ode_modules", "dist", "build", "public", "src/main", "src/preload"],
+, "src/types.ts"  ],
+  "exclude": ["node_modules", "dist", "build", "public", "src/main", "src/preload"],
   "compilerOptions": {
     "composite": true,
     "verbatimModuleSyntax": true,
