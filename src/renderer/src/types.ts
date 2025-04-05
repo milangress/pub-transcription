@@ -1,9 +1,3 @@
-import type {
-  PrintSettings as ElectronPrintSettings,
-  PrintRequest,
-  PrintStatusMessage,
-  QueueStatus
-} from '@preload/types.d.ts'
 import type { SvelteComponent } from 'svelte'
 
 export interface FontFamily {
@@ -43,12 +37,4 @@ export interface TxtObject {
   content: string
   settings: BlockTxtSettings
   id: number
-}
-
-// Re-export electron types
-export type {
-  PrintRequest,
-  ElectronPrintSettings as PrintSettings,
-  PrintStatusMessage,
-  QueueStatus
 }
