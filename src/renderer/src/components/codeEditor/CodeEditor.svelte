@@ -24,7 +24,7 @@
   import { settings } from '../../stores/settings.js'
   import type { ControllerSetting, FontFamily } from '../../types.js'
 
-  let { value = '', language = 'css', controllerSettings = [], svgFiltersCode = '', fontFamilys = [] } = $props<{
+  let { value = $bindable(''), language = 'css', controllerSettings = [], svgFiltersCode = '', fontFamilys = [] } = $props<{
     value?: string;
     language?: 'css' | 'html';
     controllerSettings?: ControllerSetting[];

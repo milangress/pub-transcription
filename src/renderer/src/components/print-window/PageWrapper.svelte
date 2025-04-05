@@ -1,12 +1,25 @@
-<script>
+<script lang="ts">
   import Page from './Page.svelte'
 
-  // Props
-  export let scale = 1
-  export let onScaleChange = undefined
-  export let showControls = true
-  export let showDebug = false
-  export let position = 'right' // 'right', 'center', 'left'
+  
+  interface Props {
+    // Props
+    scale?: number;
+    onScaleChange?: any;
+    showControls?: boolean;
+    showDebug?: boolean;
+    position?: string; // 'right', 'center', 'left'
+    children?: import('svelte').Snippet;
+  }
+
+  let {
+    scale = 1,
+    onScaleChange = undefined,
+    showControls = true,
+    showDebug = false,
+    position = 'right',
+    children
+  }: Props = $props();
 </script>
 
 <div
@@ -16,7 +29,7 @@
   class:left={position === 'left'}
 >
   <Page {scale} {onScaleChange} {showControls} {showDebug} centered={false}>
-    <slot></slot>
+    {@render children?.()}
   </Page>
 </div>
 

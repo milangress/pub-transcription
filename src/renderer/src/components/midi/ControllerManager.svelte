@@ -3,7 +3,7 @@
   import { settings } from '@stores/settings'
   import MIDIKnobPreview from './MIDIKnobPreview.svelte'
 
-  let { controllerSettings } = $props<{
+  let { controllerSettings = $bindable([]) } = $props<{
     controllerSettings: ControllerSetting[];
   }>();
 

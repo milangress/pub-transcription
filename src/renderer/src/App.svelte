@@ -71,7 +71,7 @@
   let codeEditorContentSaved = $derived(settings.codeEditorContentSaved.subscribe);
   let currentContentList = $derived([...committedContent, currentSentence]);
 
-  window.electronAPI.onTranscriptionData((event: Event, value: string) => {
+  window.electronAPI.onTranscriptionData((_event: Event, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
     const formattedSentence = formatTTSasTxtObject(value)
 
@@ -246,9 +246,9 @@
     console.log('WebMidi device disconnected:', e)
   })
 
-  function openPDFFolder(): void {
-    window.electronAPI.openPDFFolder()
-  }
+  // function openPDFFolder(): void {
+  //   window.electronAPI.openPDFFolder()
+  // }
 
   function clearAll(): void {
     console.log('🗑️ Clearing all content')
@@ -267,16 +267,14 @@
       <page size="A3">
         <div class="content-context">
           {#each committedContent as item (item.id)}
-            <svelte:component
-              this={item.type}
+            <item.type
               content={item.content}
               settings={item.settings}
               on:overflow={() => handleOverflow(item)}
             />
           {/each}
           {#if !isPrinting && currentSentence?.type}
-            <svelte:component
-              this={currentSentence.type}
+            <currentSentence.type
               content={currentSentence.content}
               settings={$settings}
               isCurrent
@@ -316,9 +314,9 @@
 
       <hr />
       <div class="printControls">
-        <button on:click={printFile}>PRINT</button>
-        <button on:click={clearAll}>CLEAR ALL</button>
-        <button on:click={() => window.electronAPI.openPDFFolder()}>OPEN PDFs FOLDER</button>
+        <button onclick={printFile}>PRINT</button>
+        <button onclick={clearAll}>CLEAR ALL</button>
+        <button onclick={() => window.electronAPI.openPDFFolder()}>OPEN PDFs FOLDER</button>
         <input bind:value={printerSettings.deviceName} type="text" disabled />
         <label><input bind:checked={printerSettings.forcePrint} type="checkbox" />Force Print</label
         >

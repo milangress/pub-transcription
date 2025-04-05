@@ -1,22 +1,39 @@
-<script>
-  // Props
-  export let scale = 1
-  export let onScaleChange = undefined
-  export let showControls = true
-  export let showDebug = false
-  export let centered = true
+<script lang="ts">
+  import { run } from 'svelte/legacy';
+
+  
+  interface Props {
+    // Props
+    scale?: number;
+    onScaleChange?: any;
+    showControls?: boolean;
+    showDebug?: boolean;
+    centered?: boolean;
+    children?: import('svelte').Snippet;
+  }
+
+  let {
+    scale = $bindable(1),
+    onScaleChange = undefined,
+    showControls = true,
+    showDebug = false,
+    centered = true,
+    children
+  }: Props = $props();
 
   // State
-  let page
-  let pageContainer
-  let status = 'Ready'
-  let lastUpdate = 'Never'
+  let page = $state()
+  let pageContainer = $state()
+  let status = $state('Ready')
+  let lastUpdate = $state('Never')
 
   // Reactive statements
-  $: if (page && pageContainer && scale) {
-    status = `Scale: ${scale.toFixed(2)}`
-    lastUpdate = new Date().toLocaleTimeString()
-  }
+  run(() => {
+    if (page && pageContainer && scale) {
+      status = `Scale: ${scale.toFixed(2)}`
+      lastUpdate = new Date().toLocaleTimeString()
+    }
+  });
 
   function adjustScale(delta) {
     const newScale = Math.max(0.1, Math.min(2, scale + delta))
@@ -37,9 +54,9 @@
 
 {#if showControls}
   <div id="scale-controls">
-    <button on:click={() => adjustScale(-0.1)}>-</button>
+    <button onclick={() => adjustScale(-0.1)}>-</button>
     <span>{scale.toFixed(1)}</span>
-    <button on:click={() => adjustScale(0.1)}>+</button>
+    <button onclick={() => adjustScale(0.1)}>+</button>
   </div>
 {/if}
 
@@ -47,7 +64,7 @@
   <div class="page-container" bind:this={pageContainer} style:transform={`scale(${scale})`}>
     <page size="A3" bind:this={page}>
       <div class="content-context">
-        <slot></slot>
+        {@render children?.()}
       </div>
     </page>
   </div>

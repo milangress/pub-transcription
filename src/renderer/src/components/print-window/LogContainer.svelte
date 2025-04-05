@@ -1,16 +1,17 @@
-<script>
+<script lang="ts">
+  import { run } from 'svelte/legacy'
+
   import { onMount } from 'svelte'
 
-  export let logs = []
-  let logContainer
-  let shouldAutoScroll = true
-  let previousLogsLength = logs.length
+  let { logs = $bindable([]) } = $props();
+  let logContainer: HTMLDivElement = $state()
+  let shouldAutoScroll = $state(true)
+  let previousLogsLength = $state(logs.length)
   const MAX_STORED_LOGS = 200
-  let isFirstLoad = true
+  let isFirstLoad = $state(true)
 
-  let previousLogs = []
+  let previousLogs = $state([])
 
-  $: mergedLogs = [...previousLogs, ...logs]
 
   // Load saved logs on mount
   onMount(async () => {
@@ -45,24 +46,6 @@
     }
   })
 
-  // Save logs when they change
-  $: {
-    if (mergedLogs.length !== previousLogsLength) {
-      // Save all logs including dividers
-      const logsToStore = mergedLogs.slice(-MAX_STORED_LOGS)
-      window.electronAPI
-        .setStoreValue('printLogs', logsToStore)
-        .catch((error) => console.error('Failed to save logs:', error))
-      previousLogsLength = mergedLogs.length
-
-      // If auto-scroll is enabled, scroll after the DOM updates
-      if (shouldAutoScroll) {
-        requestAnimationFrame(() => {
-          scrollToBottom()
-        })
-      }
-    }
-  }
 
   // Check if user is near bottom
   function isNearBottom() {
@@ -99,6 +82,25 @@
       await window.electronAPI.setStoreValue('printLogs', [])
     }
   }
+  let mergedLogs = $derived([...previousLogs, ...logs])
+  // Save logs when they change
+  run(() => {
+    if (mergedLogs.length !== previousLogsLength) {
+      // Save all logs including dividers
+      const logsToStore = mergedLogs.slice(-MAX_STORED_LOGS)
+      window.electronAPI
+        .setStoreValue('printLogs', logsToStore)
+        .catch((error) => console.error('Failed to save logs:', error))
+      previousLogsLength = mergedLogs.length
+
+      // If auto-scroll is enabled, scroll after the DOM updates
+      if (shouldAutoScroll) {
+        requestAnimationFrame(() => {
+          scrollToBottom()
+        })
+      }
+    }
+  });
 </script>
 
 <div class="print-log">
@@ -108,16 +110,16 @@
       <button
         class="auto-scroll-toggle"
         class:active={shouldAutoScroll}
-        on:click={toggleAutoScroll}
+        onclick={toggleAutoScroll}
         title={shouldAutoScroll ? 'Disable auto-scroll' : 'Enable auto-scroll'}
       >
         {shouldAutoScroll ? '📌 Auto-scroll on' : '🔓 Auto-scroll off'}
       </button>
-      <button class="clear-logs-btn" on:click={clearLogs} title="Clear all logs"> 🗑️ </button>
+      <button class="clear-logs-btn" onclick={clearLogs} title="Clear all logs"> 🗑️ </button>
       <div class="log-count">{mergedLogs.length} entries ({logs.length} fresh)</div>
     </div>
   </div>
-  <div class="log-container" bind:this={logContainer} on:scroll={handleScroll}>
+  <div class="log-container" bind:this={logContainer} onscroll={handleScroll}>
     {#each mergedLogs as log}
       <div
         class="log-entry"

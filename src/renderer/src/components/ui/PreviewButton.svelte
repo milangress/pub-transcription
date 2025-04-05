@@ -1,12 +1,16 @@
-<script>
-  export let isPrintPreview = false
-  export let onClick = () => {}
+<script lang="ts">
+  interface Props {
+    isPrintPreview?: boolean;
+    onClick?: any;
+  }
+
+  let { isPrintPreview = false, onClick = () => {} }: Props = $props();
 </script>
 
 <button
   class="preview-button"
   class:active={isPrintPreview}
-  on:click={onClick}
+  onclick={onClick}
   disabled={isPrintPreview}
 >
   {isPrintPreview ? '🖨️ Preview Mode (5s)' : '👁️ Preview Print'}
