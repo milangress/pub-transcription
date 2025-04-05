@@ -1,4 +1,3 @@
-
 /**
  * Print action types
  */
@@ -8,7 +7,6 @@ export type PrintAction = 'PRINT_START' | 'PRINT_COMPLETE' | 'PDF_SAVE' | 'PRINT
  * Print status types
  */
 export type PrintStatus = 'SUCCESS' | 'ERROR' | 'INFO'
-
 
 /**
  * Base print settings interface
