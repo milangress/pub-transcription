@@ -2,9 +2,9 @@ import { ChildProcess, spawn } from 'child_process'
 import { app, BrowserWindow } from 'electron'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import ggmlMetal from '../../resources/lib/ggml-metal.metal?asset'
-import ggmlStreamBin from '../../resources/lib/stream?asset'
-import ggmlModelSmallEnQ51Bin from '../../resources/models/ggml-small.en-q5_1.bin?asset'
+import ggmlMetal from '../../resources/lib/ggml-metal.metal?asset&asarUnpack'
+import ggmlStreamBin from '../../resources/lib/stream?asset&asarUnpack'
+import ggmlModelSmallEnQ51Bin from '../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack'
 
 // Keep track of the stream process
 let activeStreamProcess: ChildProcess | null = null
