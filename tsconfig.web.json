@@ -5,7 +5,7 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.svelte",
     "src/preload/*.d.ts"
-, "src/types.ts"  ],
+, "src/types/types.tspes.ts"  ],
   "compilerOptions": {
     "composite": true,
     "verbatimModuleSyntax": true,
@@ -20,7 +20,8 @@
       "@stores/*": ["src/renderer/src/stores/*"],
       "@utils/*": ["src/renderer/src/utils/*"],
       "@preload/*": ["src/preload/*"],
-      "@electron/*": ["src/main/*"]
+      "@electron/*": ["src/main/*"],
+      "@types/*": ["src/types/*"]
     }
   }
 }

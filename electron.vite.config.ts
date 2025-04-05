@@ -18,7 +18,8 @@ export default defineConfig({
         '@stores': resolve('src/renderer/src/stores'),
         '@utils': resolve('src/renderer/src/utils'),
         '@preload': resolve('src/preload'),
-        '@electron': resolve('src/main')
+        '@electron': resolve('src/main'),
+        '@types': resolve('src/types')
       }
     }
   }
