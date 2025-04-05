@@ -4,14 +4,14 @@
   import MIDIKnobPreview from './MIDIKnobPreview.svelte'
 
   let { controllerSettings = $bindable([]) } = $props<{
-    controllerSettings: ControllerSetting[];
-  }>();
+    controllerSettings: ControllerSetting[]
+  }>()
 
   function resetValueToDefault(item: ControllerSetting) {
     settings.resetController(item.var)
   }
 
-  let copySuccess = $state(false);
+  let copySuccess = $state(false)
   const copyContent = async (text: string) => {
     try {
       const varNameAsSass = '$' + text
@@ -27,7 +27,7 @@
   }
 
   function handleSliderChange(item: ControllerSetting, event: Event) {
-    const target = event.target as HTMLInputElement;
+    const target = event.target as HTMLInputElement
     settings.updateControllerValue(item.var, parseFloat(target.value))
   }
 </script>

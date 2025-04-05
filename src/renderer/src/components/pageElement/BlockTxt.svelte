@@ -7,14 +7,18 @@
     overflow: void
   }>()
 
-  let { content = 'Hello World', isCurrent = false, settings = {
-    inlineStyle: '',
-    controllerSettings: []
-  } } = $props<{
-    content?: string;
-    isCurrent?: boolean;
-    settings?: BlockTxtSettings;
-  }>();
+  let {
+    content = 'Hello World',
+    isCurrent = false,
+    settings = {
+      inlineStyle: '',
+      controllerSettings: []
+    }
+  } = $props<{
+    content?: string
+    isCurrent?: boolean
+    settings?: BlockTxtSettings
+  }>()
 
   function transformSassToCSS(
     str: string | undefined,
@@ -49,8 +53,10 @@
     return result.trim()
   }
 
-  let isCurrentClass = $derived(isCurrent ? 'current' : '');
-  let compiledStyle = $derived(transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings));
+  let isCurrentClass = $derived(isCurrent ? 'current' : '')
+  let compiledStyle = $derived(
+    transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings)
+  )
 </script>
 
 <span

@@ -8,9 +8,9 @@
   }
 
   let { printId, status } = $props<{
-    printId: string;
-    status: Status;
-  }>();
+    printId: string
+    status: Status
+  }>()
 </script>
 
 <div class="status-item" title="{printId} – {status.text || 'Print status update'}">

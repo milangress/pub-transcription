@@ -1,15 +1,14 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+  import { run } from 'svelte/legacy'
 
-  
   interface Props {
     // Props
-    scale?: number;
-    onScaleChange?: any;
-    showControls?: boolean;
-    showDebug?: boolean;
-    centered?: boolean;
-    children?: import('svelte').Snippet;
+    scale?: number
+    onScaleChange?: any
+    showControls?: boolean
+    showDebug?: boolean
+    centered?: boolean
+    children?: import('svelte').Snippet
   }
 
   let {
@@ -19,7 +18,7 @@
     showDebug = false,
     centered = true,
     children
-  }: Props = $props();
+  }: Props = $props()
 
   // State
   let page = $state()
@@ -33,7 +32,7 @@
       status = `Scale: ${scale.toFixed(2)}`
       lastUpdate = new Date().toLocaleTimeString()
     }
-  });
+  })
 
   function adjustScale(delta) {
     const newScale = Math.max(0.1, Math.min(2, scale + delta))

@@ -1,9 +1,9 @@
 <script lang="ts">
   import {
-      autocompletion,
-      closeBrackets,
-      completionKeymap,
-      type Completion
+    autocompletion,
+    closeBrackets,
+    completionKeymap,
+    type Completion
   } from '@codemirror/autocomplete'
   import { defaultKeymap, toggleComment, toggleLineComment } from '@codemirror/commands'
   import { html } from '@codemirror/lang-html'
@@ -12,38 +12,44 @@
   import { linter, lintGutter, type Diagnostic } from '@codemirror/lint'
   import { EditorState } from '@codemirror/state'
   import {
-      Decoration,
-      EditorView,
-      keymap,
-      ViewPlugin,
-      WidgetType,
-      type DecorationSet
+    Decoration,
+    EditorView,
+    keymap,
+    ViewPlugin,
+    WidgetType,
+    type DecorationSet
   } from '@codemirror/view'
   import { basicSetup } from 'codemirror'
   import { createEventDispatcher, onMount } from 'svelte'
   import { settings } from '../../stores/settings.js'
   import type { ControllerSetting, FontFamily } from '../../types.js'
 
-  let { value = $bindable(''), language = 'css', controllerSettings = [], svgFiltersCode = '', fontFamilys = [] } = $props<{
-    value?: string;
-    language?: 'css' | 'html';
-    controllerSettings?: ControllerSetting[];
-    svgFiltersCode?: string;
-    fontFamilys?: FontFamily[];
-  }>();
+  let {
+    value = $bindable(''),
+    language = 'css',
+    controllerSettings = [],
+    svgFiltersCode = '',
+    fontFamilys = []
+  } = $props<{
+    value?: string
+    language?: 'css' | 'html'
+    controllerSettings?: ControllerSetting[]
+    svgFiltersCode?: string
+    fontFamilys?: FontFamily[]
+  }>()
 
   const dispatch = createEventDispatcher<{
     change: string
   }>()
 
-  let element = $state<HTMLDivElement | undefined>();
-  let view = $state<EditorView | undefined>();
-  let filterIds = $state<string[]>([]);
-  let isUpdatingFromPreview = $state(false);
-  let isDragging = $state(false);
-  let dragStartX = $state(0);
-  let currentVar = $state<string | null>(null);
-  let currentController = $state<ControllerSetting | null>(null);
+  let element = $state<HTMLDivElement | undefined>()
+  let view = $state<EditorView | undefined>()
+  let filterIds = $state<string[]>([])
+  let isUpdatingFromPreview = $state(false)
+  let isDragging = $state(false)
+  let dragStartX = $state(0)
+  let currentVar = $state<string | null>(null)
+  let currentController = $state<ControllerSetting | null>(null)
 
   function extractFilterIds(svgCode: string): string[] {
     const parser = new DOMParser()
@@ -57,7 +63,7 @@
       filterIds = extractFilterIds(svgFiltersCode)
       console.log('Available filters:', filterIds)
     }
-  });
+  })
 
   function createCompletions(context: any) {
     // Check for font-family completion
@@ -150,7 +156,7 @@
         }
       })
     }
-  });
+  })
 
   // Remove all decoration-related code and keep only the linter
   const duplicatePropertiesLinter = linter((view) => {
@@ -344,7 +350,7 @@
     if (view && controllerSettings) {
       view.dispatch(view.state.update())
     }
-  });
+  })
 
   function handleMouseDown(event: MouseEvent) {
     if (!event.altKey) return

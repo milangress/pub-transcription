@@ -3,7 +3,7 @@
 
   import { onMount } from 'svelte'
 
-  let { logs = $bindable([]) } = $props();
+  let { logs = $bindable([]) } = $props()
   let logContainer: HTMLDivElement = $state()
   let shouldAutoScroll = $state(true)
   let previousLogsLength = $state(logs.length)
@@ -11,7 +11,6 @@
   let isFirstLoad = $state(true)
 
   let previousLogs = $state([])
-
 
   // Load saved logs on mount
   onMount(async () => {
@@ -45,7 +44,6 @@
       console.error('Failed to load saved logs:', error)
     }
   })
-
 
   // Check if user is near bottom
   function isNearBottom() {
@@ -100,7 +98,7 @@
         })
       }
     }
-  });
+  })
 </script>
 
 <div class="print-log">

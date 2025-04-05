@@ -9,14 +9,16 @@
   let stylesLoaded = $state('No')
   let currentScale = $state(1)
   let children = $state<NodeListOf<HTMLSpanElement> | null>(null)
-  let printLogs = $state<Array<{
-    timestamp: string
-    message: string
-    pdfUrl: string | null
-    spanCount: number | null
-    type: string
-    printId: string | null
-  }>>([])
+  let printLogs = $state<
+    Array<{
+      timestamp: string
+      message: string
+      pdfUrl: string | null
+      spanCount: number | null
+      type: string
+      printId: string | null
+    }>
+  >([])
   let currentPrintId = $state<string | null>(null)
   let isPrintPreview = $state(false)
   let previewTimer = $state<NodeJS.Timeout | null>(null)
@@ -26,7 +28,12 @@
   let isQueueProcessing = $state(false)
   let printStartTime = $state<number | null>(null)
 
-  function addLogEntry(message: string, pdfUrl: string | null = null, spanCount: number | null = null, type = 'client') {
+  function addLogEntry(
+    message: string,
+    pdfUrl: string | null = null,
+    spanCount: number | null = null,
+    type = 'client'
+  ) {
     const timestamp = new Date().toLocaleTimeString()
     printLogs = [
       {

@@ -1,15 +1,14 @@
 <script lang="ts">
   import Page from './Page.svelte'
 
-  
   interface Props {
     // Props
-    scale?: number;
-    onScaleChange?: any;
-    showControls?: boolean;
-    showDebug?: boolean;
-    position?: string; // 'right', 'center', 'left'
-    children?: import('svelte').Snippet;
+    scale?: number
+    onScaleChange?: any
+    showControls?: boolean
+    showDebug?: boolean
+    position?: string // 'right', 'center', 'left'
+    children?: import('svelte').Snippet
   }
 
   let {
@@ -19,7 +18,7 @@
     showDebug = false,
     position = 'right',
     children
-  }: Props = $props();
+  }: Props = $props()
 </script>
 
 <div

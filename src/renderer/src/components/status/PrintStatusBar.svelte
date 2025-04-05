@@ -23,10 +23,10 @@
     text: string
   }
 
-  let printStatuses = $state(new Map<string, StatusEntry>());
-  let successPrintCount = $state(0);
-  let successPdfCount = $state(0);
-  let failureCount = $state(0);
+  let printStatuses = $state(new Map<string, StatusEntry>())
+  let successPrintCount = $state(0)
+  let successPdfCount = $state(0)
+  let failureCount = $state(0)
 
   // Status emoji mapping based on action and status
   const STATUS_EMOJIS: StatusEmojis = {

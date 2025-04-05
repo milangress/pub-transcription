@@ -9,33 +9,35 @@
   import { tick } from 'svelte'
   import { WebMidi } from 'webmidi'
   import type {
-      BlockTxtSettings,
-      FontFamily,
-      PrinterSettings,
-      PrintSettings,
-      TxtObject
+    BlockTxtSettings,
+    FontFamily,
+    PrinterSettings,
+    PrintSettings,
+    TxtObject
   } from './types'
 
-  let { unwantedTragmentsDontCommit = [
-    '[ Silence ]',
-    '[silence]',
-    '[BLANK_AUDIO]',
-    '[ [ [ [',
-    '[ [ [',
-    '[ [',
-    '[',
-    '(buzzer)',
-    '(buzzing)',
-    '.'
-  ] } = $props();
+  let {
+    unwantedTragmentsDontCommit = [
+      '[ Silence ]',
+      '[silence]',
+      '[BLANK_AUDIO]',
+      '[ [ [ [',
+      '[ [ [',
+      '[ [',
+      '[',
+      '(buzzer)',
+      '(buzzing)',
+      '.'
+    ]
+  } = $props()
 
   // Only Contains the final sentences
-  let committedContent = $state<TxtObject[]>([]);
+  let committedContent = $state<TxtObject[]>([])
 
   // Contains all incoming TTS sentences
-  let allIncomingTTSMessages = $state<string[]>([]);
+  let allIncomingTTSMessages = $state<string[]>([])
 
-  let currentSentence = $state<TxtObject>({} as TxtObject);
+  let currentSentence = $state<TxtObject>({} as TxtObject)
 
   let fontFamilys = $state<FontFamily[]>([
     { name: 'Garamondt-Regular' },
@@ -49,27 +51,27 @@
     { name: 'Neureal-Regular' },
     { name: 'NIKITA-Regular' },
     { name: 'Yorkshire' }
-  ]);
+  ])
 
   let printerSettings = $state<PrinterSettings>({
     deviceName: 'Xerox_Phaser_5550N',
     forcePrint: false
-  });
-  
-  let isSuccessfulPrint = $state(true);
-  let printStatusBar = $state<PrintStatusBar | undefined>(undefined);
+  })
+
+  let isSuccessfulPrint = $state(true)
+  let printStatusBar = $state<PrintStatusBar | undefined>(undefined)
 
   // State for sentences waiting to be committed while printing
-  let isPrinting = $state(false);
-  let isHandlingOverflow = $state(false); // Flag to prevent recursive overflow handling
+  let isPrinting = $state(false)
+  let isHandlingOverflow = $state(false) // Flag to prevent recursive overflow handling
 
   // Initialize settings when the app starts
   $effect(() => {
     if (!$settings.controllerSettings.length) settings.init()
-  });
+  })
 
-  let codeEditorContentSaved = $derived(settings.codeEditorContentSaved.subscribe);
-  let currentContentList = $derived([...committedContent, currentSentence]);
+  let codeEditorContentSaved = $derived(settings.codeEditorContentSaved.subscribe)
+  let currentContentList = $derived([...committedContent, currentSentence])
 
   window.electronAPI.onTranscriptionData((_event: Event, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
@@ -119,7 +121,7 @@
     if ($settings.inlineStyle || $settings.svgFilters) {
       settings.markUnsaved()
     }
-  });
+  })
 
   async function handleOverflow(overflowingItem: TxtObject): Promise<void> {
     // Don't handle overflow if we're already handling overflow
