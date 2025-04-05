@@ -5,16 +5,16 @@
   import BlockTxt from '@components/pageElement/BlockTxt.svelte'
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
   import { settings } from '@stores/settings.js'
+  import type {
+      BlockTxtSettings,
+      FontFamily,
+      PrinterSettings,
+      PrintSettings,
+      TxtObject
+  } from 'src/types'
   import type { SvelteComponent } from 'svelte'
   import { tick } from 'svelte'
   import { WebMidi } from 'webmidi'
-  import type {
-    BlockTxtSettings,
-    FontFamily,
-    PrinterSettings,
-    PrintSettings,
-    TxtObject
-  } from './types'
 
   let {
     unwantedTragmentsDontCommit = [
@@ -73,7 +73,7 @@
   let codeEditorContentSaved = $derived(settings.codeEditorContentSaved.subscribe)
   let currentContentList = $derived([...committedContent, currentSentence])
 
-  window.electronAPI.onTranscriptionData((_event: Event, value: string) => {
+  window.electron.onTranscriptionData((_event: Event, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
     const formattedSentence = formatTTSasTxtObject(value)
 
