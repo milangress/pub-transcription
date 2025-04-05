@@ -1,7 +1,6 @@
 import { PvRecorder } from '@picovoice/pvrecorder-node'
 import { writeFileSync } from 'fs'
 import { WaveFile } from 'wavefile'
-import { transcribeWavFile } from './whisperTranscription'
 
 interface AudioFrame extends Int16Array {
   readonly length: number
@@ -66,10 +65,7 @@ export class AudioRecorder {
     wav.fromScratch(1, this.recorder.sampleRate, '16', audioData)
     writeFileSync('test.wav', wav.toBuffer())
     console.log('Wrote test.wav')
-
-    const transcript = await transcribeWavFile('test.wav')
-    console.log(transcript)
-    return transcript
+    return 'test.wav'
   }
 
   stop(): void {
