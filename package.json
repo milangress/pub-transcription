@@ -22,8 +22,6 @@
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
-    "@electron-toolkit/preload": "^3.0.1",
-    "@electron-toolkit/utils": "^4.0.0",
     "@codemirror/autocomplete": "^6.11.1",
     "@codemirror/commands": "^6.8.0",
     "@codemirror/lang-html": "^6.4.7",
@@ -32,6 +30,9 @@
     "@codemirror/lint": "^6.8.4",
     "@codemirror/state": "^6.5.1",
     "@codemirror/view": "^6.36.2",
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/typed-ipc": "^1.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
     "@picovoice/pvrecorder-node": "^1.2.1",
     "codemirror": "^6.0.1",
     "electron-serve": "^1.1.0",
