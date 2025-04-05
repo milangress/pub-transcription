@@ -20,9 +20,9 @@
       type DecorationSet
   } from '@codemirror/view'
   import { basicSetup } from 'codemirror'
+  import type { ControllerSetting, FontFamily } from 'src/types'
   import { createEventDispatcher, onMount } from 'svelte'
   import { settings } from '../../stores/settings.js'
-  import type { ControllerSetting, FontFamily } from '../../types.js'
 
   let {
     value = $bindable(''),
