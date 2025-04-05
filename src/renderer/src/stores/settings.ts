@@ -2,9 +2,9 @@ import type { ControllerSetting, Settings } from 'src/types'
 import { derived, get, writable, type Writable } from 'svelte/store'
 import { WebMidi } from 'webmidi'
 
-import defaultInlineStyle from '@assets/input-defaults/inlineStyle.js'
-import inputJson from '@assets/input-defaults/input.json'
-import defaultSvgFilters from '@assets/input-defaults/svgFilters.js'
+import defaultInlineStyle from '../assets/input-defaults/inlineStyle.js'
+import inputJson from '../assets/input-defaults/input.json'
+import defaultSvgFilters from '../assets/input-defaults/svgFilters.js'
 
 import { mapRange } from '@utils/math.js'
 
@@ -47,12 +47,12 @@ function createSettingsStore(): SettingsStore {
     console.log('Saving settings to electron store')
     const currentSettings = get(store)
     await window.electron.ipcRenderer.invoke(
-      'set-store-value',
+      'setStoreValue',
       'inlineStyle',
       currentSettings.inlineStyle
     )
     await window.electron.ipcRenderer.invoke(
-      'set-store-value',
+      'setStoreValue',
       'svgFilters',
       currentSettings.svgFilters
     )
@@ -96,11 +96,11 @@ function createSettingsStore(): SettingsStore {
       try {
         // Load from electron store
         const savedInlineStyle = await window.electron.ipcRenderer.invoke(
-          'get-store-value',
+          'getStoreValue',
           'inlineStyle'
         )
         const savedSvgFilters = await window.electron.ipcRenderer.invoke(
-          'get-store-value',
+          'getStoreValue',
           'svgFilters'
         )
 
