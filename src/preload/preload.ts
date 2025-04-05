@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { PrintRequest, PrintSettings, PrintStatusMessage, QueueStatus } from './types';
+import type { PrintRequest, PrintSettings, PrintStatusMessage, QueueStatus } from '../types';
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
