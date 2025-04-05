@@ -48,7 +48,8 @@ const DEFAULT_OPTIONS: StreamOptions = {
  */
 export function createStreamProcess(
   mainWindow: BrowserWindow,
-  options: Partial<StreamOptions> = {}
+  options: Partial<StreamOptions> = {},
+  printTranscription: boolean = false
 ): ChildProcess {
   const mergedOptions = { ...DEFAULT_OPTIONS, ...options }
 
@@ -111,13 +112,14 @@ export function createStreamProcess(
 
   ls.stdout.on('data', (data: Buffer) => {
     const string = new TextDecoder().decode(data)
-    log.msg(`stdout: ${string}`)
+    if (printTranscription) {
+      log.msg(`stdout: ${string}`)
+    }
     sendToWindowIfAvailable('transcription-data', string)
   })
 
   ls.stderr.on('data', (info: Buffer) => {
     const string = new TextDecoder().decode(info)
-    log.msg(`stderr: ${string}`)
     log.toWindow(string)
   })
 
