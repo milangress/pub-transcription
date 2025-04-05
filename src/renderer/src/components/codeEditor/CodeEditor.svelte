@@ -44,7 +44,6 @@
 
   let element = $state<HTMLDivElement | undefined>()
   let view = $state<EditorView | undefined>()
-  let filterIds = $state<string[]>([])
   let isUpdatingFromPreview = $state(false)
   let isDragging = $state(false)
   let dragStartX = $state(0)
@@ -58,12 +57,10 @@
     return Array.from(filters).map((filter) => filter.id)
   }
 
-  $effect(() => {
-    if (svgFiltersCode) {
-      filterIds = extractFilterIds(svgFiltersCode)
-      console.log('Available filters:', filterIds)
-    }
-  })
+  let filterIds = $derived(extractFilterIds(svgFiltersCode))
+
+  $inspect(filterIds)
+
 
   function createCompletions(context: any) {
     // Check for font-family completion
