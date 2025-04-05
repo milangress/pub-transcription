@@ -1,5 +1,5 @@
 interface CheckPositionParams {
-  onOverflow: (element: HTMLElement) => void
+  registerOverflow: (element: HTMLElement) => void
 }
 
 export function checkPosition(
@@ -7,11 +7,11 @@ export function checkPosition(
   params: CheckPositionParams | null
 ): { destroy: () => void } {
   // If no params provided or explicitly set to null, don't do any checking
-  if (!params) return { destroy() {} }
+  if (!params) return { destroy: (): void => {} }
 
-  const { onOverflow } = params
+  const { registerOverflow } = params
   const page = element.closest('page')
-  if (!page) return { destroy() {} }
+  if (!page) return { destroy: (): void => {} }
 
   const pageRect = page.getBoundingClientRect()
   const elementRect = element.getBoundingClientRect()
@@ -27,11 +27,11 @@ export function checkPosition(
   })
 
   if (distanceToBottom < 0 || percentToBottom < 5) {
-    onOverflow(element)
+    registerOverflow(element)
   }
 
   return {
-    destroy() {
+    destroy(): void {
       // Cleanup if needed
     }
   }

@@ -1,11 +1,6 @@
 <script lang="ts">
-  import type { BlockTxtSettings, ControllerSetting } from '@/types'
-  import { createEventDispatcher } from 'svelte'
+  import type { BlockTxtSettings, ControllerSetting } from 'src/types'
   import { checkPosition } from './checkPosition.js'
-
-  const dispatch = createEventDispatcher<{
-    overflow: void
-  }>()
 
   let {
     content = 'Hello World',
@@ -13,11 +8,13 @@
     settings = {
       inlineStyle: '',
       controllerSettings: []
-    }
+    },
+    onOverflow = () => {}
   } = $props<{
     content?: string
     isCurrent?: boolean
     settings?: BlockTxtSettings
+    onOverflow?: () => void
   }>()
 
   function transformSassToCSS(
@@ -64,7 +61,7 @@
   style={compiledStyle}
   use:checkPosition={!isCurrent
     ? {
-        onOverflow: () => dispatch('overflow')
+        registerOverflow: () => onOverflow()
       }
     : null}
 >
