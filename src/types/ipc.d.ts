@@ -1,4 +1,4 @@
-import type { PrintRequest, PrintStatusMessage, QueueStatus } from './index';
+import type { PrintRequest, PrintStatusMessage, QueueStatus } from './index'
 
 // Main process ipc events (from renderer to main)
 export type IpcEvents =

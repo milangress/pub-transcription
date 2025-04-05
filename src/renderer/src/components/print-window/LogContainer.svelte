@@ -15,10 +15,8 @@
   // Load saved logs on mount
   onMount(async () => {
     try {
-      const savedLogs = (await window.electron.ipcRenderer.invoke(
-        'get-store-value',
-        'printLogs'
-      )) || []
+      const savedLogs =
+        (await window.electron.ipcRenderer.invoke('get-store-value', 'printLogs')) || []
       if (savedLogs.length > 0) {
         // Add session divider only on first load
         const sessionDivider = {

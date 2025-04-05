@@ -79,7 +79,6 @@ export interface PrintCompletionEvent {
   error?: string
 }
 
-
 export interface FontFamily {
   name: string
 }

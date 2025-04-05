@@ -70,11 +70,9 @@
 
   // Add print request handler
   onMount(() => {
-    window.electron.ipcRenderer.on('print-queued',
-      (
-        _,
-        { success, error, printId }: { success: boolean; error?: string; printId: string }
-      ) => {
+    window.electron.ipcRenderer.on(
+      'print-queued',
+      (_, { success, error, printId }: { success: boolean; error?: string; printId: string }) => {
         if (success) {
           updateStatus(printId, '🐣', 'Print job queued successfully')
         } else {

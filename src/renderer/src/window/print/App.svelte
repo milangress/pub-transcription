@@ -80,7 +80,10 @@
       previewTimer = setTimeout(async () => {
         try {
           // Disable print media emulation
-          const disableSuccess = await window.electron.ipcRenderer.invoke('toggle-print-preview', false)
+          const disableSuccess = await window.electron.ipcRenderer.invoke(
+            'toggle-print-preview',
+            false
+          )
           if (!disableSuccess) {
             addLogEntry('Failed to end print preview', null, null, 'server')
           } else {
@@ -151,7 +154,9 @@
 
         case 'PRINT_COMPLETE':
           if (printStatus === 'SUCCESS') {
-            const duration = printStartTime ? ((Date.now() - printStartTime) / 1000).toFixed(2) : '0.00'
+            const duration = printStartTime
+              ? ((Date.now() - printStartTime) / 1000).toFixed(2)
+              : '0.00'
             status = message || `🖨️ Print completed successfully (${duration}s)`
             addLogEntry(
               message || `Print completed successfully (${duration}s)`,
@@ -192,7 +197,8 @@
     })
 
     // Handle print job setup
-    window.electron.ipcRenderer.on('print-job',
+    window.electron.ipcRenderer.on(
+      'print-job',
       async (_event, { content, settings = {}, attempt, maxRetries: maxRetriesVal }) => {
         try {
           console.log('onPrintJob', { content, settings, attempt, maxRetriesVal })

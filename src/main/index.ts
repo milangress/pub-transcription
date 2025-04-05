@@ -10,7 +10,6 @@ import { PrintQueue } from './PrintQueue'
 import { simulatedTranscriptController } from './simulateTranscriptForDevTesting'
 import { createStreamProcess } from './streamProcess'
 
-
 // Local types
 interface PrintWindowOptions extends Electron.BrowserWindowConstructorOptions {
   width: number

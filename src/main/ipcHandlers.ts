@@ -50,9 +50,9 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
       await printQueue.add(request.content, request.settings)
 
       // Send queue notification immediately
-      emitter.send(event.sender, 'print-queued', { 
-        success: true, 
-        printId: request.settings.printId 
+      emitter.send(event.sender, 'print-queued', {
+        success: true,
+        printId: request.settings.printId
       })
     } catch (error) {
       console.error('Print queue error:', error)
@@ -230,4 +230,4 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
     )
     sendToAllWindows('print-status', statusMsg)
   })
-} 
+}

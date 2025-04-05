@@ -6,11 +6,11 @@
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
   import { settings } from '@stores/settings.js'
   import type {
-      BlockTxtSettings,
-      FontFamily,
-      PrinterSettings,
-      PrintSettings,
-      TxtObject
+    BlockTxtSettings,
+    FontFamily,
+    PrinterSettings,
+    PrintSettings,
+    TxtObject
   } from 'src/types'
   import type { SvelteComponent } from 'svelte'
   import { tick } from 'svelte'

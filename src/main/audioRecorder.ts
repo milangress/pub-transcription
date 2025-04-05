@@ -75,4 +75,4 @@ export class AudioRecorder {
       this.recorder = null
     }
   }
-} 
+}
