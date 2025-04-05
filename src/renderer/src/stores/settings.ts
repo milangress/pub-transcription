@@ -1,4 +1,4 @@
-import type { ControllerSetting, Settings } from 'src/types'
+import type { ControllerSetting, Settings } from 'src/renderer/src/types'
 import { derived, get, writable, type Writable } from 'svelte/store'
 import { WebMidi } from 'webmidi'
 

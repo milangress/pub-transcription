@@ -18,6 +18,23 @@ const printEvents = new EventEmitter()
 let printQueue: PrintQueue | null = null
 const printWindow: BrowserWindow | null = null
 
+// Default print options
+const DEFAULT_PRINT_OPTIONS = {
+  margins: {
+    marginType: 'custom' as const,
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0
+  },
+  pageSize: 'A3' as const,
+  printBackground: true,
+  printSelectionOnly: false,
+  landscape: false,
+  silent: true,
+  scaleFactor: 100
+}
+
 // Helper function to send messages to all windows
 function sendToAllWindows(channel: keyof IpcRendererEvent, status: PrintStatusMessage): void {
   ;[printWindow].forEach((window) => {
@@ -96,18 +113,8 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
       }
 
       const printOptions = {
-        margins: {
-          marginType: 'custom' as const,
-          top: 0,
-          bottom: 0,
-          left: 0,
-          right: 0
-        },
-        pageSize: 'A3' as const,
-        scaleFactor: 100,
-        printBackground: false,
-        landscape: false,
-        silent: true
+        ...DEFAULT_PRINT_OPTIONS,
+        silent: request.settings.silent ?? DEFAULT_PRINT_OPTIONS.silent
       }
 
       const pdfOptions = {

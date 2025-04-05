@@ -6,12 +6,14 @@
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
   import { settings } from '@stores/settings.js'
   import type {
-    BlockTxtSettings,
-    FontFamily,
-    PrinterSettings,
-    PrintSettings,
-    TxtObject
-  } from 'src/types'
+      BlockTxtSettings,
+      FontFamily,
+      PrinterSettings,
+      TxtObject
+  } from 'src/renderer/src/types'
+
+  import type { PrintSettings } from 'src/types'
+
   import type { SvelteComponent } from 'svelte'
   import { tick } from 'svelte'
   import { WebMidi } from 'webmidi'
@@ -213,17 +215,6 @@
         ...printerSettings,
         printId,
         silent: true,
-        printBackground: true,
-        printSelectionOnly: false,
-        landscape: false,
-        pageSize: 'A3',
-        margins: {
-          marginType: 'custom',
-          top: 0,
-          bottom: 0,
-          left: 0,
-          right: 0
-        },
         inlineStyle: $settings.inlineStyle,
         svgFilters: $settings.svgFilters
       }

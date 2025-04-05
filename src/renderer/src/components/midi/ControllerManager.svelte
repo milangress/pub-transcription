@@ -1,6 +1,6 @@
 <script lang="ts">
   import { settings } from '@stores/settings'
-  import type { ControllerSetting } from 'src/types'
+  import type { ControllerSetting } from 'src/renderer/src/types'
   import MIDIKnobPreview from './MIDIKnobPreview.svelte'
 
   let { controllerSettings = $bindable([]) } = $props<{
