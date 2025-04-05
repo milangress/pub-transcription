@@ -22,7 +22,7 @@ interface StreamOptions {
 }
 
 const DEFAULT_OPTIONS: StreamOptions = {
-  name: 'whisper.ccp metal',
+  name: 'whisper-ccp-stream',
   model: ggmlModelSmallEnQ51Bin,
   metal: ggmlMetal,
   threads: 8,
@@ -37,7 +37,6 @@ const DEFAULT_OPTIONS: StreamOptions = {
  * Creates and manages a child process for real-time audio stream transcription.
  *
  * @param mainWindow - The Electron main window instance to send transcription events
- * @param baseDir - Base directory path for locating the stream executable and model files
  * @param options - Optional configuration for the stream process
  * @returns The spawned child process instance
  *
@@ -53,8 +52,17 @@ export function createStreamProcess(
 ): ChildProcess {
   const mergedOptions = { ...DEFAULT_OPTIONS, ...options }
 
-  function logMessage(message: string): void {
-    console.log(`[${mergedOptions.name}] ${message}`)
+  const log = {
+    msg: (message: string | object): void => {
+      const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message
+      console.log('\x1b[90m%s\x1b[0m', `[${mergedOptions.name}] ${text}`)
+    },
+    toWindow: (message: string): void => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        console.log('\x1b[34m%s\x1b[0m', `[${mergedOptions.name}] [send] ${message}`)
+        mainWindow.webContents.send('transcription-status', message)
+      }
+    }
   }
 
   // Create audio directory in userData if it doesn't exist
@@ -63,20 +71,7 @@ export function createStreamProcess(
     mkdirSync(audioDir, { recursive: true })
   }
 
-  // Change working directory to audioDir before spawning process
-  const spawnOptions = {
-    cwd: audioDir
-  }
-
-  logMessage(`Audio directory: '${audioDir}'`)
-
-  logMessage(`Audio directory: '${audioDir}'`)
-
-  logMessage(`Stream path: '${ggmlStreamBin}'`)
-
-  logMessage(`ggmlModelSmallEnQ51Bin: ${ggmlModelSmallEnQ51Bin}`)
-
-
+  const spawnOptions = { cwd: audioDir }
   const args = [
     '--model',
     mergedOptions.model,
@@ -96,40 +91,33 @@ export function createStreamProcess(
     args.push('--save-audio')
   }
 
-  logMessage(`Spawn stream  process: ${ggmlStreamBin} ${args}`)
+  log.msg(`Starting in ${audioDir}`)
+  log.msg(`Command: ${ggmlStreamBin} ${args.join(' ')}`)
 
   const ls = spawn(ggmlStreamBin, args, spawnOptions)
-
-  // Store the process for cleanup
   activeStreamProcess = ls
 
   ls.stdout.on('data', (data: Buffer) => {
     const string = new TextDecoder().decode(data)
-    logMessage(`stdout: ${string}`)
+    log.msg(`stdout: ${string}`)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('transcription-data', string)
-    } else {
-      logMessage('Could not send transcription data - window unavailable')
     }
   })
 
   ls.stderr.on('data', (info: Buffer) => {
     const string = new TextDecoder().decode(info)
-    logMessage(`stderr: ${string}`)
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('transcription-status', string)
-    }
+    log.msg(`stderr: ${string}`)
+    log.toWindow(string)
   })
 
   ls.on('error', (error: Error) => {
-    logMessage(`error: ${error.message}`)
-    if (mainWindow) {
-      mainWindow.webContents.send('transcription-status', error.message)
-    }
+    log.msg(`error: ${error.message}`)
+    log.toWindow(error.message)
   })
 
   ls.on('close', (code: number | null) => {
-    logMessage(`child process exited with code ${code}`)
+    log.msg(`Process exited with code ${code}`)
     activeStreamProcess = null
   })
 
