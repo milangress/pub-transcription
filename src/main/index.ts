@@ -1,10 +1,10 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
-import serve from 'electron-serve'
 import Store from 'electron-store'
 import { EventEmitter } from 'events'
 import { existsSync, promises as fs } from 'fs'
 import { join } from 'path'
+import icon from '../../resources/favicon.png?asset'
 
 import { AudioRecorder } from './audioRecorder'
 import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printMessages'
@@ -44,7 +44,6 @@ interface MainWindowOptions extends Electron.BrowserWindowConstructorOptions {
 // Create event emitter for print events
 const printEvents = new EventEmitter()
 const store = new Store()
-const loadURL = serve({ directory: 'public' })
 
 // Global references
 let mainWindow: BrowserWindow | null = null
@@ -69,16 +68,16 @@ function createPrintWindow(): BrowserWindow {
       scrollBounce: true,
       nodeIntegration: false,
       contextIsolation: true,
-      preload: join(__dirname, 'electron/preload.js')
+      preload: join(__dirname, '../preload/index.js')
     }
   }
 
   printWindow = new BrowserWindow(options)
 
-  if (isDev()) {
-    printWindow.loadFile('public/print.html')
+  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
+    printWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/print.html`)
   } else {
-    printWindow.loadFile(join(__dirname, 'public/print.html'))
+    printWindow.loadFile(join(__dirname, '../renderer/print.html'))
   }
 
   // Initialize debugger state for new window
@@ -123,9 +122,9 @@ function createWindow(): void {
         hiddenInset: true
       },
       nodeIntegration: true,
-      preload: join(__dirname, 'electron/preload.js')
+      preload: join(__dirname, '../preload/index.js')
     },
-    icon: join(__dirname, 'public/favicon.png'),
+    icon,
     show: false
   }
 
@@ -136,10 +135,10 @@ function createWindow(): void {
   }
 
   // Load the app
-  if (isDev()) {
-    mainWindow.loadURL('http://localhost:8080/')
+  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    loadURL(mainWindow)
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
   // Register IPC handlers
