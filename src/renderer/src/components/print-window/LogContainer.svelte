@@ -15,7 +15,10 @@
   // Load saved logs on mount
   onMount(async () => {
     try {
-      const savedLogs = (await window.electronAPI.getStoreValue('printLogs')) || []
+      const savedLogs = (await window.electron.ipcRenderer.invoke(
+        'get-store-value',
+        'printLogs'
+      )) || []
       if (savedLogs.length > 0) {
         // Add session divider only on first load
         const sessionDivider = {
@@ -77,7 +80,7 @@
   async function clearLogs() {
     if (confirm('Are you sure you want to clear all logs?')) {
       logs = []
-      await window.electronAPI.setStoreValue('printLogs', [])
+      await window.electron.ipcRenderer.invoke('set-store-value', 'printLogs', [])
     }
   }
   let mergedLogs = $derived([...previousLogs, ...logs])
@@ -86,8 +89,8 @@
     if (mergedLogs.length !== previousLogsLength) {
       // Save all logs including dividers
       const logsToStore = mergedLogs.slice(-MAX_STORED_LOGS)
-      window.electronAPI
-        .setStoreValue('printLogs', logsToStore)
+      window.electron.ipcRenderer
+        .invoke('set-store-value', 'printLogs', logsToStore)
         .catch((error) => console.error('Failed to save logs:', error))
       previousLogsLength = mergedLogs.length
 

@@ -2,7 +2,7 @@
   let messages = $state<string[]>([])
 
   // Listen for transcription status updates
-  window.electronAPI.onTranscriptionStatus((_event: Event, value: string) => {
+  window.electron.ipcRenderer.on('transcription-status', (_, value: string) => {
     messages = [value, ...messages]
   })
 </script>

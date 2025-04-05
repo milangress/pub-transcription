@@ -70,9 +70,9 @@
 
   // Add print request handler
   onMount(() => {
-    window.electronAPI.onPrintQueued(
+    window.electron.ipcRenderer.on('print-queued',
       (
-        _event: Event,
+        _,
         { success, error, printId }: { success: boolean; error?: string; printId: string }
       ) => {
         if (success) {
@@ -83,7 +83,7 @@
       }
     )
 
-    window.electronAPI.onPrintStatus((_event: Event, message: PrintStatusMessage) => {
+    window.electron.ipcRenderer.on('print-status', (_event, message: PrintStatusMessage) => {
       const { id, action, status, ...details } = message
       let emoji = '❓'
       let text = 'Unknown status'

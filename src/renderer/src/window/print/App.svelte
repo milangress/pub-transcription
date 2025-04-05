@@ -69,7 +69,7 @@
       }
 
       // Enable print media emulation
-      const success = await window.electronAPI.togglePrintPreview(true)
+      const success = await window.electron.ipcRenderer.invoke('toggle-print-preview', true)
       if (!success) {
         addLogEntry('Failed to start print preview', null, null, 'server')
         isPrintPreview = false
@@ -80,7 +80,7 @@
       previewTimer = setTimeout(async () => {
         try {
           // Disable print media emulation
-          const disableSuccess = await window.electronAPI.togglePrintPreview(false)
+          const disableSuccess = await window.electron.ipcRenderer.invoke('toggle-print-preview', false)
           if (!disableSuccess) {
             addLogEntry('Failed to end print preview', null, null, 'server')
           } else {
@@ -114,7 +114,7 @@
     console.log('📝 Executing print with ID:', currentPrintId)
 
     try {
-      await window.electronAPI.executePrint(content, settings)
+      await window.electron.ipcRenderer.invoke('execute-print', content, settings)
       // Status updates will come from main process
     } catch (error) {
       console.error('❌ Print error:', error)
@@ -127,7 +127,7 @@
     console.log('🖨️ Print window initialized')
 
     // Listen for print status updates
-    window.electronAPI.onPrintStatus((_event, data) => {
+    window.electron.ipcRenderer.on('print-status', (_event, data) => {
       console.log('📥 Print status update:', data)
 
       if (!data?.id) {
@@ -182,14 +182,14 @@
     })
 
     // Also add back server message handling for transcription status
-    window.electronAPI.onTranscriptionStatus((_event, message) => {
+    window.electron.ipcRenderer.on('transcription-status', (_event, message) => {
       if (typeof message === 'string') {
         addLogEntry(message, null, null, 'server')
       }
     })
 
     // Handle print job setup
-    window.electronAPI.onPrintJob(
+    window.electron.ipcRenderer.on('print-job',
       async (_event, { content, settings = {}, attempt, maxRetries: maxRetriesVal }) => {
         try {
           console.log('onPrintJob', { content, settings, attempt, maxRetriesVal })
@@ -222,6 +222,9 @@
 
           // Get the container
           const container = document.getElementById('print-container')
+          if (!container) {
+            throw new Error('⚠️ Print container not found')
+          }
           container.innerHTML = ''
 
           // Inject any dynamic styles
@@ -285,7 +288,7 @@
     )
 
     // Handle queue status updates
-    window.electronAPI.onQueueStatus((_event, status) => {
+    window.electron.ipcRenderer.on('queue-status', (_event, status) => {
       console.log('📊 Queue status update:', status)
       queueLength = status.queueLength || 0
       isQueueProcessing = status.isProcessing
@@ -307,7 +310,7 @@
         clearTimeout(previewTimer)
         previewTimer = null
       }
-      window.electronAPI.togglePrintPreview(false).catch((error) => {
+      window.electron.ipcRenderer.invoke('toggle-print-preview', false).catch((error) => {
         console.error('Failed to disable print preview on unmount:', error)
       })
     }

@@ -1,6 +1,6 @@
+import type { ControllerSetting, Settings } from 'src/types'
 import { derived, get, writable, type Writable } from 'svelte/store'
 import { WebMidi } from 'webmidi'
-import type { ControllerSetting, Settings } from '../types'
 
 import defaultInlineStyle from '@assets/input-defaults/inlineStyle.js'
 import inputJson from '@assets/input-defaults/input.json'
@@ -46,8 +46,16 @@ function createSettingsStore(): SettingsStore {
   const debouncedSave = debounce(async () => {
     console.log('Saving settings to electron store')
     const currentSettings = get(store)
-    await window.electronAPI.setStoreValue('inlineStyle', currentSettings.inlineStyle)
-    await window.electronAPI.setStoreValue('svgFilters', currentSettings.svgFilters)
+    await window.electron.ipcRenderer.invoke(
+      'set-store-value',
+      'inlineStyle',
+      currentSettings.inlineStyle
+    )
+    await window.electron.ipcRenderer.invoke(
+      'set-store-value',
+      'svgFilters',
+      currentSettings.svgFilters
+    )
     codeEditorContentSaved.set(true)
   }, 1000)
 
@@ -87,8 +95,14 @@ function createSettingsStore(): SettingsStore {
 
       try {
         // Load from electron store
-        const savedInlineStyle = await window.electronAPI.getStoreValue('inlineStyle')
-        const savedSvgFilters = await window.electronAPI.getStoreValue('svgFilters')
+        const savedInlineStyle = await window.electron.ipcRenderer.invoke(
+          'get-store-value',
+          'inlineStyle'
+        )
+        const savedSvgFilters = await window.electron.ipcRenderer.invoke(
+          'get-store-value',
+          'svgFilters'
+        )
 
         // Initialize with defaults and saved values
         const controllers = (inputJson.controllers || []) as ControllerSetting[]

@@ -73,7 +73,7 @@
   let codeEditorContentSaved = $derived(settings.codeEditorContentSaved.subscribe)
   let currentContentList = $derived([...committedContent, currentSentence])
 
-  window.electron.onTranscriptionData((_event: Event, value: string) => {
+  window.electron.ipcRenderer.on('transcription-data', (_, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
     const formattedSentence = formatTTSasTxtObject(value)
 
@@ -203,10 +203,11 @@
       }
 
       // Create a print request in the status bar
-      const printId = printStatusBar.addPrintRequest().toString() // Convert to string
+      const printId = printStatusBar?.addPrintRequest().toString() // Convert to string
       console.log(`📝 Created print request with ID: ${printId}`)
 
       console.log('Printing text: ', pageElement.textContent?.trim())
+      if (!printId) return
 
       const printSettings: PrintSettings = {
         ...printerSettings,
@@ -227,7 +228,7 @@
         svgFilters: $settings.svgFilters
       }
 
-      window.electronAPI.print(pageContent, printSettings)
+      window.electron.ipcRenderer.send('print', pageContent, printSettings)
       committedContent = []
     } catch (error) {
       console.error('❌ Error during print:', error)
@@ -272,7 +273,7 @@
             <item.type
               content={item.content}
               settings={item.settings}
-              on:overflow={() => handleOverflow(item)}
+              onOverflow={() => handleOverflow(item)}
             />
           {/each}
           {#if !isPrinting && currentSentence?.type}
@@ -318,7 +319,9 @@
       <div class="printControls">
         <button onclick={printFile}>PRINT</button>
         <button onclick={clearAll}>CLEAR ALL</button>
-        <button onclick={() => window.electronAPI.openPDFFolder()}>OPEN PDFs FOLDER</button>
+        <button onclick={() => window.electron.ipcRenderer.send('open-pdfs-folder')}>
+          OPEN PDFs FOLDER
+        </button>
         <input bind:value={printerSettings.deviceName} type="text" disabled />
         <label><input bind:checked={printerSettings.forcePrint} type="checkbox" />Force Print</label
         >
