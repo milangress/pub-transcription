@@ -9,6 +9,8 @@ files:
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{recordings/**}'
+  - '!{doc/**}'
 asarUnpack:
   - resources/**/*
 win:
@@ -26,7 +28,7 @@ mac:
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
-  asar: false
+  # asar: false
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
