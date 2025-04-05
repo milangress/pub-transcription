@@ -246,4 +246,12 @@ export class PrintQueue {
     this.queue = []
     this.isProcessing = false
   }
+
+  /**
+   * Check if there are any active jobs in the queue
+   * @returns true if there are jobs in the queue or a job is being processed
+   */
+  hasActiveJobs(): boolean {
+    return this.queue.length > 0 || this.isProcessing
+  }
 }

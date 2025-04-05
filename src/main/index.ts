@@ -1,18 +1,15 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
-import Store from 'electron-store'
+import { app, BrowserWindow } from 'electron'
 import { EventEmitter } from 'events'
-import { existsSync, promises as fs } from 'fs'
 import { join } from 'path'
 import icon from '../../resources/favicon.png?asset'
 
 import { AudioRecorder } from './audioRecorder'
-import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printMessages'
+import { setupIpcHandlers } from './ipcHandlers'
 import { PrintQueue } from './PrintQueue'
 import { simulatedTranscriptController } from './simulateTranscriptForDevTesting'
 import { createStreamProcess } from './streamProcess'
 
-import type { PrintCompletionEvent, PrintRequest, PrintStatusMessage } from '../types'
 
 // Local types
 interface PrintWindowOptions extends Electron.BrowserWindowConstructorOptions {
@@ -43,7 +40,6 @@ interface MainWindowOptions extends Electron.BrowserWindowConstructorOptions {
 
 // Create event emitter for print events
 const printEvents = new EventEmitter()
-const store = new Store()
 
 // Global references
 let mainWindow: BrowserWindow | null = null
@@ -132,6 +128,7 @@ function createWindow(): void {
 
   if (isDev()) {
     createPrintWindow()
+    mainWindow.webContents.openDevTools()
   }
 
   // Load the app
@@ -142,14 +139,14 @@ function createWindow(): void {
   }
 
   // Register IPC handlers
-  setupIPCHandlers()
+  setupIpcHandlers(createPrintWindow)
 
   // Window event handlers
   let isWindowShown = false
   let isContentLoaded = false
 
   function checkAndStartProcesses(): void {
-    if (isWindowShown && isContentLoaded) {
+    if (isWindowShown && isContentLoaded && mainWindow) {
       startProcesses()
     }
   }
@@ -168,7 +165,7 @@ function createWindow(): void {
   // Handle window closing
   mainWindow.on('closed', () => {
     // If there are active print jobs, show the print window
-    if (printQueue && (printQueue.queue.length > 0 || printQueue.isProcessing)) {
+    if (printQueue?.hasActiveJobs()) {
       printWindow?.show()
     }
 
@@ -182,223 +179,6 @@ function createWindow(): void {
   })
 }
 
-function setupIPCHandlers(): void {
-  // Helper function to send messages to all windows
-  function sendToAllWindows(channel: string, ...args: unknown[]): void {
-    ;[mainWindow, printWindow].forEach((window) => {
-      if (window && !window.isDestroyed()) {
-        window.webContents.send(channel, ...args)
-      }
-    })
-  }
-
-  // Print request handler
-  ipcMain.on('print', async (event, { content, settings }: PrintRequest) => {
-    try {
-      if (!printQueue) {
-        printQueue = new PrintQueue(printWindow, createPrintWindow, printEvents)
-      }
-
-      if (!content || typeof content !== 'string') {
-        throw new Error('Invalid content format')
-      }
-      if (!settings || !settings.printId) {
-        throw new Error('Print settings or ID missing')
-      }
-
-      console.log('📝 Print request received:', {
-        contentLength: content.length,
-        settings: settings.printId
-      })
-
-      await printQueue.add(content, settings)
-
-      // Send queue notification immediately
-      event.reply('print-queued', { success: true, printId: settings.printId })
-    } catch (error) {
-      console.error('Print queue error:', error)
-      event.reply('print-queued', {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-        printId: settings?.printId
-      })
-    }
-  })
-
-  // Store value handlers
-  ipcMain.handle('getStoreValue', (_event, key: string) => {
-    return store.get(key)
-  })
-
-  ipcMain.handle('setStoreValue', (_event, key: string, value: unknown) => {
-    return store.set(key, value)
-  })
-
-  // PDF folder handler
-  ipcMain.handle('open-pdf-folder', async () => {
-    const pdfDir = join(app.getPath('userData'), 'pdfs')
-    if (!existsSync(pdfDir)) {
-      await fs.mkdir(pdfDir, { recursive: true })
-    }
-    await shell.openPath(pdfDir)
-    return true
-  })
-
-  // Print execution handler
-  ipcMain.handle(
-    'execute-print',
-    async (_event, { content, settings = { printId: '' } }: PrintRequest) => {
-      try {
-        console.log('📝 Execute print request:', {
-          contentLength: content?.length,
-          settings: settings.printId
-        })
-
-        if (!settings || !settings.printId) {
-          throw new Error('Print ID is required')
-        }
-
-        const printOptions: Electron.WebContentsPrintOptions = {
-          margins: {
-            marginType: 'custom',
-            top: 0,
-            bottom: 0,
-            left: 0,
-            right: 0
-          },
-          pageSize: 'A3' as const,
-          scaleFactor: 100,
-          printBackground: false,
-          landscape: false,
-          silent: true
-        }
-
-        const pdfOptions: Electron.PrintToPDFOptions = {
-          margins: printOptions.margins,
-          pageSize: printOptions.pageSize,
-          landscape: printOptions.landscape,
-          printBackground: printOptions.printBackground
-        }
-
-        const statusMsg: PrintStatusMessage = createPrintStatusMessage(
-          settings.printId,
-          PRINT_ACTIONS.PRINT_START,
-          PRINT_STATUS.INFO,
-          { message: '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥' }
-        )
-        sendToAllWindows('print-status', statusMsg)
-
-        // Handle direct printing
-        if (settings?.forcePrint === true && printWindow) {
-          await new Promise<void>((resolve, reject) => {
-            printWindow?.webContents.print(printOptions, (success, errorType) => {
-              if (!success) {
-                const errorMsg = createPrintStatusMessage(
-                  settings.printId,
-                  PRINT_ACTIONS.PRINT_COMPLETE,
-                  PRINT_STATUS.ERROR,
-                  { message: 'Printing failed', error: errorType }
-                )
-                sendToAllWindows('print-status', errorMsg)
-                reject(new Error(errorType))
-              } else {
-                const successMsg = createPrintStatusMessage(
-                  settings.printId,
-                  PRINT_ACTIONS.PRINT_COMPLETE,
-                  PRINT_STATUS.SUCCESS,
-                  { message: '🖨️ Print completed' }
-                )
-                sendToAllWindows('print-status', successMsg)
-                resolve()
-              }
-            })
-          })
-        }
-
-        // Handle PDF saving
-        const dateString = new Date().toISOString().replace(/:/g, '-')
-        const pdfDir = join(app.getPath('userData'), 'pdfs')
-
-        if (!existsSync(pdfDir)) {
-          await fs.mkdir(pdfDir, { recursive: true })
-        }
-
-        const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`)
-        const pdfData = await printWindow?.webContents.printToPDF(pdfOptions)
-
-        if (pdfData) {
-          await fs.writeFile(pdfPath, pdfData)
-          console.log(`Wrote PDF successfully to ${pdfPath}`)
-
-          const pdfMsg = createPrintStatusMessage(
-            settings.printId,
-            PRINT_ACTIONS.PDF_SAVE,
-            PRINT_STATUS.SUCCESS,
-            {
-              message: `💦 Wrote PDF successfully to ${pdfPath}`,
-              path: pdfPath
-            }
-          )
-          sendToAllWindows('print-status', pdfMsg)
-
-          // Emit success event for PrintQueue
-          const completionEvent: PrintCompletionEvent = {
-            printId: settings.printId,
-            success: true
-          }
-          printEvents.emit('print-complete', completionEvent)
-        }
-
-        return true
-      } catch (error) {
-        console.error('Print/PDF error:', error)
-        const errorMsg = createPrintStatusMessage(
-          settings.printId,
-          PRINT_ACTIONS.PRINT_ERROR,
-          PRINT_STATUS.ERROR,
-          {
-            message: `🥵 Error: ${error instanceof Error ? error.message : String(error)}`,
-            error: error instanceof Error ? error.message : String(error)
-          }
-        )
-        sendToAllWindows('print-status', errorMsg)
-
-        // Emit error event for PrintQueue
-        const completionEvent: PrintCompletionEvent = {
-          printId: settings.printId,
-          success: false,
-          error: error instanceof Error ? error.message : String(error)
-        }
-        printEvents.emit('print-complete', completionEvent)
-
-        throw error
-      }
-    }
-  )
-
-  // Print status handler
-  ipcMain.on(
-    'print-status',
-    (_event, status: { printId: string; success: boolean; error?: string }) => {
-      if (!status.printId) {
-        console.error('❌ Print status received without printId:', status)
-        return
-      }
-
-      const statusMsg = createPrintStatusMessage(
-        status.printId,
-        status.success ? PRINT_ACTIONS.PRINT_COMPLETE : PRINT_ACTIONS.PRINT_ERROR,
-        status.success ? PRINT_STATUS.SUCCESS : PRINT_STATUS.ERROR,
-        {
-          message: status.error || (status.success ? '🖨️ Print completed' : '❌ Print failed'),
-          error: status.error
-        }
-      )
-      sendToAllWindows('print-status', statusMsg)
-    }
-  )
-}
-
 // Initialize audio devices
 const initAudioDevices = (): void => {
   audioRecorder = new AudioRecorder()
@@ -410,6 +190,8 @@ const initAudioDevices = (): void => {
 
 // Function to start processes after window is ready
 function startProcesses(): void {
+  if (!mainWindow) return
+
   if (process.argv.includes('--simulate')) {
     console.log('Running in simulation mode')
     simulationController = simulatedTranscriptController(mainWindow)
