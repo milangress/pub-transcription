@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PrintStatusMessage } from '@preload/types.d.ts'
+  import type { PrintStatusMessage } from '@preload/types'
   import { onMount } from 'svelte'
   import { fly } from 'svelte/transition'
   import PrintStatus from './PrintStatus.svelte'
