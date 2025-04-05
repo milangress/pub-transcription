@@ -6,14 +6,11 @@
     "src/renderer/src/**/*.svelte",
     "src/preload/*.d.ts"
 , "src/types.ts"  ],
-  "exclude": ["node_modules", "dist", "build", "public", "src/main", "src/preload"],
   "compilerOptions": {
     "composite": true,
     "verbatimModuleSyntax": true,
     "useDefineForClassFields": true,
-    "strict": false,
-    "allowJs": true,
-    "checkJs": true,
+    "strict": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "baseUrl": ".",
     "paths": {
