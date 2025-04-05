@@ -1,7 +1,11 @@
-const { PvRecorder } = require('@picovoice/pvrecorder-node')
-const { WaveFile } = require('wavefile')
-const fs = require('fs')
-const { transcribeWavFile } = require('./whisperTranscription')
+import { PvRecorder } from '@picovoice/pvrecorder-node'
+import { writeFileSync } from 'fs'
+import { WaveFile } from 'wavefile'
+import { transcribeWavFile } from './whisperTranscription'
+
+interface AudioFrame extends Int16Array {
+  readonly length: number
+}
 
 /**
  * AudioRecorder handles real-time audio recording and transcription using PvRecorder.
@@ -13,27 +17,32 @@ const { transcribeWavFile } = require('./whisperTranscription')
  * - Automatic WAV file generation
  * - Integration with Whisper transcription
  * - Device management
- *
- * @exports AudioRecorder
  */
-class AudioRecorder {
-  constructor() {
+export class AudioRecorder {
+  private frames: AudioFrame[]
+  private recorder: PvRecorder | null
+  private readonly frameSize: number
+  private readonly deviceIndex: number
+
+  constructor(frameSize = 512, deviceIndex = 1) {
     this.frames = []
     this.recorder = null
+    this.frameSize = frameSize
+    this.deviceIndex = deviceIndex
   }
 
-  getAvailableDevices() {
+  getAvailableDevices(): string[] {
     return PvRecorder.getAvailableDevices()
   }
 
-  async start() {
-    this.recorder = new PvRecorder(512, 1)
+  async start(): Promise<void> {
+    this.recorder = new PvRecorder(this.frameSize, this.deviceIndex)
     console.log(`Using PvRecorder version: ${this.recorder.version}`)
     this.recorder.start()
 
     while (this.recorder.isRecording) {
       const frame = await this.recorder.read()
-      this.frames.push(frame)
+      this.frames.push(frame as AudioFrame)
 
       if (this.frames.length > 200) {
         await this.saveAndTranscribe()
@@ -42,7 +51,11 @@ class AudioRecorder {
     }
   }
 
-  async saveAndTranscribe() {
+  async saveAndTranscribe(): Promise<string> {
+    if (!this.recorder) {
+      throw new Error('Recorder not initialized')
+    }
+
     const wav = new WaveFile()
     const audioData = new Int16Array(this.recorder.frameLength * this.frames.length)
 
@@ -51,7 +64,7 @@ class AudioRecorder {
     }
 
     wav.fromScratch(1, this.recorder.sampleRate, '16', audioData)
-    fs.writeFileSync('test.wav', wav.toBuffer())
+    writeFileSync('test.wav', wav.toBuffer())
     console.log('Wrote test.wav')
 
     const transcript = await transcribeWavFile('test.wav')
@@ -59,15 +72,11 @@ class AudioRecorder {
     return transcript
   }
 
-  stop() {
+  stop(): void {
     if (this.recorder) {
       this.recorder.stop()
       this.recorder.release()
       this.recorder = null
     }
   }
-}
-
-module.exports = {
-  AudioRecorder
-}
+} 
