@@ -33,7 +33,7 @@ jobs:
         run: pnpm build
 
       - name: Build Electron app
-        run: pnpm electron-pack
+        run: pnpm build:mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
