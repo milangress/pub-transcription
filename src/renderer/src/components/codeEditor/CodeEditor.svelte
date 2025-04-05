@@ -20,7 +20,7 @@
       type DecorationSet
   } from '@codemirror/view'
   import { basicSetup } from 'codemirror'
-  import type { ControllerSetting, FontFamily } from 'src/types'
+  import type { ControllerSetting, FontFamily } from 'src/types/index.js'
   import { createEventDispatcher, onMount } from 'svelte'
   import { settings } from '../../stores/settings.js'
 

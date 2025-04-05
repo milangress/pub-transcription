@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { BlockTxtSettings, ControllerSetting } from 'src/types'
+  import type { BlockTxtSettings, ControllerSetting } from 'src/types/index.js'
   import { checkPosition } from './checkPosition.js'
 
   let {
