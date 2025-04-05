@@ -60,8 +60,16 @@ export function createStreamProcess(
     toWindow: (message: string): void => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         console.log('\x1b[34m%s\x1b[0m', `[${mergedOptions.name}] [send] ${message}`)
-        mainWindow.webContents.send('transcription-status', message)
+        sendToWindowIfAvailable('transcription-status', message)
       }
+    }
+  }
+
+  const sendToWindowIfAvailable = (channel: string, message: string): void => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(channel, message)
+    } else {
+      log.msg(`mainWindow Unavailable! Message: ${message}`)
     }
   }
 
@@ -100,9 +108,7 @@ export function createStreamProcess(
   ls.stdout.on('data', (data: Buffer) => {
     const string = new TextDecoder().decode(data)
     log.msg(`stdout: ${string}`)
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('transcription-data', string)
-    }
+    sendToWindowIfAvailable('transcription-data', string)
   })
 
   ls.stderr.on('data', (info: Buffer) => {
