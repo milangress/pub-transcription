@@ -1,7 +1,8 @@
-import { lineUncomment, toggleLineComment } from '@codemirror/commands';
-import { syntaxTree } from '@codemirror/language';
-import { type Extension, type StateCommand, EditorSelection, Transaction } from '@codemirror/state';
-import { EditorView, keymap } from '@codemirror/view';
+import { lineUncomment, toggleLineComment } from '@codemirror/commands'
+import { syntaxTree } from '@codemirror/language'
+import { type Extension, type StateCommand, EditorSelection, Transaction } from '@codemirror/state'
+import { EditorView, keymap } from '@codemirror/view'
+import { flashEffect, flashLinesEffect } from './FlashEffect'
 
 /**
  * Find all lines containing the CSS block (start from the cursor position)
@@ -48,10 +49,12 @@ function findBlockLines(state: EditorView['state']): { startLine: number; endLin
 /**
  * Find the current line at cursor position
  */
-function findCurrentLine(state: EditorView['state']): { startLine: number; endLine: number } | null {
+function findCurrentLine(
+  state: EditorView['state']
+): { startLine: number; endLine: number } | null {
   const selection = state.selection.main
   const cursorLine = state.doc.lineAt(selection.head)
-  
+
   console.log(`Evaluating current line: ${cursorLine.number}`)
   return { startLine: cursorLine.number, endLine: cursorLine.number }
 }
@@ -129,7 +132,7 @@ function findPropertyLinesInRange(
 
   for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
     const line = state.doc.line(lineNum)
-    
+
     // Skip already commented lines since they won't have PropertyName nodes
     if (line.text.trim().startsWith('//')) {
       continue
@@ -189,7 +192,10 @@ function evaluatePropertiesCore(
 
     // Apply lineUncomment to all commented lines
     const commentSelection = EditorSelection.create(commentRanges)
-    const tr = state.update({ selection: commentSelection })
+    const tr = state.update({
+      selection: commentSelection,
+      effects: flashLinesEffect.of(range)
+    })
     dispatch(tr)
     lineUncomment({ state: tr.state, dispatch })
 
@@ -200,7 +206,14 @@ function evaluatePropertiesCore(
 
     return true
   } else {
-    // No commented lines, proceed directly
+    // No commented lines - add flash effect to a regular transaction
+    dispatch(
+      state.update({
+        effects: flashLinesEffect.of(range)
+      })
+    )
+
+    // Proceed directly
     return applyRangeEvaluation(range)
   }
 
@@ -301,7 +314,9 @@ function evaluatePropertiesCore(
         })
 
         const propSelection = EditorSelection.create(propRanges)
-        const trProp = updatedState.update({ selection: propSelection })
+        const trProp = updatedState.update({
+          selection: propSelection
+        })
         view.dispatch(trProp)
         toggleLineComment({ state: trProp.state, dispatch: view.dispatch })
 
@@ -349,8 +364,11 @@ const evaluatePropertiesLine: StateCommand = (params) => {
  * Creates the property evaluator extension with keyboard shortcuts
  */
 export function propertyEvaluator(): Extension {
-  return keymap.of([
-    { key: 'Alt-Enter', run: evaluatePropertiesBlock },
-    { key: 'Ctrl-Enter', run: evaluatePropertiesLine }
-  ])
+  return [
+    keymap.of([
+      { key: 'Alt-Enter', run: evaluatePropertiesBlock },
+      { key: 'Ctrl-Enter', run: evaluatePropertiesLine }
+    ]),
+    flashEffect()
+  ]
 }

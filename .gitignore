@@ -27,3 +27,6 @@ private
 
 out
 .eslintcache
+
+# Environment variables
+.env.local

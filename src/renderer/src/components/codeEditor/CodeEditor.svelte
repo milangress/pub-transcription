@@ -17,6 +17,7 @@
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
   import { onMount } from 'svelte'
   import { settings } from '../../stores/settings.svelte.js'
+  import { createAIExtension } from './AIExtension'
   import { createCompletionSource } from './css/Completions.js'
   import { compiledControllerValues, updateControllerValues } from './css/ControllerValuesExtension.js'
   import { controllerValueSliders, updateControllerSliderValues } from './css/ControllerValueSliderWidget.js'
@@ -99,6 +100,7 @@
         controllerValueSliders(),
         propertyHighlighter(),
         propertyEvaluator(),
+        createAIExtension(),
         sassLanguage.data.of({
           autocomplete: createCompletionSource(completionOptions)
         }),

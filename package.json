@@ -34,10 +34,12 @@
     "@electron-toolkit/typed-ipc": "^1.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@lezer/common": "^1.2.3",
+    "@marimo-team/codemirror-ai": "^0.1.11",
     "@picovoice/pvrecorder-node": "^1.2.1",
     "codemirror": "^6.0.1",
     "electron-serve": "^1.1.0",
     "electron-store": "^8.1.0",
+    "openai": "^4.91.1",
     "wavefile": "^11.0.0",
     "webmidi": "^3.1.12"
   },
