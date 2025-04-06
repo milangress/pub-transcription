@@ -118,17 +118,13 @@ function findPropertyLinesInRange(
 
   for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
     const line = state.doc.line(lineNum)
-
-    // Skip commented lines
+    
+    // Skip already commented lines since they won't have PropertyName nodes
     if (line.text.trim().startsWith('//')) {
-      // If commented, check if it contains our property
-      if (line.text.trim().includes(propertyName + ':')) {
-        lines.push(lineNum)
-      }
       continue
     }
 
-    // Check active lines
+    // Check active lines via syntax tree (this will automatically skip commented lines)
     let found = false
     syntaxTree(state).iterate({
       from: line.from,
