@@ -23,6 +23,7 @@
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
   import { onMount } from 'svelte'
   import { settings } from '../../stores/settings.svelte.js'
+  import { propertyHighlighter } from './PropertyHighlighter'
 
   let {
     value = $bindable(''),
@@ -333,7 +334,7 @@
   function vizualizeParserTreeLinebreaks(tree: string): string {
     // NOTE: Just a hacky way to make the parser tree more readable
     return tree
-.replace(/LineComment/g, 'LineComment\n  ')
+      .replace(/LineComment/g, 'LineComment\n  ')
       .replace(/\"{"/g, '"{"\n  ')
       .replace(/\";"/g, '";"\n  ')
       .replace(/\"}"/g, '\n"}"')
@@ -361,6 +362,7 @@
         EditorTheme,
         duplicatePropertiesLinter,
         sassValuePlugin,
+        propertyHighlighter(),
         sassLanguage.data.of({
           autocomplete: createCompletions
         }),
