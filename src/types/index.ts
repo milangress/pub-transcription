@@ -14,11 +14,10 @@ export type PrintStatus = 'SUCCESS' | 'ERROR' | 'INFO'
 export interface PrintSettings {
   printId: string
   deviceName?: string
-  forcePrint?: boolean
+  forcePrint: boolean
   silent?: boolean
-  inlineStyle?: string
-  svgFiltersCode?: string
-  svgFilters?: string
+  inlineStyle: string
+  svgFilters: string
 }
 
 /**
