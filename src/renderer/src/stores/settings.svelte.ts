@@ -54,10 +54,8 @@ class SettingsStore {
   updateControllerValue(varName: string, newValue: number): void {
     const controller = this.controllerSettings.find((c) => c.var === varName)
     if (controller) {
-      // Clamp value to controller range
-      const min = controller.range[0]
-      const max = controller.range[1]
-      controller.value = Math.max(min, Math.min(max, newValue))
+      // Round to 3 decimal places and remove trailing zeros
+      controller.value = parseFloat(newValue.toFixed(3))
     }
   }
 
