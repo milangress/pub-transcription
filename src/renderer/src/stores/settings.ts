@@ -6,8 +6,11 @@ import defaultInlineStyle from '../assets/input-defaults/inlineStyle.js'
 import inputJson from '../assets/input-defaults/input.json'
 import defaultSvgFilters from '../assets/input-defaults/svgFilters.js'
 
+import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer'
 import { mapRange } from '@utils/math.js'
+import type { IpcEvents } from 'src/types/ipc'
 
+const emitter = new IpcEmitter<IpcEvents>()
 // Default settings structure
 const defaultSettings: Settings = {
   controllerSettings: [],
@@ -46,16 +49,8 @@ function createSettingsStore(): SettingsStore {
   const debouncedSave = debounce(async () => {
     console.log('Saving settings to electron store')
     const currentSettings = get(store)
-    await window.electron.ipcRenderer.invoke(
-      'setStoreValue',
-      'inlineStyle',
-      currentSettings.inlineStyle
-    )
-    await window.electron.ipcRenderer.invoke(
-      'setStoreValue',
-      'svgFilters',
-      currentSettings.svgFilters
-    )
+    await emitter.invoke('setStoreValue', 'inlineStyle', currentSettings.inlineStyle)
+    await emitter.invoke('setStoreValue', 'svgFilters', currentSettings.svgFilters)
     codeEditorContentSaved.set(true)
   }, 1000)
 
@@ -95,14 +90,8 @@ function createSettingsStore(): SettingsStore {
 
       try {
         // Load from electron store
-        const savedInlineStyle = await window.electron.ipcRenderer.invoke(
-          'getStoreValue',
-          'inlineStyle'
-        )
-        const savedSvgFilters = await window.electron.ipcRenderer.invoke(
-          'getStoreValue',
-          'svgFilters'
-        )
+        const savedInlineStyle = (await emitter.invoke('getStoreValue', 'inlineStyle')) as string
+        const savedSvgFilters = (await emitter.invoke('getStoreValue', 'svgFilters')) as string
 
         // Initialize with defaults and saved values
         const controllers = (inputJson.controllers || []) as ControllerSetting[]
