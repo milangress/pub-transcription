@@ -190,7 +190,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
           printId: request.settings.printId,
           success: true
         }
-        printEvents.emit('print-complete', completionEvent)
+        printEvents.emit('PrintQueueEvent:complete', completionEvent)
       }
 
       return true
@@ -213,7 +213,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
         success: false,
         error: error instanceof Error ? error.message : String(error)
       }
-      printEvents.emit('print-complete', completionEvent)
+      printEvents.emit('PrintQueueEvent:complete', completionEvent)
 
       throw error
     }
