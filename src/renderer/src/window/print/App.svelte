@@ -11,7 +11,6 @@
   let status = $state('Waiting for print job...')
   let lastJobTime = $state('Never')
   let stylesLoaded = $state('No')
-  let currentScale = $state(1)
   let children = $state<NodeListOf<HTMLSpanElement> | null>(null)
   let printLogs = $state<
     Array<{
@@ -293,10 +292,8 @@
 
   <div class="page-container-wrapper">
     <PageWrapper
-      scale={currentScale}
-      onScaleChange={(newScale) => (currentScale = newScale)}
+    
       showControls={!isPrintPreview}
-      showDebug={false}
       position="center"
     >
       <div id="print-container"></div>
@@ -309,6 +306,10 @@
 </div>
 
 <style>
+  :global(body, html) {
+    padding: 0;
+    margin: 0;
+  }
   #print-window-wrapper {
     width: 100vw;
     height: 100vh;

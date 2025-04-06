@@ -4,18 +4,14 @@
   interface Props {
     // Props
     scale?: number
-    onScaleChange?: any
     showControls?: boolean
-    showDebug?: boolean
     position?: string // 'right', 'center', 'left'
     children?: import('svelte').Snippet
   }
 
   let {
     scale = 1,
-    onScaleChange = undefined,
     showControls = true,
-    showDebug = false,
     position = 'right',
     children
   }: Props = $props()
@@ -27,7 +23,7 @@
   class:center={position === 'center'}
   class:left={position === 'left'}
 >
-  <Page {scale} {onScaleChange} {showControls} {showDebug} centered={false}>
+  <Page {scale} {showControls} centered={false}>
     {@render children?.()}
   </Page>
 </div>
