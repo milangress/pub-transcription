@@ -6,22 +6,32 @@
 
   import { onMount } from 'svelte'
 
-  let { logs = $bindable([]) } = $props()
-  let logContainer: HTMLDivElement = $state()
+  interface LogEntry {
+    timestamp: string
+    message: string
+    pdfUrl?: string | null
+    spanCount?: number | null
+    type: string
+    printId?: string | null
+    isOldSession?: boolean
+  }
+
+  let { logs = $bindable<LogEntry[]>([]) } = $props()
+  let logContainer = $state<HTMLDivElement>()
   let shouldAutoScroll = $state(true)
   let previousLogsLength = $state(logs.length)
   const MAX_STORED_LOGS = 200
   let isFirstLoad = $state(true)
 
-  let previousLogs = $state([])
+  let previousLogs = $state<LogEntry[]>([])
 
   // Load saved logs on mount
   onMount(async () => {
     try {
-      const savedLogs = (await emitter.invoke('getStoreValue', 'printLogs')) || []
+      const savedLogs = ((await emitter.invoke('getStoreValue', 'printLogs')) || []) as LogEntry[]
       if (savedLogs.length > 0) {
         // Add session divider only on first load
-        const sessionDivider = {
+        const sessionDivider: LogEntry = {
           timestamp: new Date().toLocaleTimeString(),
           message: '---------------- Previous Session ----------------',
           type: 'divider',
@@ -29,7 +39,7 @@
         }
 
         // Mark all saved logs as old session
-        const oldLogs = savedLogs.map((log) => ({
+        const oldLogs = savedLogs.map((log: LogEntry) => ({
           ...log,
           isOldSession: true
         }))
@@ -84,11 +94,21 @@
     }
   }
   let mergedLogs = $derived([...previousLogs, ...logs])
+  
   // Save logs when they change
   run(() => {
     if (mergedLogs.length !== previousLogsLength) {
-      // Save all logs including dividers
-      const logsToStore = mergedLogs.slice(-MAX_STORED_LOGS)
+      // Save all logs including dividers, but ensure they're serializable
+      const logsToStore = mergedLogs.slice(-MAX_STORED_LOGS).map((log: LogEntry) => ({
+        timestamp: log.timestamp,
+        message: log.message,
+        pdfUrl: log.pdfUrl,
+        spanCount: log.spanCount,
+        type: log.type,
+        printId: log.printId,
+        isOldSession: log.isOldSession
+      }))
+      
       emitter
         .invoke('setStoreValue', 'printLogs', logsToStore)
         .catch((error) => console.error('Failed to save logs:', error))
