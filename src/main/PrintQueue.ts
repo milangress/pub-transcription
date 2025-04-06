@@ -1,8 +1,8 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
 import { BrowserWindow } from 'electron'
 import { EventEmitter } from 'events'
-import type { PrintSettings, QueueStatus } from '../types'
-import { IpcRendererEvent } from '../types/ipc'
+import type { PrintSettings, QueueStatus } from '../types/index.ts'
+import type { IpcRendererEvent } from '../types/ipc.d.ts'
 const emitter = new IpcEmitter<IpcRendererEvent>()
 interface PrintJob {
   content: string
