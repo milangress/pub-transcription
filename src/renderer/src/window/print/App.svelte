@@ -62,10 +62,7 @@
 
 
   async function executePrint(content, settings) {
-    if (!settings?.printId) {
-      throw new Error('Print ID is required')
-    }
-
+    
     currentPrintId = settings.printId
     console.log('📝 Executing print with ID:', currentPrintId)
 
@@ -157,7 +154,7 @@
           console.log('onPrintJob', { content, settings, attempt, maxRetriesVal })
           debugger
           // Validate essential data
-          if (!settings?.printId) {
+          if (!settings.printId) {
             console.error('❌ Print job received without printId:', settings)
             throw new Error('Print job received without printId')
           }
@@ -190,7 +187,7 @@
           container.innerHTML = ''
 
           // Inject any dynamic styles
-          if (settings?.inlineStyle) {
+          if (settings.inlineStyle) {
             const styleSheet = document.createElement('style')
             styleSheet.textContent = settings.inlineStyle
             document.head.appendChild(styleSheet)
@@ -205,7 +202,7 @@
           }
 
           // Inject SVG filters if they exist
-          if (settings?.svgFiltersCode) {
+          if (settings.svgFilters) {
             console.log('🎨 Adding SVG filters')
             // reuse the same div for all svg filters
             let filtersDiv = document.getElementById('svg-filters')
@@ -215,7 +212,7 @@
               filtersDiv.style.display = 'none'
               document.body.appendChild(filtersDiv)
             }
-            filtersDiv.innerHTML = settings.svgFiltersCode
+            filtersDiv.innerHTML = settings.svgFilters
           } else {
             console.warn('⚠️ No SVG filters provided for print job')
           }
