@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language'
-import { RangeSetBuilder, StateEffect, StateField, type Extension } from '@codemirror/state'
+import { RangeSetBuilder, type Extension } from '@codemirror/state'
 import {
     Decoration,
     EditorView,
@@ -9,6 +9,7 @@ import {
     type ViewUpdate
 } from '@codemirror/view'
 import type { ControllerSetting } from 'src/renderer/src/types'
+import { settings } from '../../../stores/settings.svelte.js'
 
 // Widget for displaying and controlling values via dragging
 class ControllerSliderWidget extends WidgetType {
@@ -31,16 +32,10 @@ class ControllerSliderWidget extends WidgetType {
     // Add current value indicator
     const valueDisplay = document.createElement('span')
     valueDisplay.className = 'cm-controller-value'
-    valueDisplay.textContent = `${this.setting.value}`
-
-    // Add draggable handle
-    const handle = document.createElement('span')
-    handle.className = 'cm-controller-handle'
-    handle.title = `Drag to adjust value (${this.setting.range[0]}-${this.setting.range[1]})`
+    valueDisplay.textContent = `${this.setting.value.toFixed(1)}`
 
     // Assemble the widget
     container.appendChild(valueDisplay)
-    container.appendChild(handle)
 
     return container
   }
@@ -51,15 +46,10 @@ class ControllerSliderWidget extends WidgetType {
   }
 }
 
-// Effect to update a controller setting value
-export const updateControllerValueEffect = StateEffect.define<{
-  name: string
-  value: number
-}>()
-
 // Find controller variables and create widget decorations
-function controllerSliders(view: EditorView, settings: ControllerSetting[]): DecorationSet {
+function controllerSliders(view: EditorView): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>()
+  const controllerSettings = settings.controllerSettings
 
   // Process only visible ranges for performance
   for (const { from, to } of view.visibleRanges) {
@@ -73,7 +63,7 @@ function controllerSliders(view: EditorView, settings: ControllerSetting[]): Dec
           const varName = view.state.doc.sliceString(node.from, node.to).substring(1)
 
           // Find corresponding controller setting
-          const setting = settings.find((s) => s.var === varName)
+          const setting = controllerSettings.find((s) => s.var === varName)
 
           if (setting) {
             // Create widget after the variable
@@ -114,28 +104,23 @@ function updateValueFromDrag(
 }
 
 // ViewPlugin to manage slider widgets and interaction
-export const controllerSliderPlugin = (settings: ControllerSetting[] = []): Extension => {
+export const controllerSliderPlugin = (): Extension => {
   return ViewPlugin.fromClass(
     class {
       decorations: DecorationSet
       dragging: boolean = false
-      draggedSetting: ControllerSetting | null = null
+      draggedVarName: string | null = null
       startX: number = 0
       startValue: number = 0
+      draggingSpan: HTMLElement | null = null
 
       constructor(readonly view: EditorView) {
-        this.decorations = controllerSliders(view, settings)
+        this.decorations = controllerSliders(view)
       }
 
       update(update: ViewUpdate): void {
-        if (
-          update.docChanged ||
-          update.viewportChanged ||
-          update.startState.field(controllerSliderState) !==
-            update.state.field(controllerSliderState)
-        ) {
-          const currentSettings = update.state.field(controllerSliderState)
-          this.decorations = controllerSliders(update.view, currentSettings)
+        if (update.docChanged || update.viewportChanged) {
+          this.decorations = controllerSliders(update.view)
         }
       }
     },
@@ -154,19 +139,16 @@ export const controllerSliderPlugin = (settings: ControllerSetting[] = []): Exte
           // Find the position in the document
           const pos = view.posAtDOM(target)
 
-          // Find the node at this position
-          const node = syntaxTree(view.state).resolveInner(pos)
-
-          if (node.type.name !== 'SassVariableName') {
-            return false
-          }
+          // Find the node at this position and try to get the SassVariableName
+          const variableNode = syntaxTree(view.state).resolveInner(pos, -1)
 
           // Extract variable name
-          const varName = view.state.doc.sliceString(node.from, node.to).substring(1)
+          const varName = view.state.doc
+            .sliceString(variableNode.from, variableNode.to)
+            .substring(1)
 
           // Find setting for this variable
-          const settings = view.state.field(controllerSliderState)
-          const setting = settings.find((s) => s.var === varName)
+          const setting = settings.controllerSettings.find((s) => s.var === varName)
 
           if (!setting) {
             return false
@@ -174,33 +156,55 @@ export const controllerSliderPlugin = (settings: ControllerSetting[] = []): Exte
 
           // Start dragging
           this.dragging = true
-          this.draggedSetting = setting
+          this.draggedVarName = varName
           this.startX = e.clientX
           this.startValue = setting.value
+          this.draggingSpan = target
+          this.draggingSpan.classList.add('cm-controller-slider-dragging')
+
+          // Create overlay to capture mouse events and prevent text selection
+          const overlay = document.createElement('div')
+          overlay.className = 'cm-drag-overlay'
+          overlay.style.cssText = `
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            cursor: ew-resize;
+          `
+          document.body.appendChild(overlay)
 
           // Set up drag event listeners
           const onMouseMove = (e: MouseEvent): void => {
-            if (!this.dragging || !this.draggedSetting) return
+            if (!this.dragging || !this.draggedVarName) return
 
             // Calculate drag distance
             const deltaX = e.clientX - this.startX
 
-            // Update value based on drag
-            const newValue = updateValueFromDrag(this.startValue, deltaX, this.draggedSetting)
+            // Find current setting
+            const setting = settings.controllerSettings.find((s) => s.var === this.draggedVarName)
+            if (!setting) return
 
-            // Dispatch state effect to update value
-            view.dispatch({
-              effects: updateControllerValueEffect.of({
-                name: this.draggedSetting.name,
-                value: newValue
-              })
-            })
+            // Update value based on drag
+            const newValue = updateValueFromDrag(this.startValue, deltaX, setting)
+
+            // Update value in the store
+            settings.updateControllerValue(this.draggedVarName, newValue)
+
+            // Force editor to redraw
+            view.dispatch({})
           }
 
           const onMouseUp = (): void => {
             // Clean up
             this.dragging = false
-            this.draggedSetting = null
+            this.draggedVarName = null
+            this.draggingSpan?.classList.remove('cm-controller-slider-dragging')
+            // Remove overlay
+            document.body.removeChild(overlay)
+
             document.removeEventListener('mousemove', onMouseMove)
             document.removeEventListener('mouseup', onMouseUp)
           }
@@ -218,63 +222,33 @@ export const controllerSliderPlugin = (settings: ControllerSetting[] = []): Exte
   )
 }
 
-// State field to track controller settings
-export const controllerSliderState = StateField.define<ControllerSetting[]>({
-  create: () => [],
-
-  update: (settings, tr) => {
-    // Handle updates from effects
-    for (const e of tr.effects) {
-      if (e.is(updateControllerValueEffect)) {
-        const { name, value } = e.value
-        // Create a new array with the updated setting
-        return settings.map((s) => (s.name === name ? { ...s, value } : s))
-      }
-    }
-    return settings
-  },
-
-  // Provide decorations to the editor
-  provide: (field) => {
-    return EditorView.decorations.of((view) => {
-      return controllerSliders(view, view.state.field(field))
-    })
-  }
-})
-
 // Styles for the widget
 const sliderWidgetTheme = EditorView.theme({
   '.cm-controller-slider': {
-    display: 'inline-flex',
-    alignItems: 'center',
-    marginLeft: '0.5em',
+    marginLeft: '0',
     cursor: 'ew-resize',
-    borderRadius: '3px',
-    padding: '0 4px'
+    borderRadius: '0.1em',
+    padding: '0.1em 0.3em',
+    userSelect: 'none',
+    transition: 'scale 0.05s ease-in-out',
   },
   '.cm-controller-value': {
-    fontSize: '0.8em',
-    padding: '0 4px',
-    color: '#008800',
-    fontWeight: 'bold'
-  },
-  '.cm-controller-handle': {
-    width: '10px',
-    height: '10px',
-    borderRadius: '50%',
-    backgroundColor: '#008800',
-    marginLeft: '2px'
+    fontSize: '0.7em',
+    color: 'oklab(0.7 0.32 -0.12);',
+    fontWeight: 'bold',
+    userSelect: 'none',
+    pointerEvents: 'none'
   },
   '.cm-controller-slider:hover': {
-    backgroundColor: 'rgba(0, 136, 0, 0.1)'
+    backgroundColor: 'oklch(0.95 0.24 107.73 / 0.9)'
+  },
+  '.cm-controller-slider-dragging': {
+    scale: 1.5,
+    backgroundColor: 'oklch(0.95 0.24 107.73 / 0.9)'
   }
 })
 
 // Main extension factory function
-export function controllerValueSliders(settings: ControllerSetting[] = []): Extension[] {
-  return [
-    controllerSliderState.init(() => settings),
-    controllerSliderPlugin(settings),
-    sliderWidgetTheme
-  ]
+export function controllerValueSliders(): Extension[] {
+  return [controllerSliderPlugin(), sliderWidgetTheme]
 }
