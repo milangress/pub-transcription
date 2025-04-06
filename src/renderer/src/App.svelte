@@ -290,7 +290,6 @@
         bind:value={settings.inlineStyle}
         language="css"
         controllerSettings={settings.controllerSettings}
-        svgFiltersCode={settings.svgFilters}
         {fontFamilys}
       />
 
@@ -326,7 +325,6 @@
         bind:value={settings.svgFilters}
         language="html"
         controllerSettings={settings.controllerSettings}
-        svgFiltersCode={settings.svgFilters}
       />
       <div style="display: none">
         {@html settings.svgFilters}
@@ -363,7 +361,7 @@
     width: calc(297.3mm * 0.86);
     height: calc(420.2mm * 0.895);
     padding: 2cm;
-    background: url('../scan.png');
+    background: url('@assets/scan.png');
     background-size: 100% 100%;
     outline: 1px solid red;
     position: fixed;
