@@ -143,3 +143,28 @@ StyleSheet
 4. **List Values**: For properties that accept multiple comma-separated values (like text-shadow), each group is represented individually in the tree.
 
 5. **Units**: NumberLiteral nodes can have Unit annotations when they include CSS units like px, deg, em.
+
+## Full tree
+
+```
+StyleSheet(RuleSet(ClassSelector(ClassName),Block("{"
+  ,Declaration(PropertyName,":",ValueName),";"
+  ,Declaration(PropertyName,":",CallExpression(Callee,ArgList("(",NumberLiteral(Unit),",",BinaryExpression(SassVariableName,BinOp,NumberLiteral(Unit)),")"))),";"
+  ,Declaration(PropertyName,":",BinaryExpression(SassVariableName,BinOp,NumberLiteral)),";"
+  ,LineComment
+  ,Declaration(PropertyName,":",BinaryExpression(SassVariableName,BinOp,NumberLiteral(Unit))),";"
+  ,Declaration(PropertyName,":",ValueName,ValueName,ValueName,BinaryExpression(SassVariableName,BinOp,NumberLiteral(Unit))),";"
+  ,LineComment
+  ,Declaration(PropertyName,":",NumberLiteral(Unit),NumberLiteral(Unit),ColorLiteral),";"
+  ,Declaration(PropertyName,":",NumberLiteral(Unit),NumberLiteral(Unit),NumberLiteral(Unit),ValueName,",",NumberLiteral,NumberLiteral,NumberLiteral(Unit),ValueName,",",NumberLiteral,NumberLiteral,NumberLiteral(Unit),ValueName),";"
+  ,LineComment
+  ,LineComment
+  ,Declaration(PropertyName,":",CallLiteral(CallTag,"(",ParenthesizedContent,")")),";"
+  ,Declaration(PropertyName,":",ValueName,ValueName),";"
+  ,Declaration(PropertyName,":",CallExpression(Callee,ArgList("(",BinaryExpression(SassVariableName,BinOp,NumberLiteral),",",SassVariableName,",",SassVariableName,",",SassVariableName,")"))),";"
+  ,Declaration(PropertyName,":",BinaryExpression(SassVariableName,BinOp,NumberLiteral(Unit))),";"
+  ,Declaration(PropertyName,":",BinaryExpression(SassVariableName,BinOp,NumberLiteral(Unit))),";"
+  ,LineComment
+  ,
+"}")))
+```
