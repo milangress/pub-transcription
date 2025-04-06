@@ -9,6 +9,7 @@ import { setupIpcHandlers } from './ipcHandlers'
 import { PrintQueue } from './PrintQueue'
 import { simulatedTranscriptController } from './simulateTranscriptForDevTesting'
 import { createStreamProcess } from './streamProcess'
+import { checkApplicationFolder } from './utils/applicationFolder'
 
 // Local types
 interface PrintWindowOptions extends Electron.BrowserWindowConstructorOptions {
@@ -213,8 +214,11 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+  
+  // Check if we should move to Applications folder
+  checkApplicationFolder(isDev)
+  
   initAudioDevices()
-
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
