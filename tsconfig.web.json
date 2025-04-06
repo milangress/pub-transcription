@@ -4,8 +4,9 @@
     "src/renderer/src/env.d.ts",
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.svelte",
-    "src/preload/*.d.ts"
-, "src/types/types.tspes.ts"  ],
+    "src/preload/*.d.ts",
+    "src/types/**/*"
+  ],
   "compilerOptions": {
     "composite": true,
     "verbatimModuleSyntax": true,
