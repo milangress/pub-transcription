@@ -34,7 +34,7 @@ class ControllerSliderWidget extends WidgetType {
     // Add current value indicator
     const valueDisplay = document.createElement('span')
     valueDisplay.className = 'cm-controller-value'
-    valueDisplay.textContent = `${this.setting.value.toFixed(1)}`
+    valueDisplay.textContent = `${parseFloat(this.setting.value.toFixed(3))}`
 
     // Assemble the widget
     container.appendChild(valueDisplay)
@@ -88,20 +88,24 @@ function updateValueFromDrag(
   dragPixels: number,
   setting: ControllerSetting
 ): number {
-  // Calculate how much to change value based on pixel movement
-  // Use step and range to scale appropriately
   const [min, max] = setting.range
   const range = max - min
-
-  // Scale the drag movement - each 100px = full range by default
-  // Adjust sensitivity with step - smaller steps = more precision needed
-  const dragScale = (range / 100) * (setting.step || 1)
-  const newValue = initialValue + dragPixels * dragScale
-
-  // Clamp to range and round to nearest step
-  const step = setting.step || 1
-  const steppedValue = Math.round(newValue / step) * step
-  return Math.max(min, Math.min(max, steppedValue))
+  
+  // Calculate velocity-based scaling factor
+  // Higher velocity = more aggressive changes
+  const velocity = Math.abs(dragPixels) / 10 // Normalize pixels to a reasonable range
+  const velocityScale = Math.pow(velocity + 1, 1.5) / 10 // Non-linear scaling
+  
+  // Calculate the change amount based on range and velocity
+  // For zero or small initial values, we use range as base multiplier
+  const baseMultiplier = Math.max(Math.abs(initialValue), range / 100)
+  const changeAmount = (dragPixels * velocityScale * baseMultiplier) / 100
+  
+  // Apply the change
+  const newValue = initialValue + changeAmount
+  
+  // Clamp to range
+  return Math.max(min, Math.min(max, newValue))
 }
 
 // Simple function to update controller settings
@@ -239,15 +243,19 @@ export const controllerSliderPlugin = (): Extension => {
 // Styles for the widget
 const sliderWidgetTheme = EditorView.theme({
   '.cm-controller-slider': {
-    marginLeft: '0',
+    display: 'inline-block',
+    marginInline: '0',
     cursor: 'ew-resize',
     borderRadius: '0.1em',
-    padding: '0.1em 0.3em',
+    padding: '0 0.5em',
     userSelect: 'none',
-    transition: 'scale 0.05s ease-in-out'
+    transition: 'scale 0.05s ease-in-out',
+    scale: 0.8,
+    backgroundColor: 'lightgray'
   },
   '.cm-controller-value': {
-    fontSize: '0.7em',
+    fontSize: '0.9em',
+    marginInline: '0',
     color: 'oklab(0.7 0.32 -0.12);',
     fontWeight: 'bold',
     userSelect: 'none',
@@ -257,7 +265,7 @@ const sliderWidgetTheme = EditorView.theme({
     backgroundColor: 'oklch(0.95 0.24 107.73 / 0.9)'
   },
   '.cm-controller-slider-dragging': {
-    scale: 1.5,
+
     backgroundColor: 'oklch(0.95 0.24 107.73 / 0.9)'
   }
 })

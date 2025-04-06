@@ -115,8 +115,10 @@ function computeBinaryExpression(
       return null
   }
 
+  const roundedResult = parseFloat(result.toFixed(3))
+
   // Return the formatted result with the unit if present
-  return unit ? `${result}${unit}` : result.toString()
+  return unit ? `${roundedResult}${unit}` : roundedResult.toString()
 }
 
 // Theme for styling the compiled values
