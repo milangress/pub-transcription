@@ -361,7 +361,7 @@
     width: calc(297.3mm * 0.86);
     height: calc(420.2mm * 0.895);
     padding: 2cm;
-    background: url('@assets/scan.png');
+    background: url('../src/assets/scan.png');
     background-size: 100% 100%;
     outline: 1px solid red;
     position: fixed;

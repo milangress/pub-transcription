@@ -113,7 +113,7 @@
     width: calc(297.3mm * 0.86);
     height: calc(420.2mm * 0.895);
     padding: 2cm;
-    background: url('../../scan.png'); /* this path is corrrect!!! */
+    background: url('../../assets/scan.png'); /* this path is corrrect!!! */
     background-size: 100% 100%;
     transform-origin: center;
     transition: all 0.3s ease;
