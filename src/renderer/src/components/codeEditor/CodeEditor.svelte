@@ -19,7 +19,7 @@
   import { settings } from '../../stores/settings.svelte.js'
   import { createCompletionSource } from './css/Completions.js'
   import { compiledControllerValues, updateControllerValues } from './css/ControllerValuesExtension.js'
-  import { controllerValueSliders } from './css/ControllerValueSliderWidget.js'
+  import { controllerValueSliders, updateControllerSliderValues } from './css/ControllerValueSliderWidget.js'
   import { propertyHighlighter } from './css/PropertyHighlighter.js'
 
   let {
@@ -73,6 +73,7 @@
     if (view && controllerSettings) {
       // console.log('controllerSettings', $state.snapshot(controllerSettings))
       updateControllerValues(view, $state.snapshot(controllerSettings))
+      updateControllerSliderValues(view, $state.snapshot(controllerSettings))
     }
   })
 

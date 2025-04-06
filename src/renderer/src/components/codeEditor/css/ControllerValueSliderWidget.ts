@@ -9,7 +9,9 @@ import {
     type ViewUpdate
 } from '@codemirror/view'
 import type { ControllerSetting } from 'src/renderer/src/types'
-import { settings } from '../../../stores/settings.svelte.js'
+import { settings as SettingsStore } from '../../../stores/settings.svelte.js'
+// Global variable to store the current settings
+let currentSettings: ControllerSetting[] = []
 
 // Widget for displaying and controlling values via dragging
 class ControllerSliderWidget extends WidgetType {
@@ -49,7 +51,6 @@ class ControllerSliderWidget extends WidgetType {
 // Find controller variables and create widget decorations
 function controllerSliders(view: EditorView): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>()
-  const controllerSettings = settings.controllerSettings
 
   // Process only visible ranges for performance
   for (const { from, to } of view.visibleRanges) {
@@ -63,7 +64,7 @@ function controllerSliders(view: EditorView): DecorationSet {
           const varName = view.state.doc.sliceString(node.from, node.to).substring(1)
 
           // Find corresponding controller setting
-          const setting = controllerSettings.find((s) => s.var === varName)
+          const setting = currentSettings.find((s) => s.var === varName)
 
           if (setting) {
             // Create widget after the variable
@@ -103,6 +104,20 @@ function updateValueFromDrag(
   return Math.max(min, Math.min(max, steppedValue))
 }
 
+// Simple function to update controller settings
+export function updateControllerSliderValues(
+  view: EditorView,
+  settings: ControllerSetting[]
+): void {
+  console.log('updateControllerSliderValues', settings)
+  currentSettings = settings
+
+  if (view) {
+    // Force an editor update to refresh decorations
+    view.dispatch({})
+  }
+}
+
 // ViewPlugin to manage slider widgets and interaction
 export const controllerSliderPlugin = (): Extension => {
   return ViewPlugin.fromClass(
@@ -119,9 +134,7 @@ export const controllerSliderPlugin = (): Extension => {
       }
 
       update(update: ViewUpdate): void {
-        if (update.docChanged || update.viewportChanged) {
           this.decorations = controllerSliders(update.view)
-        }
       }
     },
     {
@@ -148,7 +161,7 @@ export const controllerSliderPlugin = (): Extension => {
             .substring(1)
 
           // Find setting for this variable
-          const setting = settings.controllerSettings.find((s) => s.var === varName)
+          const setting = currentSettings.find((s) => s.var === varName)
 
           if (!setting) {
             return false
@@ -184,14 +197,14 @@ export const controllerSliderPlugin = (): Extension => {
             const deltaX = e.clientX - this.startX
 
             // Find current setting
-            const setting = settings.controllerSettings.find((s) => s.var === this.draggedVarName)
+            const setting = currentSettings.find((s) => s.var === this.draggedVarName)
             if (!setting) return
 
             // Update value based on drag
             const newValue = updateValueFromDrag(this.startValue, deltaX, setting)
 
-            // Update value in the store
-            settings.updateControllerValue(this.draggedVarName, newValue)
+            // Update the value using the settings store
+            SettingsStore.updateControllerValue(this.draggedVarName, newValue)
 
             // Force editor to redraw
             view.dispatch({})
@@ -202,6 +215,7 @@ export const controllerSliderPlugin = (): Extension => {
             this.dragging = false
             this.draggedVarName = null
             this.draggingSpan?.classList.remove('cm-controller-slider-dragging')
+
             // Remove overlay
             document.body.removeChild(overlay)
 
@@ -230,7 +244,7 @@ const sliderWidgetTheme = EditorView.theme({
     borderRadius: '0.1em',
     padding: '0.1em 0.3em',
     userSelect: 'none',
-    transition: 'scale 0.05s ease-in-out',
+    transition: 'scale 0.05s ease-in-out'
   },
   '.cm-controller-value': {
     fontSize: '0.7em',
