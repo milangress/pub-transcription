@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language'
-import { StateEffect, type Extension } from '@codemirror/state'
+import { RangeSetBuilder, type Extension } from '@codemirror/state'
 import {
   Decoration,
   EditorView,
@@ -7,15 +7,12 @@ import {
   WidgetType,
   type DecorationSet,
   type PluginValue,
-  type ViewUpdate,
+  type ViewUpdate
 } from '@codemirror/view'
 import type { ControllerSetting } from 'src/renderer/src/types'
 
 // Global variable to store the current settings
 let currentSettings: ControllerSetting[] = []
-
-// Define an effect to update controller settings
-export const updateControllerSettingsEffect = StateEffect.define()
 
 // Widget to display computed values at the end of lines
 class CompiledValueWidget extends WidgetType {
@@ -62,8 +59,6 @@ function computeBinaryExpression(
   let number: number | null = null
   let unit: string | null = null
 
-  console.log('computing binary expression', node)
-
   // We need to find the children of this binary expression
   // We'll use syntaxTree.iterate for this specific node
   syntaxTree(view.state).iterate({
@@ -72,7 +67,6 @@ function computeBinaryExpression(
       if (childNode.from >= node.from && childNode.to <= node.to && childNode !== node) {
         const childName = childNode.type.name
         const childText = view.state.doc.sliceString(childNode.from, childNode.to)
-        console.log('childNode', childName, childText)
         if (childName === 'SassVariableName') {
           varName = childText.substring(1) // Remove the $ prefix
         } else if (childName === 'BinOp') {
@@ -104,7 +98,6 @@ function computeBinaryExpression(
     console.error('missing number, operator, or varName', number, operator, varName)
     return null
   }
-  console.log('Var', varName, setting.value, operator, number)
   // Compute the result based on the operator
   let result
   switch (operator) {
@@ -136,11 +129,10 @@ const compiledValueTheme = EditorView.theme({
 })
 
 // Simple function to update controller settings
-export function updateControllerValues(view, settings): void {
+export function updateControllerValues(view: EditorView, settings: ControllerSetting[]): void {
   currentSettings = settings
 
   if (view) {
-    console.log('Updating with settings:', settings)
     // Force an editor update to refresh decorations
     view.dispatch({})
   }
@@ -156,15 +148,18 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
     class implements PluginValue {
       decos: DecorationSet
 
-      constructor() {
-        this.decos = Decoration.none
+      constructor(view: EditorView) {
+        this.decos = this.computeDecorations(view)
       }
 
-      update(update: ViewUpdate): void {
-        const processedLines = new Set()
+      // Helper to compute all decorations at once
+      computeDecorations(view: EditorView): DecorationSet {
+        const builder = new RangeSetBuilder<Decoration>()
+        const processedLines = new Set<number>()
+
         // Process visible lines for performance
-        for (const { from, to } of update.view.visibleRanges) {
-          syntaxTree(update.view.state).iterate({
+        for (const { from, to } of view.visibleRanges) {
+          syntaxTree(view.state).iterate({
             from,
             to,
             enter: (node) => {
@@ -172,27 +167,39 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
               if (node.type.name !== 'BinaryExpression') return
 
               // Find the line containing this expression
-              const line = update.view.state.doc.lineAt(node.from)
+              const line = view.state.doc.lineAt(node.from)
 
               // Skip if we've already processed this line
-              if (processedLines.has(line.number)) return
+              if (processedLines.has(line.number)) {
+                console.log('already processed line', line.number)
+                return
+              }
 
               // Compute the value of this expression
-              const value = computeBinaryExpression(update.view, node, currentSettings)
-              console.log('value', value)
+              const value = computeBinaryExpression(view, node, currentSettings)
+
               if (value !== null) {
                 processedLines.add(line.number)
                 const widget = new CompiledValueWidget(value)
-                const decorationWidget = Decoration.widget({
-                  widget,
-                  side: 1
-                })
-                this.decos = Decoration.set(decorationWidget.range(line.to))
-                console.log('decos', this.decos)
+                builder.add(
+                  line.to,
+                  line.to,
+                  Decoration.widget({
+                    widget,
+                    side: 1
+                  })
+                )
               }
             }
           })
         }
+
+        return builder.finish()
+      }
+
+      update(update: ViewUpdate): void {
+        // Always update decorations on any change
+        this.decos = this.computeDecorations(update.view)
       }
     },
     {
