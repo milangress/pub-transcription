@@ -16,7 +16,6 @@ const emitter = new IpcEmitter<IpcRendererEvent>()
 const printEvents = new EventEmitter()
 
 let printQueue: PrintQueue | null = null
-const printWindow: BrowserWindow | null = null
 
 // Default print options
 const DEFAULT_PRINT_OPTIONS = {
@@ -36,18 +35,33 @@ const DEFAULT_PRINT_OPTIONS = {
 }
 
 // Helper function to send messages to all windows
-function sendToAllWindows(channel: keyof IpcRendererEvent, status: PrintStatusMessage): void {
-  ;[printWindow].forEach((window) => {
+function sendToAllWindows(
+  printWindow: BrowserWindow | null,
+  channel: keyof IpcRendererEvent,
+  status: PrintStatusMessage
+): void {
+  const windows = Array.from([printWindow])
+  windows.forEach((window) => {
+    console.log('Sending to window', channel, status)
     if (window && !window.isDestroyed()) {
       emitter.send(window.webContents, channel, status)
+    } else {
+      console.log('Window is not available', window)
     }
   })
 }
 
 export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
+  let printWindow: BrowserWindow | null = null
+
   // Print request handler
   ipc.on('print', async (event, request) => {
     try {
+      // Ensure we have a print window
+      if (!printWindow || printWindow.isDestroyed()) {
+        printWindow = createPrintWindow()
+      }
+
       if (!printQueue) {
         printQueue = new PrintQueue(printWindow, createPrintWindow, printEvents)
       }
@@ -61,7 +75,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
 
       console.log('📝 Print request received:', {
         contentLength: request.content.length,
-        settings: request.settings.printId
+        PrintId: request.settings.printId
       })
 
       await printQueue.add(request.content, request.settings)
@@ -103,13 +117,22 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
   // Print execution handler
   ipc.handle('execute-print', async (_event, request) => {
     try {
+      // Ensure we have a print window
+      if (!printWindow || printWindow.isDestroyed()) {
+        printWindow = createPrintWindow()
+      }
+
       console.log('📝 Execute print request:', {
-        contentLength: request.content?.length,
-        settings: request.settings.printId
+        contentLength: request.content.length,
+        printId: request.settings.printId
       })
 
       if (!request.settings || !request.settings.printId) {
         throw new Error('Print ID is required')
+      }
+
+      if (!printWindow) {
+        throw new Error('Print window is not available')
       }
 
       const printOptions = {
@@ -130,29 +153,32 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
         PRINT_STATUS.INFO,
         { message: '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥' }
       )
-      sendToAllWindows('print-status', statusMsg)
+      sendToAllWindows(printWindow, 'print-status', statusMsg)
 
       // Handle direct printing
-      if (request.settings?.forcePrint === true && printWindow) {
+      if (request.settings.forcePrint === true) {
         await new Promise<void>((resolve, reject) => {
-          printWindow?.webContents.print(printOptions, (success, errorType) => {
+          console.log('Printing...', printOptions)
+          printWindow!.webContents.print(printOptions, (success, errorType) => {
             if (!success) {
+              console.error('Printing failed', errorType)
               const errorMsg = createPrintStatusMessage(
                 request.settings.printId,
                 PRINT_ACTIONS.PRINT_COMPLETE,
                 PRINT_STATUS.ERROR,
                 { message: 'Printing failed', error: errorType }
               )
-              sendToAllWindows('print-status', errorMsg)
+              sendToAllWindows(printWindow, 'print-status', errorMsg)
               reject(new Error(errorType))
             } else {
+              console.log('Printing completed')
               const successMsg = createPrintStatusMessage(
                 request.settings.printId,
                 PRINT_ACTIONS.PRINT_COMPLETE,
                 PRINT_STATUS.SUCCESS,
                 { message: '🖨️ Print completed' }
               )
-              sendToAllWindows('print-status', successMsg)
+              sendToAllWindows(printWindow, 'print-status', successMsg)
               resolve()
             }
           })
@@ -168,7 +194,8 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
       }
 
       const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`)
-      const pdfData = await printWindow?.webContents.printToPDF(pdfOptions)
+      console.log('Printing to PDF...', pdfPath, pdfOptions)
+      const pdfData = await printWindow.webContents.printToPDF(pdfOptions)
 
       if (pdfData) {
         await fs.writeFile(pdfPath, pdfData)
@@ -183,7 +210,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
             path: pdfPath
           }
         )
-        sendToAllWindows('print-status', pdfMsg)
+        sendToAllWindows(printWindow, 'print-status', pdfMsg)
 
         // Emit success event for PrintQueue
         const completionEvent: PrintCompletionEvent = {
@@ -205,7 +232,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
           error: error instanceof Error ? error.message : String(error)
         }
       )
-      sendToAllWindows('print-status', errorMsg)
+      sendToAllWindows(printWindow, 'print-status', errorMsg)
 
       // Emit error event for PrintQueue
       const completionEvent: PrintCompletionEvent = {
@@ -226,6 +253,11 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
       return
     }
 
+    // Ensure we have a print window
+    if (!printWindow || printWindow.isDestroyed()) {
+      printWindow = createPrintWindow()
+    }
+
     const statusMsg = createPrintStatusMessage(
       status.printId,
       status.success ? PRINT_ACTIONS.PRINT_COMPLETE : PRINT_ACTIONS.PRINT_ERROR,
@@ -235,6 +267,6 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
         error: status.error
       }
     )
-    sendToAllWindows('print-status', statusMsg)
+    sendToAllWindows(printWindow, 'print-status', statusMsg)
   })
 }
