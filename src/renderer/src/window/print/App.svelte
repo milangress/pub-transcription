@@ -1,8 +1,12 @@
 <script lang="ts">
   import LogContainer from '@components/print-window/LogContainer.svelte'
   import PageWrapper from '@components/print-window/PageWrapper.svelte'
-  import PreviewButton from '@components/ui/PreviewButton.svelte'
+  import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer'
+  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc'
   import { onMount } from 'svelte'
+
+  const ipc = new IpcListener<IpcRendererEvent>()
+  const emitter = new IpcEmitter<IpcEvents>()
 
   let status = $state('Waiting for print job...')
   let lastJobTime = $state('Never')
@@ -21,7 +25,6 @@
   >([])
   let currentPrintId = $state<string | null>(null)
   let isPrintPreview = $state(false)
-  let previewTimer = $state<NodeJS.Timeout | null>(null)
   let currentAttempt = $state(0)
   let maxRetries = $state(0)
   let queueLength = $state(0)
@@ -57,58 +60,6 @@
     })
   }
 
-  async function togglePrintPreview() {
-    try {
-      isPrintPreview = true
-      addLogEntry('Print preview started')
-
-      // Clear any existing timer
-      if (previewTimer) {
-        clearTimeout(previewTimer)
-        previewTimer = null
-      }
-
-      // Enable print media emulation
-      const success = await window.electron.ipcRenderer.invoke('toggle-print-preview', true)
-      if (!success) {
-        addLogEntry('Failed to start print preview', null, null, 'server')
-        isPrintPreview = false
-        return
-      }
-
-      // Set new timer
-      previewTimer = setTimeout(async () => {
-        try {
-          // Disable print media emulation
-          const disableSuccess = await window.electron.ipcRenderer.invoke(
-            'toggle-print-preview',
-            false
-          )
-          if (!disableSuccess) {
-            addLogEntry('Failed to end print preview', null, null, 'server')
-          } else {
-            addLogEntry('Print preview ended')
-          }
-        } catch (error) {
-          console.error('Preview end error:', error)
-          const message = error instanceof Error ? error.message : String(error)
-          addLogEntry(`Preview end error: ${message}`, null, null, 'server')
-        } finally {
-          isPrintPreview = false
-          previewTimer = null
-        }
-      }, 5000)
-    } catch (error) {
-      console.error('Preview error:', error)
-      const message = error instanceof Error ? error.message : String(error)
-      addLogEntry(`Preview error: ${message}`, null, null, 'server')
-      isPrintPreview = false
-      if (previewTimer) {
-        clearTimeout(previewTimer)
-        previewTimer = null
-      }
-    }
-  }
 
   async function executePrint(content, settings) {
     if (!settings?.printId) {
@@ -133,7 +84,7 @@
     console.log('🖨️ Print window initialized')
 
     // Listen for print status updates
-    window.electron.ipcRenderer.on('print-status', (_event, data) => {
+    ipc.on('print-status', (_event, data) => {
       console.log('📥 Print status update:', data)
 
       if (!data?.id) {
@@ -190,16 +141,14 @@
     })
 
     // Also add back server message handling for transcription status
-    window.electron.ipcRenderer.on('transcription-status', (_event, message) => {
+    ipc.on('whisper-ccp-stream:status', (_event, message) => {
       if (typeof message === 'string') {
         addLogEntry(message, null, null, 'server')
       }
     })
 
     // Handle print job setup
-    window.electron.ipcRenderer.on(
-      'print-job',
-      async (_event, { content, settings = {}, attempt, maxRetries: maxRetriesVal }) => {
+    ipc.on('print-job', async (_event, { content, settings = {}, attempt, maxRetries: maxRetriesVal }) => {
         try {
           console.log('onPrintJob', { content, settings, attempt, maxRetriesVal })
           debugger
@@ -298,7 +247,7 @@
     )
 
     // Handle queue status updates
-    window.electron.ipcRenderer.on('queue-status', (_event, status) => {
+    ipc.on('queue-status', (_event, status) => {
       console.log('📊 Queue status update:', status)
       queueLength = status.queueLength || 0
       isQueueProcessing = status.isProcessing
@@ -315,15 +264,6 @@
       }
     })
 
-    return () => {
-      if (previewTimer) {
-        clearTimeout(previewTimer)
-        previewTimer = null
-      }
-      window.electron.ipcRenderer.invoke('toggle-print-preview', false).catch((error) => {
-        console.error('Failed to disable print preview on unmount:', error)
-      })
-    }
   })
 </script>
 
@@ -346,7 +286,6 @@
         </div>
       </div>
       <div class="debug-controls">
-        <PreviewButton {isPrintPreview} onClick={togglePrintPreview} />
       </div>
     </div>
   </div>
