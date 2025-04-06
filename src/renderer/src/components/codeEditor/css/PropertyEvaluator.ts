@@ -1,6 +1,6 @@
 import { lineUncomment, toggleLineComment } from '@codemirror/commands';
 import { syntaxTree } from '@codemirror/language';
-import { type Extension, type StateCommand, EditorSelection } from '@codemirror/state';
+import { type Extension, type StateCommand, EditorSelection, Transaction } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 
 /**
@@ -46,7 +46,18 @@ function findBlockLines(state: EditorView['state']): { startLine: number; endLin
 }
 
 /**
- * Find all commented lines in a block
+ * Find the current line at cursor position
+ */
+function findCurrentLine(state: EditorView['state']): { startLine: number; endLine: number } | null {
+  const selection = state.selection.main
+  const cursorLine = state.doc.lineAt(selection.head)
+  
+  console.log(`Evaluating current line: ${cursorLine.number}`)
+  return { startLine: cursorLine.number, endLine: cursorLine.number }
+}
+
+/**
+ * Find all commented lines in a range
  */
 function findCommentedLines(
   state: EditorView['state'],
@@ -66,9 +77,9 @@ function findCommentedLines(
 }
 
 /**
- * Extract all distinct property names from a block
+ * Extract all distinct property names from a range of lines
  */
-function extractBlockProperties(
+function extractRangeProperties(
   state: EditorView['state'],
   startLine: number,
   endLine: number
@@ -150,21 +161,26 @@ function findPropertyLinesInRange(
 }
 
 /**
- * Command function that evaluates properties in the current CSS block
+ * Core function to evaluate properties - abstract implementation that can work with
+ * either a single line or a block of lines
  */
-const evaluateProperties: StateCommand = ({ state, dispatch }) => {
-  // Find the current CSS block
-  const block = findBlockLines(state)
-  if (!block) return false
+function evaluatePropertiesCore(
+  { state, dispatch }: { state: EditorView['state']; dispatch?: (tr: Transaction) => void },
+  range: { startLine: number; endLine: number }
+): boolean {
+  if (!dispatch) return false
 
-  // Find any commented lines in the block
-  const commentedLines = findCommentedLines(state, block.startLine, block.endLine)
+  // Store the original selection to restore it later
+  const originalSelection = state.selection
 
-  console.log(`Block spans lines ${block.startLine} to ${block.endLine}`)
-  console.log(`Found ${commentedLines.length} commented lines in block`)
+  // Find any commented lines in the range
+  const commentedLines = findCommentedLines(state, range.startLine, range.endLine)
 
-  // Step 1: First uncomment all commented lines in the block
-  if (commentedLines.length > 0 && dispatch) {
+  console.log(`Range spans lines ${range.startLine} to ${range.endLine}`)
+  console.log(`Found ${commentedLines.length} commented lines in range`)
+
+  // Step 1: First uncomment all commented lines in the range
+  if (commentedLines.length > 0) {
     // Create a selection for all commented lines
     const commentRanges = commentedLines.map((lineNum) => {
       const line = state.doc.line(lineNum)
@@ -179,54 +195,54 @@ const evaluateProperties: StateCommand = ({ state, dispatch }) => {
 
     // Now we need to wait for this transaction to complete before continuing
     setTimeout(() => {
-      applyBlockEvaluation(block)
+      applyRangeEvaluation(range)
     }, 50)
 
     return true
   } else {
     // No commented lines, proceed directly
-    return applyBlockEvaluation(block)
+    return applyRangeEvaluation(range)
   }
 
   // Helper function to apply the rest of the evaluation
-  function applyBlockEvaluation(block: { startLine: number; endLine: number }): boolean {
+  function applyRangeEvaluation(range: { startLine: number; endLine: number }): boolean {
     // Get the updated editor state
     const view = EditorView.findFromDOM(document.querySelector('.cm-editor') as HTMLElement)
     if (!view || !dispatch) return false
 
     const updatedState = view.state
 
-    // Step 2: Extract all distinct property names from the block
-    const allProperties = extractBlockProperties(updatedState, block.startLine, block.endLine)
+    // Step 2: Extract all distinct property names from the range
+    const allProperties = extractRangeProperties(updatedState, range.startLine, range.endLine)
     console.log(
-      `Found ${allProperties.length} distinct properties in block: ${allProperties.join(', ')}`
+      `Found ${allProperties.length} distinct properties in range: ${allProperties.join(', ')}`
     )
 
-    // Step 3: For each property, comment out all occurrences outside the block
+    // Step 3: For each property, comment out all occurrences outside the range
     const outsideLinesToComment: number[] = []
 
     allProperties.forEach((propName) => {
-      // Find occurrences outside the block (before the block)
-      if (block.startLine > 1) {
-        const beforeLines = findPropertyLinesInRange(updatedState, propName, 1, block.startLine - 1)
+      // Find occurrences outside the range (before the range)
+      if (range.startLine > 1) {
+        const beforeLines = findPropertyLinesInRange(updatedState, propName, 1, range.startLine - 1)
         outsideLinesToComment.push(...beforeLines)
       }
 
-      // Find occurrences outside the block (after the block)
-      if (block.endLine < updatedState.doc.lines) {
+      // Find occurrences outside the range (after the range)
+      if (range.endLine < updatedState.doc.lines) {
         const afterLines = findPropertyLinesInRange(
           updatedState,
           propName,
-          block.endLine + 1,
+          range.endLine + 1,
           updatedState.doc.lines
         )
         outsideLinesToComment.push(...afterLines)
       }
     })
 
-    // Comment out all properties outside the block
+    // Comment out all properties outside the range
     if (outsideLinesToComment.length > 0) {
-      console.log(`Commenting out ${outsideLinesToComment.length} properties outside block`)
+      console.log(`Commenting out ${outsideLinesToComment.length} properties outside range`)
 
       const outsideRanges = outsideLinesToComment.map((lineNum) => {
         const line = updatedState.doc.line(lineNum)
@@ -240,19 +256,19 @@ const evaluateProperties: StateCommand = ({ state, dispatch }) => {
 
       // Wait for this to complete before doing the next step
       setTimeout(() => {
-        handleBlockProperties(block, allProperties)
+        handleRangeProperties(range, allProperties)
       }, 50)
 
       return true
     } else {
-      // No outside properties to comment, proceed with block properties
-      return handleBlockProperties(block, allProperties)
+      // No outside properties to comment, proceed with range properties
+      return handleRangeProperties(range, allProperties)
     }
   }
 
-  // Helper function to handle properties within the block
-  function handleBlockProperties(
-    block: { startLine: number; endLine: number },
+  // Helper function to handle properties within the range
+  function handleRangeProperties(
+    range: { startLine: number; endLine: number },
     properties: string[]
   ): boolean {
     const view = EditorView.findFromDOM(document.querySelector('.cm-editor') as HTMLElement)
@@ -260,16 +276,16 @@ const evaluateProperties: StateCommand = ({ state, dispatch }) => {
 
     const updatedState = view.state
 
-    // Step 4: For each property in the block, ensure only the last instance is active
+    // Step 4: For each property in the range, ensure only the last instance is active
     let anyProcessed = false
 
     properties.forEach((propName) => {
-      // Find all instances of this property in the block
+      // Find all instances of this property in the range
       const propLines = findPropertyLinesInRange(
         updatedState,
         propName,
-        block.startLine,
-        block.endLine
+        range.startLine,
+        range.endLine
       )
 
       if (propLines.length > 1) {
@@ -293,13 +309,48 @@ const evaluateProperties: StateCommand = ({ state, dispatch }) => {
       }
     })
 
+    // Final step: Restore the original cursor position/selection
+    setTimeout(() => {
+      const finalView = EditorView.findFromDOM(document.querySelector('.cm-editor') as HTMLElement)
+      if (finalView) {
+        // Map the original selection through potential document changes
+        // to handle cases where line numbers might have changed
+        finalView.dispatch({
+          selection: originalSelection
+        })
+      }
+    }, 50)
+
     return anyProcessed
   }
 }
 
 /**
- * Creates the property evaluator extension
+ * Command to evaluate properties in the current CSS block
+ */
+const evaluatePropertiesBlock: StateCommand = (params) => {
+  const block = findBlockLines(params.state)
+  if (!block) return false
+
+  return evaluatePropertiesCore(params, block)
+}
+
+/**
+ * Command to evaluate properties in just the current line
+ */
+const evaluatePropertiesLine: StateCommand = (params) => {
+  const line = findCurrentLine(params.state)
+  if (!line) return false
+
+  return evaluatePropertiesCore(params, line)
+}
+
+/**
+ * Creates the property evaluator extension with keyboard shortcuts
  */
 export function propertyEvaluator(): Extension {
-  return keymap.of([{ key: 'Alt-Enter', run: evaluateProperties }])
+  return keymap.of([
+    { key: 'Alt-Enter', run: evaluatePropertiesBlock },
+    { key: 'Ctrl-Enter', run: evaluatePropertiesLine }
+  ])
 }
