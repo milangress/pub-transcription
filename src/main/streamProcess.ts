@@ -1,6 +1,6 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
 import { ChildProcess, spawn } from 'child_process'
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, powerSaveBlocker } from 'electron'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import ggmlMetal from '../../resources/lib/ggml-metal.metal?asset&asarUnpack'
@@ -111,6 +111,8 @@ export function createStreamProcess(
   log.msg(`Starting in ${audioDir}`)
   log.msg(`Command: ${ggmlStreamBin} ${args.join(' ')}`)
 
+  const stopPowerSaveBlocker = startPowerSaveBlocker(log.toWindow)
+
   const ls = spawn(ggmlStreamBin, args, spawnOptions)
   activeStreamProcess = ls
 
@@ -135,6 +137,7 @@ export function createStreamProcess(
   ls.on('close', (code: number | null) => {
     log.error(`Process exited with code ${code}`)
     activeStreamProcess = null
+    stopPowerSaveBlocker()
   })
 
   return ls
@@ -156,3 +159,18 @@ export function stopStreamProcess(): void {
     activeStreamProcess = null
   }
 }
+
+function startPowerSaveBlocker(logtoWindow: (message: string) => void): () => void {
+  const id = powerSaveBlocker.start('prevent-display-sleep')
+  if (powerSaveBlocker.isStarted(id)) {
+    logtoWindow('✅ Power save blocker started')
+  } else {
+    logtoWindow('❌ Power save blocker failed to start')
+  }
+  return () => {
+    powerSaveBlocker.stop(id)
+    logtoWindow('❌ Power save blocker stopped')
+  }
+}
+
+
