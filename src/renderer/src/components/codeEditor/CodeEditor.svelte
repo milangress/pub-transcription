@@ -9,20 +9,17 @@
   import { html } from '@codemirror/lang-html'
   import { sass, sassLanguage } from '@codemirror/lang-sass'
   import { syntaxTree } from '@codemirror/language'
-  import { linter, lintGutter, type Diagnostic } from '@codemirror/lint'
+  import { lintGutter } from '@codemirror/lint'
   import { EditorState } from '@codemirror/state'
   import {
-      Decoration,
       EditorView,
-      keymap,
-      ViewPlugin,
-      WidgetType,
-      type DecorationSet
+      keymap
   } from '@codemirror/view'
   import { basicSetup } from 'codemirror'
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
   import { onMount } from 'svelte'
   import { settings } from '../../stores/settings.svelte.js'
+  import { compiledControllerValues, updateControllerValues } from './ControllerValuesExtension'
   import { propertyHighlighter } from './PropertyHighlighter'
 
   let {
@@ -137,200 +134,6 @@
     }
   })
 
-  // Remove all decoration-related code and keep only the linter
-  const duplicatePropertiesLinter = linter((view) => {
-    try {
-      const diagnostics: Diagnostic[] = []
-      const properties = new Map<string, Map<string, Array<{ node: any; line: any }>>>()
-      let currentRule: any = null
-
-      syntaxTree(view.state).iterate({
-        enter: (node: any) => {
-          if (node?.type?.name === 'RuleSet') {
-            currentRule = node
-          }
-
-          if (node?.type?.name === 'PropertyName') {
-            const property = view.state.doc.sliceString(node.from, node.to).trim()
-            if (!property) return
-
-            const line = view.state.doc.lineAt(node.from)
-            if (!line || line.text.trim().startsWith('//')) return
-
-            const ruleKey = currentRule ? currentRule.from : 'global'
-            if (!properties.has(ruleKey)) {
-              properties.set(ruleKey, new Map())
-            }
-
-            const ruleProperties = properties.get(ruleKey)!
-            if (!ruleProperties.has(property)) {
-              ruleProperties.set(property, [{ node, line }])
-            } else {
-              const existing = ruleProperties.get(property)!
-              existing.push({ node, line })
-              console.log(
-                `Found duplicate '${property}' on line ${line.number} (first used on line ${existing[0].line.number})`
-              )
-
-              // Create diagnostic immediately for this duplicate
-              diagnostics.push({
-                from: node.from,
-                to: node.to,
-                severity: 'warning',
-                message: `Duplicate '${property}' (-> ${existing[0].line.number})`,
-                actions: [
-                  {
-                    name: '// Comment',
-                    apply(view: EditorView, _from: number, _to: number) {
-                      const match = line.text.match(/^\s*/)
-                      const indentLength = match ? match[0].length : 0
-                      const lineStart = line.from + indentLength
-                      view.dispatch({
-                        changes: { from: lineStart, insert: '// ' }
-                      })
-                    }
-                  }
-                ]
-              })
-            }
-          }
-        },
-        leave: (node: any) => {
-          if (node?.type?.name === 'RuleSet') {
-            currentRule = null
-          }
-        }
-      })
-
-      return diagnostics
-    } catch (error) {
-      console.error('Error in linter:', error)
-      return []
-    }
-  })
-
-  // Helper to transform SASS values
-  function transformSassValue(str: string, settings: ControllerSetting[]): string | null {
-    if (!settings || !Array.isArray(settings) || settings.length === 0) return null
-
-    const values: string[] = []
-    let foundAny = false
-
-    // Find all $variables in the string
-    const regex = /\$(\w+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g
-    let match
-
-    while ((match = regex.exec(str)) !== null) {
-      const [_, varName, number, unit] = match
-      const setting = settings.find((s) => s.var === varName)
-
-      if (setting) {
-        foundAny = true
-        if (number) {
-          const result = setting.value * parseFloat(number)
-          values.push(unit ? result + unit : result.toString())
-        } else {
-          values.push(setting.value.toString())
-        }
-      }
-    }
-
-    return foundAny ? values.join(', ') : null
-  }
-
-  class ValueWidget extends WidgetType {
-    value: string
-
-    constructor(value: string) {
-      super()
-      this.value = value
-    }
-
-    eq(other: ValueWidget): boolean {
-      return other.value === this.value
-    }
-
-    toDOM(): HTMLElement {
-      const span = document.createElement('span')
-      span.className = 'cm-sass-value'
-      span.style.cssText = `
-                display: inline-block;
-                color: #888;
-                pointer-events: none;
-                user-select: none;
-                white-space: pre;
-                padding-left: 1ch;
-            `
-      span.textContent = `→ ${this.value}`
-      return span
-    }
-
-    ignoreEvent(): boolean {
-      return true
-    }
-  }
-
-  function createValueDecorations(view: EditorView): DecorationSet {
-    const widgets: any[] = []
-    const settings = controllerSettings
-
-    for (let { from, to } of view.visibleRanges) {
-      syntaxTree(view.state).iterate({
-        from,
-        to,
-        enter: (node) => {
-          if (node.type.name === 'Declaration') {
-            const line = view.state.doc.lineAt(node.from)
-            const lineContent = line.text
-
-            if (lineContent.includes('$') && !lineContent.trim().startsWith('//')) {
-              const value = transformSassValue(lineContent, settings)
-              if (value !== null) {
-                widgets.push(
-                  Decoration.widget({
-                    widget: new ValueWidget(value),
-                    side: 1
-                  }).range(line.to)
-                )
-              }
-            }
-          }
-        }
-      })
-    }
-    return Decoration.set(widgets)
-  }
-
-  const EditorTheme = EditorView.theme({
-    '.ͼk': {
-      backgroundColor: 'rgba(0, 0, 0, 0.1)'
-    }
-  })
-
-  const sassValuePlugin = ViewPlugin.fromClass(
-    class {
-      decorations: DecorationSet
-
-      constructor(view: EditorView) {
-        this.decorations = createValueDecorations(view)
-      }
-
-      update(update: { view: EditorView }) {
-        this.decorations = createValueDecorations(update.view)
-      }
-    },
-    {
-      decorations: (v) => v.decorations
-    }
-  )
-
-  // Add reactive statement to force plugin update when settings change
-  $effect(() => {
-    if (view && controllerSettings) {
-      view.dispatch(view.state.update())
-    }
-  })
-
   function vizualizeParserTreeLinebreaks(tree: string): string {
     // NOTE: Just a hacky way to make the parser tree more readable
     return tree
@@ -343,6 +146,13 @@
   $effect(() => {
     if (view) {
       syntaxTreeVizRepresentation = vizualizeParserTreeLinebreaks(syntaxTree(view.state).toString())
+    }
+  })
+
+  // Add reactive statement to force plugin update when settings change
+  $effect(() => {
+    if (view && controllerSettings) {
+      updateControllerValues(view, controllerSettings)
     }
   })
 
@@ -359,9 +169,7 @@
         closeBrackets(),
         autocompletion(),
         lintGutter(),
-        EditorTheme,
-        duplicatePropertiesLinter,
-        sassValuePlugin,
+        compiledControllerValues(controllerSettings),
         propertyHighlighter(),
         sassLanguage.data.of({
           autocomplete: createCompletions
