@@ -113,7 +113,6 @@ export function updateControllerSliderValues(
   view: EditorView,
   settings: ControllerSetting[]
 ): void {
-  console.log('updateControllerSliderValues', settings)
   currentSettings = settings
 
   if (view) {
