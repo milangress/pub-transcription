@@ -13,7 +13,7 @@ const propertyHighlight = Decoration.line({
   attributes: { class: 'cm-propertyHighlight' }
 })
 
-// Check if the cursor is on a PropertyName node or a commented property
+// Check if the cursor is on a line containing a PropertyName node or a commented property
 function getPropertyNameAtCursor(
   view: EditorView
 ): { name: string; from: number; to: number } | null {
@@ -21,11 +21,17 @@ function getPropertyNameAtCursor(
   const selection = state.selection.main
   const cursor = selection.head
 
-  // First try to get property name from syntax tree (for active properties)
+  // Get the current line where the cursor is
+  const cursorLine = state.doc.lineAt(cursor)
+
+  // Try to find property name in the syntax tree for this line
   let propertyName: { name: string; from: number; to: number } | null = null
   syntaxTree(state).iterate({
+    from: cursorLine.from,
+    to: cursorLine.to,
     enter: (node) => {
-      if (node.type.name === 'PropertyName' && node.from <= cursor && node.to >= cursor) {
+      // Check if the node is a PropertyName and is on the same line as the cursor
+      if (node.type.name === 'PropertyName') {
         propertyName = {
           name: state.doc.sliceString(node.from, node.to).trim(),
           from: node.from,
@@ -33,13 +39,13 @@ function getPropertyNameAtCursor(
         }
         return false // Stop iteration once found
       }
+      return true
     }
   })
 
   // If not found in syntax tree, check if we're on a commented line
   if (!propertyName) {
-    const line = state.doc.lineAt(cursor)
-    const lineText = line.text.trim()
+    const lineText = cursorLine.text.trim()
 
     if (lineText.startsWith('//')) {
       // Try to extract property name from the comment
@@ -47,15 +53,13 @@ function getPropertyNameAtCursor(
       const match = lineText.match(/\/\/\s*([a-zA-Z-]+):/)
       if (match && match[1]) {
         const name = match[1].trim()
-        // Only create propertyName if cursor is within the property name
-        const nameStart = line.from + lineText.indexOf(name)
+        // Create propertyName since we're on the line containing this property
+        const nameStart = cursorLine.from + lineText.indexOf(name)
         const nameEnd = nameStart + name.length
-        if (cursor >= nameStart && cursor <= nameEnd) {
-          propertyName = {
-            name,
-            from: nameStart,
-            to: nameEnd
-          }
+        propertyName = {
+          name,
+          from: nameStart,
+          to: nameEnd
         }
       }
     }

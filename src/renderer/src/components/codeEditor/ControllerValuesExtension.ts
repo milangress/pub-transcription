@@ -62,32 +62,30 @@ function computeBinaryExpression(
   // We need to find the children of this binary expression
   // We'll use syntaxTree.iterate for this specific node
   syntaxTree(view.state).iterate({
+    from: node.from,
+    to: node.to,
     enter: (childNode) => {
-      // Only process direct children of our node
-      if (childNode.from >= node.from && childNode.to <= node.to && childNode !== node) {
-        const childName = childNode.type.name
-        const childText = view.state.doc.sliceString(childNode.from, childNode.to)
-        if (childName === 'SassVariableName') {
-          varName = childText.substring(1) // Remove the $ prefix
-        } else if (childName === 'BinOp') {
-          operator = childText.trim()
-        } else if (childName === 'NumberLiteral') {
-          // Extract the number and unit if present
-          const match = childText.match(/^([\d.]+)([a-z%]*)$/)
-          if (match) {
-            number = parseFloat(match[1])
-            unit = match[2] || ''
-          } else {
-            number = parseFloat(childText)
-            unit = ''
-          }
+      const childName = childNode.type.name
+      const childText = view.state.doc.sliceString(childNode.from, childNode.to)
+      if (childName === 'SassVariableName') {
+        varName = childText.substring(1) // Remove the $ prefix
+      } else if (childName === 'BinOp') {
+        operator = childText.trim()
+      } else if (childName === 'NumberLiteral') {
+        // Extract the number and unit if present
+        const match = childText.match(/^([\d.]+)([a-z%]*)$/)
+        if (match) {
+          number = parseFloat(match[1])
+          unit = match[2] || ''
+        } else {
+          number = parseFloat(childText)
+          unit = ''
         }
       }
+
       // Continue iteration for all nodes
       return true
-    },
-    from: node.from,
-    to: node.to
+    }
   })
 
   // Find the setting for this variable
@@ -155,10 +153,10 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
       // Helper to compute all decorations at once
       computeDecorations(view: EditorView): DecorationSet {
         const builder = new RangeSetBuilder<Decoration>()
-        
+
         // Keep track of values per line
         const lineValues = new Map<number, string[]>()
-        
+
         // Process visible lines for performance
         for (const { from, to } of view.visibleRanges) {
           syntaxTree(view.state).iterate({
@@ -184,7 +182,7 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
             }
           })
         }
-        
+
         // Create decorations for each line
         for (const [lineNumber, values] of lineValues.entries()) {
           if (values.length > 0) {
@@ -203,7 +201,7 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
             )
           }
         }
-        
+
         return builder.finish()
       }
 
