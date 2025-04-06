@@ -68,7 +68,7 @@ function getPropertyNameAtCursor(
 function findMatchingPropertyLines(view: EditorView, propertyName: string): number[] {
   const matches: number[] = []
   const { state } = view
-  
+
   // Get the current line number to exclude it
   const currentLine = state.doc.lineAt(state.selection.main.head)
 
@@ -93,10 +93,10 @@ function findMatchingPropertyLines(view: EditorView, propertyName: string): numb
   for (let i = 1; i <= state.doc.lines; i++) {
     // Skip the current line
     if (i === currentLine.number) continue
-    
+
     const line = state.doc.line(i)
     const lineText = line.text.trim()
-    
+
     // Check if it's a comment containing our property
     if (lineText.startsWith('//') && lineText.includes(propertyName + ':')) {
       // Only add if not already added (avoid duplicates)
