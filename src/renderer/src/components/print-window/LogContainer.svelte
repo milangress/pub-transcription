@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer'
+  import type { IpcEvents } from 'src/types/ipc'
   import { run } from 'svelte/legacy'
+  const emitter = new IpcEmitter<IpcEvents>()
 
   import { onMount } from 'svelte'
 
@@ -15,8 +18,7 @@
   // Load saved logs on mount
   onMount(async () => {
     try {
-      const savedLogs =
-        (await window.electron.ipcRenderer.invoke('get-store-value', 'printLogs')) || []
+      const savedLogs = (await emitter.invoke('getStoreValue', 'printLogs')) || []
       if (savedLogs.length > 0) {
         // Add session divider only on first load
         const sessionDivider = {
@@ -78,7 +80,7 @@
   async function clearLogs() {
     if (confirm('Are you sure you want to clear all logs?')) {
       logs = []
-      await window.electron.ipcRenderer.invoke('set-store-value', 'printLogs', [])
+      await emitter.invoke('setStoreValue', 'printLogs', [])
     }
   }
   let mergedLogs = $derived([...previousLogs, ...logs])
@@ -87,8 +89,8 @@
     if (mergedLogs.length !== previousLogsLength) {
       // Save all logs including dividers
       const logsToStore = mergedLogs.slice(-MAX_STORED_LOGS)
-      window.electron.ipcRenderer
-        .invoke('set-store-value', 'printLogs', logsToStore)
+      emitter
+        .invoke('setStoreValue', 'printLogs', logsToStore)
         .catch((error) => console.error('Failed to save logs:', error))
       previousLogsLength = mergedLogs.length
 

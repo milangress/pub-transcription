@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { IpcListener } from '@electron-toolkit/typed-ipc/renderer'
   import type { PrintStatusMessage } from 'src/types'
+  import type { IpcRendererEvent } from 'src/types/ipc'
   import { onMount } from 'svelte'
   import { fly } from 'svelte/transition'
   import PrintStatus from './PrintStatus.svelte'
+  const ipc = new IpcListener<IpcRendererEvent>()
 
   interface StatusEmojis {
     LOCAL_REQUEST: string
@@ -70,7 +73,7 @@
 
   // Add print request handler
   onMount(() => {
-    window.electron.ipcRenderer.on(
+    ipc.on(
       'print-queued',
       (_, { success, error, printId }: { success: boolean; error?: string; printId: string }) => {
         if (success) {
@@ -81,7 +84,7 @@
       }
     )
 
-    window.electron.ipcRenderer.on('print-status', (_event, message: PrintStatusMessage) => {
+    ipc.on('print-status', (_event, message: PrintStatusMessage) => {
       const { id, action, status, ...details } = message
       let emoji = '❓'
       let text = 'Unknown status'

@@ -18,10 +18,11 @@
   import { tick } from 'svelte'
   import { WebMidi } from 'webmidi'
 
-  import { IpcListener } from '@electron-toolkit/typed-ipc/renderer'
-  import type { IpcRendererEvent } from 'src/types/ipc'
+  import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer'
+  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc'
 
   const ipc = new IpcListener<IpcRendererEvent>()
+  const emitter = new IpcEmitter<IpcEvents>()
 
   let {
     excludedFragments = [
@@ -224,7 +225,10 @@
         svgFilters: $settings.svgFilters
       }
 
-      window.electron.ipcRenderer.send('print', pageContent, printSettings)
+      emitter.send('print', { 
+        content: pageContent, 
+        settings: printSettings 
+      })
       committedContent = []
     } catch (error) {
       console.error('❌ Error during print:', error)
@@ -315,7 +319,7 @@
       <div class="printControls">
         <button onclick={printFile}>PRINT</button>
         <button onclick={clearAll}>CLEAR ALL</button>
-        <button onclick={() => window.electron.ipcRenderer.send('open-pdfs-folder')}>
+        <button onclick={() => emitter.invoke('open-pdf-folder')}>
           OPEN PDFs FOLDER
         </button>
         <input bind:value={printerSettings.deviceName} type="text" disabled />
