@@ -152,7 +152,8 @@
   // Add reactive statement to force plugin update when settings change
   $effect(() => {
     if (view && controllerSettings) {
-      updateControllerValues(view, controllerSettings)
+      console.log('controllerSettings', $state.snapshot(controllerSettings))
+      updateControllerValues(view, $state.snapshot(controllerSettings))
     }
   })
 
