@@ -198,7 +198,7 @@ function startProcesses(): void {
     simulationController = simulatedTranscriptController(mainWindow)
     simulationController.start()
   } else {
-    createStreamProcess(mainWindow, __dirname)
+    createStreamProcess(mainWindow)
   }
 }
 
@@ -214,6 +214,7 @@ app.whenReady().then(() => {
 
   createWindow()
   initAudioDevices()
+
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
