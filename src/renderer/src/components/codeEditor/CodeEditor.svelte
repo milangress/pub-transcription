@@ -94,7 +94,7 @@
         closeBrackets(),
         lintGutter(),
         compiledControllerValues(controllerSettings),
-        controllerValueSliders(controllerSettings),
+        controllerValueSliders(),
         propertyHighlighter(),
         sassLanguage.data.of({
           autocomplete: createCompletionSource(completionOptions)
