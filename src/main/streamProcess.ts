@@ -1,3 +1,4 @@
+import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
 import { ChildProcess, spawn } from 'child_process'
 import { app, BrowserWindow } from 'electron'
 import { existsSync, mkdirSync } from 'fs'
@@ -5,6 +6,9 @@ import { join } from 'path'
 import ggmlMetal from '../../resources/lib/ggml-metal.metal?asset&asarUnpack'
 import ggmlStreamBin from '../../resources/lib/stream?asset&asarUnpack'
 import ggmlModelSmallEnQ51Bin from '../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack'
+import type { IpcRendererEvent } from '../types/ipc'
+
+const emitter = new IpcEmitter<IpcRendererEvent>()
 
 // Keep track of the stream process
 let activeStreamProcess: ChildProcess | null = null
@@ -61,7 +65,7 @@ export function createStreamProcess(
     toWindow: (message: string): void => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         console.log('\x1b[34m%s\x1b[0m', `[${mergedOptions.name}] [send] ${message}`)
-        sendToWindowIfAvailable('transcription-status', message)
+        sendToWindowIfAvailable('whisper-ccp-stream:status', message)
       }
     },
     error: (message: string | object): void => {
@@ -70,9 +74,9 @@ export function createStreamProcess(
     }
   }
 
-  const sendToWindowIfAvailable = (channel: string, message: string): void => {
+  const sendToWindowIfAvailable = (channel: keyof IpcRendererEvent, message: string): void => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(channel, message)
+      emitter.send(mainWindow.webContents, channel, message)
     } else {
       log.error(`mainWindow Unavailable! Message: ${message}`)
     }
@@ -115,7 +119,7 @@ export function createStreamProcess(
     if (printTranscription) {
       log.msg(`stdout: ${string}`)
     }
-    sendToWindowIfAvailable('transcription-data', string)
+    sendToWindowIfAvailable('whisper-ccp-stream:transcription', string)
   })
 
   ls.stderr.on('data', (info: Buffer) => {

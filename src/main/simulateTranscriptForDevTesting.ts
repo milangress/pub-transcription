@@ -1,5 +1,8 @@
+import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
 import { BrowserWindow } from 'electron'
+import type { IpcRendererEvent } from '../types/ipc'
 
+const emitter = new IpcEmitter<IpcRendererEvent>()
 interface SimulationController {
   start: () => void
   stop: () => void
@@ -118,9 +121,9 @@ export function simulatedTranscriptController(
 
       // Every 3-5 messages, send a NEW message
       if (Math.random() < 0.25) {
-        mainWindow.webContents.send('transcription-data', `${message}NEW`)
+        emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', `${message}NEW`)
       } else {
-        mainWindow.webContents.send('transcription-data', message)
+        emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', message)
       }
     }, sendMessageEvery)
 

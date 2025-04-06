@@ -1,4 +1,4 @@
-import type { PrintRequest, PrintStatusMessage, QueueStatus } from './index'
+import type { PrintRequest, PrintStatusMessage, QueueStatus } from './index';
 
 // Main process ipc events (from renderer to main)
 export type IpcEvents =
@@ -24,6 +24,6 @@ export type IpcRendererEvent = {
   'print-job': [job: { content: string; settings: unknown }]
 
   // Transcription related events
-  'transcription-data': [data: string]
-  'transcription-status': [status: string]
+  'whisper-ccp-stream:transcription': [data: string]
+  'whisper-ccp-stream:status': [status: string]
 }
