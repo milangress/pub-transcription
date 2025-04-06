@@ -299,14 +299,6 @@
 
       <hr />
 
-      <select bind:value={fontFamilys}>
-        {#each fontFamilys as fam}
-          <option value={fam}>
-            {fam.name}
-          </option>
-        {/each}
-      </select>
-
       <ControllerManager bind:controllerSettings={settings.controllerSettings}></ControllerManager>
 
       <hr />
