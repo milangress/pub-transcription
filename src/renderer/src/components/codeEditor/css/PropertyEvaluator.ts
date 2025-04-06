@@ -1,4 +1,4 @@
-import { toggleLineComment } from '@codemirror/commands';
+import { lineUncomment, toggleLineComment } from '@codemirror/commands';
 import { syntaxTree } from '@codemirror/language';
 import { type Extension, type StateCommand, EditorSelection } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
@@ -34,6 +34,24 @@ function getPropertyAtCursor(
       return true
     }
   })
+
+  // If no property found, check if we're on a commented line
+  if (!propertyName) {
+    const lineText = cursorLine.text.trim()
+    if (lineText.startsWith('//')) {
+      // Try to extract property name from the comment
+      const match = lineText.match(/\/\/\s*([a-zA-Z-]+):/)
+      if (match && match[1]) {
+        const name = match[1].trim()
+        propertyName = {
+          name,
+          from: cursorLine.from,
+          to: cursorLine.from + name.length,
+          line: cursorLine.number
+        }
+      }
+    }
+  }
 
   return propertyName
 }
@@ -76,6 +94,7 @@ function findBlockLines(state: EditorView['state']): { startLine: number; endLin
     endLine++
   }
 
+  console.log(`Found block from ${startLine} to ${endLine}`)
   return { startLine, endLine }
 }
 
@@ -87,14 +106,22 @@ function findPropertyLinesInBlock(
   propertyName: string,
   startLine: number,
   endLine: number
-): number[] {
-  const lines: number[] = []
+): { active: number[]; commented: number[] } {
+  const active: number[] = []
+  const commented: number[] = []
 
   // Iterate through all lines in the block
   for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
     const line = state.doc.line(lineNum)
+    const lineText = line.text.trim()
 
-    // Use syntax tree to find property name nodes
+    // First check if it's a commented line with our property
+    if (lineText.startsWith('//') && lineText.includes(propertyName + ':')) {
+      commented.push(lineNum)
+      continue
+    }
+
+    // Use syntax tree to find active property name nodes
     let foundProperty = false
     syntaxTree(state).iterate({
       from: line.from,
@@ -112,17 +139,18 @@ function findPropertyLinesInBlock(
     })
 
     if (foundProperty) {
-      lines.push(lineNum)
+      active.push(lineNum)
     }
   }
 
-  return lines
+  return { active, commented }
 }
 
 /**
  * Command function that evaluates and comments out duplicate properties
  */
 const evaluateProperties: StateCommand = ({ state, dispatch }) => {
+  // Find the property at the cursor
   const property = getPropertyAtCursor(state)
   if (!property) return false
 
@@ -130,20 +158,80 @@ const evaluateProperties: StateCommand = ({ state, dispatch }) => {
   const block = findBlockLines(state)
   if (!block) return false
 
-  // Get all lines with the same property
-  const propertyLines = findPropertyLinesInBlock(
+  // Get all lines with the same property (both active and commented)
+  const { active, commented } = findPropertyLinesInBlock(
     state,
     property.name,
     block.startLine,
     block.endLine
   )
-  if (propertyLines.length <= 1) return false
 
   console.log(`Evaluating property: ${property.name}`)
-  console.log(`Found ${propertyLines.length} occurrences at lines: ${propertyLines.join(', ')}`)
+  console.log(`Found ${active.length} active occurrences at lines: ${active.join(', ')}`)
+  console.log(`Found ${commented.length} commented occurrences at lines: ${commented.join(', ')}`)
+
+  // Set up our transactions as a two-step process
+
+  // Step 1: If there are any commented lines, uncomment them
+  if (commented.length > 0) {
+    const commentedRanges = commented.map((lineNum) => {
+      const line = state.doc.line(lineNum)
+      return EditorSelection.range(line.from, line.from)
+    })
+
+    if (dispatch) {
+      // Set the selection to all commented lines
+      const commentedSelection = EditorSelection.create(commentedRanges)
+      const tr1 = state.update({ selection: commentedSelection })
+      dispatch(tr1)
+
+      // Uncomment these lines
+      lineUncomment({ state: tr1.state, dispatch })
+
+      // We need to wait for this transaction to be applied before proceeding
+      // In a real app, you might want to use a more robust approach
+      setTimeout(() => {
+        // Now let's get the updated state and proceed with step 2
+        const view = EditorView.findFromDOM(document.querySelector('.cm-editor') as HTMLElement)
+        if (view) {
+          const updatedState = view.state
+
+          // Since we uncommented all properties, now handle them as if they're all active
+          const allLines = findPropertyLinesInBlock(
+            updatedState,
+            property.name,
+            block.startLine,
+            block.endLine
+          ).active
+
+          // Keep only the last property active
+          const linesToComment = allLines.slice(0, allLines.length - 1)
+
+          // Create selection ranges for lines to comment
+          const ranges = linesToComment.map((lineNum) => {
+            const line = updatedState.doc.line(lineNum)
+            return EditorSelection.range(line.from, line.from)
+          })
+
+          // Comment these lines
+          if (ranges.length > 0) {
+            const tempSelection = EditorSelection.create(ranges)
+            const tr2 = updatedState.update({ selection: tempSelection })
+            view.dispatch(tr2)
+            toggleLineComment({ state: tr2.state, dispatch: view.dispatch })
+          }
+        }
+      }, 50) // small delay to ensure the first transaction is applied
+    }
+
+    return true
+  }
+
+  // If no commented lines, just handle active lines
+  if (active.length <= 1) return false
 
   // Only comment out all but the last property
-  const linesToComment = propertyLines.slice(0, propertyLines.length - 1)
+  const linesToComment = active.slice(0, active.length - 1)
 
   // Create proper selection ranges for each line we want to comment
   const ranges = linesToComment.map((lineNum) => {
