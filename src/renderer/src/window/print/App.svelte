@@ -70,7 +70,7 @@
     console.log('📝 Executing print with ID:', currentPrintId)
 
     try {
-      await window.electron.ipcRenderer.invoke('execute-print', content, settings)
+      await emitter.invoke('execute-print', { content, settings })
       // Status updates will come from main process
     } catch (error) {
       console.error('❌ Print error:', error)
