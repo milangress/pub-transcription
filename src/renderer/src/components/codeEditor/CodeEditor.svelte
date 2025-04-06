@@ -18,7 +18,7 @@
   import { onMount } from 'svelte'
   import { settings } from '../../stores/settings.svelte.js'
   import { createAIExtension } from './AIExtension'
-  import { createCompletionSource } from './css/Completions.js'
+  import { createCompletionSource, updateCompletionOptions } from './css/Completions.js'
   import { compiledControllerValues, updateControllerValues } from './css/ControllerValuesExtension.js'
   import { controllerValueSliders, updateControllerSliderValues } from './css/ControllerValueSliderWidget.js'
   import { propertyEvaluator } from './css/PropertyEvaluator.js'
@@ -70,12 +70,21 @@
     }
   })
 
-  // Add reactive statement to force plugin update when settings change
+  // Update all extensions when settings change
   $effect(() => {
     if (view && controllerSettings) {
-      // console.log('controllerSettings', $state.snapshot(controllerSettings))
-      updateControllerValues(view, $state.snapshot(controllerSettings))
-      updateControllerSliderValues(view, $state.snapshot(controllerSettings))
+      const currentSettings = $state.snapshot(controllerSettings)
+      
+      // Update controller values extension
+      updateControllerValues(view, currentSettings)
+      updateControllerSliderValues(view, currentSettings)
+      
+      // Update completions with latest settings
+      updateCompletionOptions({
+        fontFamilies: $state.snapshot(fontFamilys),
+        controllerSettings: currentSettings,
+        filterIds: settings.filterIds
+      })
     }
   })
 

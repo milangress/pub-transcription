@@ -1,8 +1,8 @@
 import {
-    autocompletion,
-    type Completion,
-    type CompletionContext,
-    type CompletionResult
+  autocompletion,
+  type Completion,
+  type CompletionContext,
+  type CompletionResult
 } from '@codemirror/autocomplete'
 import type { Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
@@ -14,6 +14,20 @@ interface CompletionOptions {
   filterIds: string[]
 }
 
+// Global variables to store current options
+let currentFontFamilies: FontFamily[] = []
+let currentControllerSettings: ControllerSetting[] = []
+let currentFilterIds: string[] = []
+
+/**
+ * Updates the current completion options reactively
+ */
+export function updateCompletionOptions(options: CompletionOptions): void {
+  currentFontFamilies = options.fontFamilies
+  currentControllerSettings = options.controllerSettings
+  currentFilterIds = options.filterIds
+}
+
 /**
  * Creates a completion source function for CodeMirror
  * Provides completions for:
@@ -21,8 +35,11 @@ interface CompletionOptions {
  * - MIDI controller variables ($var)
  * - SVG filter IDs for url(#filter)
  */
-export function createCompletionSource(options: CompletionOptions) {
-  const { fontFamilies, controllerSettings, filterIds } = options
+export function createCompletionSource(initialOptions?: CompletionOptions) {
+  // Initialize with provided options if available
+  if (initialOptions) {
+    updateCompletionOptions(initialOptions)
+  }
 
   return (context: CompletionContext): CompletionResult | null => {
     // Font-family completion
@@ -31,7 +48,7 @@ export function createCompletionSource(options: CompletionOptions) {
       const word = context.matchBefore(/[^:\s;]*$/)
       if (!word && !context.explicit) return null
 
-      const fontOptions: Completion[] = fontFamilies.map((font) => ({
+      const fontOptions: Completion[] = currentFontFamilies.map((font) => ({
         label: font.name,
         type: 'class',
         boost: 1
@@ -50,7 +67,7 @@ export function createCompletionSource(options: CompletionOptions) {
       return {
         from: varWord.from,
         validFor: /^\$\w*$/,
-        options: controllerSettings.map((setting) => ({
+        options: currentControllerSettings.map((setting) => ({
           label: '$' + setting.var,
           type: 'variable',
           detail: `Current value: ${setting.value}`,
@@ -75,7 +92,7 @@ export function createCompletionSource(options: CompletionOptions) {
       return {
         from: filterWord.from + (hashIndex >= 0 ? hashIndex + 1 : filterWord.text.length),
         validFor: /^[a-zA-Z0-9-]*$/,
-        options: filterIds.map((id) => ({
+        options: currentFilterIds.map((id) => ({
           label: id,
           type: 'filter',
           detail: 'SVG Filter',
@@ -109,7 +126,10 @@ export function createCompletionSource(options: CompletionOptions) {
  * Creates the completion extension for CodeMirror
  */
 export function createCompletionExtension(options: CompletionOptions): Extension {
+  // Initialize current options
+  updateCompletionOptions(options)
+  
   return autocompletion({
-    override: [createCompletionSource(options)]
+    override: [createCompletionSource()]
   })
 }
