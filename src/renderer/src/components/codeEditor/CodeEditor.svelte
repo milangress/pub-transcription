@@ -19,6 +19,7 @@
   import { settings } from '../../stores/settings.svelte.js'
   import { createCompletionSource } from './css/Completions.js'
   import { compiledControllerValues, updateControllerValues } from './css/ControllerValuesExtension.js'
+  import { controllerValueSliders } from './css/ControllerValueSliderWidget.js'
   import { propertyHighlighter } from './css/PropertyHighlighter.js'
 
   let {
@@ -93,6 +94,7 @@
         closeBrackets(),
         lintGutter(),
         compiledControllerValues(controllerSettings),
+        controllerValueSliders(controllerSettings),
         propertyHighlighter(),
         sassLanguage.data.of({
           autocomplete: createCompletionSource(completionOptions)
