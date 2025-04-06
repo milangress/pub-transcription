@@ -20,6 +20,7 @@ interface PrintWindowOptions extends Electron.BrowserWindowConstructorOptions {
     nodeIntegration: boolean
     contextIsolation: boolean
     preload: string
+    sandbox?: boolean
   }
 }
 
@@ -60,10 +61,11 @@ function createPrintWindow(): BrowserWindow {
     height: 950,
     show: isDev(),
     webPreferences: {
-      scrollBounce: true,
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: join(__dirname, '../preload/index.js')
+      scrollBounce: false,
+      nodeIntegration: true,
+      contextIsolation: false,
+      preload: join(__dirname, '../preload/print.js'),
+      sandbox: false
     }
   }
 

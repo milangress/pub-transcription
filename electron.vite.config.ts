@@ -7,10 +7,26 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/preload/index.ts'),
+          print: resolve(__dirname, 'src/preload/print.ts')
+        }
+      }
+    }
   },
   renderer: {
     plugins: [svelte()],
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          print: resolve(__dirname, 'src/renderer/print.html')
+        }
+      }
+    },
     resolve: {
       alias: {
         '@': resolve('src/renderer/src'),
