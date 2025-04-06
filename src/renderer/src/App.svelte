@@ -6,10 +6,10 @@
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
   import { settings } from '@stores/settings.js'
   import type {
-    BlockTxtSettings,
-    FontFamily,
-    PrinterSettings,
-    TxtObject
+      BlockTxtSettings,
+      FontFamily,
+      PrinterSettings,
+      TxtObject
   } from 'src/renderer/src/types'
 
   import type { PrintSettings } from 'src/types'
@@ -19,7 +19,7 @@
   import { WebMidi } from 'webmidi'
 
   let {
-    unwantedTragmentsDontCommit = [
+    excludedFragments = [
       '[ Silence ]',
       '[silence]',
       '[BLANK_AUDIO]',
@@ -90,7 +90,7 @@
 
       // Only commit if it's not in the unwanted list
       if (
-        !unwantedTragmentsDontCommit.some(
+        !excludedFragments.some(
           (x) => x.toLowerCase() === formattedSentence.content.toLowerCase().trim()
         )
       ) {
