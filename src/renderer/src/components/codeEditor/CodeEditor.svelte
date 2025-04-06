@@ -8,7 +8,7 @@
   import { sass, sassLanguage } from '@codemirror/lang-sass'
   import { syntaxTree } from '@codemirror/language'
   import { lintGutter } from '@codemirror/lint'
-  import { EditorState } from '@codemirror/state'
+  import { EditorState, Prec } from '@codemirror/state'
   import {
       EditorView,
       keymap
@@ -21,6 +21,7 @@
   import { createCompletionSource, updateCompletionOptions } from './css/Completions.js'
   import { compiledControllerValues, updateControllerValues } from './css/ControllerValuesExtension.js'
   import { controllerValueSliders, updateControllerSliderValues } from './css/ControllerValueSliderWidget.js'
+  import { livecodingKeymap } from './css/LivecodingKeymapExtra.js'
   import { propertyEvaluator } from './css/PropertyEvaluator.js'
   import { propertyHighlighter } from './css/PropertyHighlighter.js'
 
@@ -116,9 +117,11 @@
         keymap.of([
           ...defaultKeymap,
           ...completionKeymap,
+          ...livecodingKeymap,
           { key: 'Mod-/', run: toggleLineComment },
           { key: 'Shift-Alt-a', run: toggleComment }
         ]),
+        Prec.highest(keymap.of(livecodingKeymap)),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             value = update.state.doc.toString()
