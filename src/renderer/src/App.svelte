@@ -18,6 +18,11 @@
   import { tick } from 'svelte'
   import { WebMidi } from 'webmidi'
 
+  import { IpcListener } from '@electron-toolkit/typed-ipc/renderer'
+  import type { IpcRendererEvent } from 'src/types/ipc'
+
+  const ipc = new IpcListener<IpcRendererEvent>()
+
   let {
     excludedFragments = [
       '[ Silence ]',
@@ -75,7 +80,7 @@
   let codeEditorContentSaved = $derived(settings.codeEditorContentSaved.subscribe)
   let currentContentList = $derived([...committedContent, currentSentence])
 
-  window.electron.ipcRenderer.on('transcription-data', (_, value: string) => {
+  ipc.on('whisper-ccp-stream:transcription', (_, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
     const formattedSentence = formatTTSasTxtObject(value)
 

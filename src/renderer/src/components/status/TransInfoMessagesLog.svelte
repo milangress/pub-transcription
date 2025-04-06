@@ -1,8 +1,12 @@
 <script lang="ts">
   let messages = $state<string[]>([])
+  import { IpcListener } from '@electron-toolkit/typed-ipc/renderer'
+  import type { IpcRendererEvent } from 'src/types/ipc'
+
+  const ipc = new IpcListener<IpcRendererEvent>()
 
   // Listen for transcription status updates
-  window.electron.ipcRenderer.on('transcription-status', (_, value: string) => {
+  ipc.on('whisper-ccp-stream:status', (_, value: string) => {
     messages = [value, ...messages]
   })
 </script>
