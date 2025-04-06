@@ -39,6 +39,7 @@
   ) {
     const timestamp = new Date().toLocaleTimeString()
     printLogs = [
+      ...printLogs,
       {
         timestamp,
         message,
@@ -46,8 +47,7 @@
         spanCount,
         type,
         printId: currentPrintId
-      },
-      ...printLogs
+      }
     ]
   }
 

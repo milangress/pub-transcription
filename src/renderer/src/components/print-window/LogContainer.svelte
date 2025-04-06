@@ -1,10 +1,9 @@
 <script lang="ts">
   import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer'
   import type { IpcEvents } from 'src/types/ipc'
-  import { run } from 'svelte/legacy'
   const emitter = new IpcEmitter<IpcEvents>()
 
-  import { onMount } from 'svelte'
+  import { onMount, untrack } from 'svelte'
 
   interface LogEntry {
     timestamp: string
@@ -19,7 +18,6 @@
   let { logs = $bindable<LogEntry[]>([]) } = $props()
   let logContainer = $state<HTMLDivElement>()
   let shouldAutoScroll = $state(true)
-  let previousLogsLength = $state(logs.length)
   const MAX_STORED_LOGS = 200
   let isFirstLoad = $state(true)
 
@@ -38,6 +36,7 @@
           isOldSession: true
         }
 
+
         // Mark all saved logs as old session
         const oldLogs = savedLogs.map((log: LogEntry) => ({
           ...log,
@@ -45,7 +44,6 @@
         }))
 
         previousLogs = [...oldLogs, sessionDivider]
-        previousLogsLength = previousLogs.length
         isFirstLoad = false
 
         // Initial scroll to bottom
@@ -89,39 +87,56 @@
   // Clear logs function
   async function clearLogs() {
     if (confirm('Are you sure you want to clear all logs?')) {
-      logs = []
       await emitter.invoke('setStoreValue', 'printLogs', [])
+      logs = []
+      previousLogs = []
     }
   }
   let mergedLogs = $derived([...previousLogs, ...logs])
-  
-  // Save logs when they change
-  run(() => {
-    if (mergedLogs.length !== previousLogsLength) {
-      // Save all logs including dividers, but ensure they're serializable
-      const logsToStore = mergedLogs.slice(-MAX_STORED_LOGS).map((log: LogEntry) => ({
-        timestamp: log.timestamp,
-        message: log.message,
-        pdfUrl: log.pdfUrl,
-        spanCount: log.spanCount,
-        type: log.type,
-        printId: log.printId,
-        isOldSession: log.isOldSession
-      }))
-      
-      emitter
-        .invoke('setStoreValue', 'printLogs', logsToStore)
-        .catch((error) => console.error('Failed to save logs:', error))
-      previousLogsLength = mergedLogs.length
 
-      // If auto-scroll is enabled, scroll after the DOM updates
-      if (shouldAutoScroll) {
-        requestAnimationFrame(() => {
-          scrollToBottom()
-        })
-      }
+  let logsToStore = $derived(mergedLogs.slice(-MAX_STORED_LOGS).map((log: LogEntry) => log))
+
+  $inspect(logsToStore)
+
+  $effect(() => {
+    if (logsToStore.length) {
+      untrack(() => {
+        console.log('Saving logs:', $state.snapshot(logsToStore[logsToStore.length - 1]))
+        emitter
+          .invoke('setStoreValue', 'printLogs', $state.snapshot(logsToStore))
+          .catch((error) => console.error('Failed to save logs:', error))
+      })
     }
   })
+
+  $effect(() => {
+    if (shouldAutoScroll && logsToStore) {
+      requestAnimationFrame(() => {
+        scrollToBottom()
+      })
+    }
+  })
+
+  // Save logs when they change
+  // $effect(() => {
+  //   if (mergedLogs.length !== previousLogsLength) {
+  //     console.log('previousLogsLength', previousLogsLength)
+  //     // Save all logs including dividers, but ensure they're serializable
+  //     const logsToStore = mergedLogs.slice(-MAX_STORED_LOGS).map((log: LogEntry) => (log))
+  //     console.log('Saving logs:', logsToStore)
+  //     emitter
+  //       .invoke('setStoreValue', 'printLogs', logsToStore)
+  //       .catch((error) => console.error('Failed to save logs:', error))
+  //     // previousLogsLength = mergedLogs.length
+
+  //     // If auto-scroll is enabled, scroll after the DOM updates
+  //     if (shouldAutoScroll) {
+  //       requestAnimationFrame(() => {
+  //         scrollToBottom()
+  //       })
+  //     }
+  //   }
+  // })
 </script>
 
 <div class="print-log">
