@@ -1,9 +1,9 @@
 <script lang="ts">
   import {
-    autocompletion,
-    closeBrackets,
-    completionKeymap,
-    type Completion
+      autocompletion,
+      closeBrackets,
+      completionKeymap,
+      type Completion
   } from '@codemirror/autocomplete'
   import { defaultKeymap, toggleComment, toggleLineComment } from '@codemirror/commands'
   import { html } from '@codemirror/lang-html'
@@ -12,16 +12,16 @@
   import { linter, lintGutter, type Diagnostic } from '@codemirror/lint'
   import { EditorState } from '@codemirror/state'
   import {
-    Decoration,
-    EditorView,
-    keymap,
-    ViewPlugin,
-    WidgetType,
-    type DecorationSet
+      Decoration,
+      EditorView,
+      keymap,
+      ViewPlugin,
+      WidgetType,
+      type DecorationSet
   } from '@codemirror/view'
   import { basicSetup } from 'codemirror'
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { onMount } from 'svelte'
   import { settings } from '../../stores/settings.js'
 
   let {
@@ -29,17 +29,15 @@
     language = 'css',
     controllerSettings = [],
     svgFiltersCode = '',
-    fontFamilys = []
+    fontFamilys = [],
+    onChange = (value: string) => {}
   } = $props<{
     value?: string
     language?: 'css' | 'html'
     controllerSettings?: ControllerSetting[]
     svgFiltersCode?: string
     fontFamilys?: FontFamily[]
-  }>()
-
-  const dispatch = createEventDispatcher<{
-    change: string
+    onChange?: (value: string) => void
   }>()
 
   let element = $state<HTMLDivElement | undefined>()
@@ -349,56 +347,50 @@
   })
 
   function handleMouseDown(event: MouseEvent) {
-    if (!event.altKey) return
+    if (!event.altKey || !view || !element) return
 
-    // Get the position in the editor
     const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
     if (pos === null) return
 
-    // Find the variable at this position
     const line = view.state.doc.lineAt(pos)
     const lineText = line.text
 
-    // Find any $variables in this line
     const regex = /\$(\w+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g
     let match
     let found = false
 
     while ((match = regex.exec(lineText)) !== null) {
-      const [fullMatch, varName] = match
-      const start = line.from + match.index
-      const end = start + fullMatch.length
+        const [fullMatch, varName] = match
+        const start = line.from + match.index
+        const end = start + fullMatch.length
 
-      if (pos >= start && pos <= end) {
-        const controller = controllerSettings.find((s) => s.var === varName)
-        if (controller) {
-          isDragging = true
-          dragStartX = event.clientX
-          currentVar = varName
-          currentController = controller
-          found = true
+        if (pos >= start && pos <= end) {
+            const controller = controllerSettings.find((s) => s.var === varName)
+            if (controller) {
+                isDragging = true
+                dragStartX = event.clientX
+                currentVar = varName
+                currentController = controller
+                found = true
 
-          // Add dragging class to editor
-          element.classList.add('dragging')
+                element.classList.add('dragging')
 
-          // Create and show the drag overlay
-          const overlay = document.createElement('div') as HTMLDivElement
-          overlay.className = 'drag-overlay'
-          overlay.textContent = `${varName}: ${controller.value}`
-          document.body.appendChild(overlay)
+                const overlay = document.createElement('div') as HTMLDivElement
+                overlay.className = 'drag-overlay'
+                overlay.textContent = `${varName}: ${controller.value}`
+                document.body.appendChild(overlay)
 
-          // Position the overlay near the cursor
-          overlay.style.left = `${event.clientX + 10}px`
-          overlay.style.top = `${event.clientY - 25}px`
-          break
+                overlay.style.left = `${event.clientX + 10}px`
+                overlay.style.top = `${event.clientY - 25}px`
+                break
+            }
         }
-      }
     }
 
     if (!found) {
-      isDragging = false
-      currentVar = null
-      currentController = null
+        isDragging = false
+        currentVar = null
+        currentController = null
     }
   }
 
@@ -429,15 +421,18 @@
     isDragging = false
     currentVar = null
     currentController = null
-    element.classList.remove('dragging')
-
-    const overlay = document.querySelector('.drag-overlay')
-    if (overlay) {
-      overlay.remove()
+    if (element && view) {
+        element.classList.remove('dragging')
+        const overlay = document.querySelector('.drag-overlay')
+        if (overlay) {
+            overlay.remove()
+        }
     }
   }
 
   onMount(() => {
+    if (!element) return
+
     const languageSupport = language === 'css' ? sass() : html()
 
     const state = EditorState.create({
@@ -463,7 +458,7 @@
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             value = update.state.doc.toString()
-            dispatch('change', value)
+            onChange(value)
           }
         })
       ]
@@ -479,10 +474,12 @@
     window.addEventListener('mouseup', handleMouseUp)
 
     return () => {
-      view.destroy()
-      element.removeEventListener('mousedown', handleMouseDown)
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
+        if (view && element) {
+            view.destroy()
+            element.removeEventListener('mousedown', handleMouseDown)
+            window.removeEventListener('mousemove', handleMouseMove)
+            window.removeEventListener('mouseup', handleMouseUp)
+        }
     }
   })
 </script>
