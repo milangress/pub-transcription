@@ -22,6 +22,8 @@ class SettingsStore {
   svgFilters = $state('')
   #initialized = $state(false)
   #codeEditorContentSaved = $state(true)
+  #lastSavedInlineStyle = $state('')
+  #lastSavedSvgFilters = $state('')
 
   constructor() {
     // Initialize with default values
@@ -42,13 +44,71 @@ class SettingsStore {
     }
   }
 
+  // Check if content is valid (not empty/whitespace and hasn't lost too much content)
+  #isValidContent(newContent: string, savedContent: string): boolean {
+    // Check if content is empty or just whitespace
+    if (!newContent.trim()) {
+      console.warn('Prevented saving empty content')
+      return false
+    }
+
+    // If saved content exists, check if too much has been deleted
+    if (savedContent) {
+      const contentLengthReduction = 1 - (newContent.length / savedContent.length)
+      
+      // If more than 50% is deleted and it's more than 5 lines
+      const newLines = newContent.split('\n').length
+      const savedLines = savedContent.split('\n').length
+      const linesReduction = savedLines - newLines
+      
+      if (contentLengthReduction > 0.5 && linesReduction > 5) {
+        console.warn('Prevented saving drastically reduced content')
+        return false
+      }
+    }
+    
+    return true
+  }
+
   // Debounced save function
   #debouncedSave = this.#debounce(async (): Promise<void> => {
     console.log('Saving settings to electron store')
+    
+    // Check inline style content
+    const isInlineStyleValid = this.#isValidContent(this.inlineStyle, this.#lastSavedInlineStyle)
+    // Check SVG filters content
+    const isSvgFiltersValid = this.#isValidContent(this.svgFilters, this.#lastSavedSvgFilters)
+    
+    if (!isInlineStyleValid || !isSvgFiltersValid) {
+      console.warn('Safety check prevented saving potentially deleted content')
+      // Reload from last saved state
+      this.reloadFromSaved()
+      return
+    }
+    
+    // Save valid content
     await emitter.invoke('setStoreValue', 'inlineStyle', this.inlineStyle)
     await emitter.invoke('setStoreValue', 'svgFilters', this.svgFilters)
+    
+    // Update last saved values
+    this.#lastSavedInlineStyle = this.inlineStyle
+    this.#lastSavedSvgFilters = this.svgFilters
     this.#codeEditorContentSaved = true
   }, 1000)
+
+  // Reload content from last saved state
+  reloadFromSaved(): void {
+    if (this.#lastSavedInlineStyle) {
+      this.inlineStyle = this.#lastSavedInlineStyle
+    }
+    
+    if (this.#lastSavedSvgFilters) {
+      this.svgFilters = this.#lastSavedSvgFilters
+    }
+    
+    this.#codeEditorContentSaved = true
+    console.log('Reloaded content from last saved state')
+  }
 
   // Update a specific controller value
   updateControllerValue(varName: string, newValue: number): void {
@@ -82,6 +142,10 @@ class SettingsStore {
       this.controllerSettings = controllers
       this.inlineStyle = savedInlineStyle || defaultInlineStyle
       this.svgFilters = savedSvgFilters || defaultSvgFilters
+      
+      // Store the initial saved values
+      this.#lastSavedInlineStyle = this.inlineStyle
+      this.#lastSavedSvgFilters = this.svgFilters
 
       console.log('init settings', this)
 
