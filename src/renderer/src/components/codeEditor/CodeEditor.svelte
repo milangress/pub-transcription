@@ -41,7 +41,7 @@
   let element = $state<HTMLDivElement | undefined>()
   let view = $state<EditorView | undefined>()
   let isUpdatingFromPreview = $state(false)
-
+  let syntaxTreeVizRepresentation = $state('')
 
   function createCompletions(context: any) {
     // Check for font-family completion
@@ -330,6 +330,19 @@
     }
   })
 
+  function vizualizeParserTreeLinebreaks(tree: string): string {
+    // NOTE: Just a hacky way to make the parser tree more readable
+    return tree
+      .replace(/\"{"/g, '"{"\n  ')
+      .replace(/\";"/g, '";"\n  ')
+      .replace(/\"}"/g, '\n"}"')
+  }
+
+  $effect(() => {
+    if (view) {
+      syntaxTreeVizRepresentation = vizualizeParserTreeLinebreaks(syntaxTree(view.state).toString())
+    }
+  })
 
   onMount(() => {
     if (!element) return
@@ -360,6 +373,7 @@
           if (update.docChanged) {
             value = update.state.doc.toString()
             onChange(value)
+            syntaxTreeVizRepresentation = vizualizeParserTreeLinebreaks(syntaxTree(update.state).toString())
           }
         })
       ]
@@ -373,6 +387,10 @@
 </script>
 
 <div bind:this={element} class="editor-wrapper"></div>
+<details class="parser-tree">
+  <summary>Parser Tree</summary>
+  <pre>{syntaxTreeVizRepresentation}</pre>
+</details>
 
 <style>
   .editor-wrapper {
@@ -388,4 +406,24 @@
     overflow: auto;
   }
 
+  .parser-tree {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+
+  .parser-tree pre {
+    margin: 0.5rem 0;
+    white-space: pre;
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.9em;
+    overflow-x: auto;
+    tab-size: 2;
+    line-height: 1.4;
+    padding: 0.5rem;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+  }
 </style>
