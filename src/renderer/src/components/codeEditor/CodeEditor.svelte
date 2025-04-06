@@ -16,13 +16,13 @@
       EditorView,
       keymap,
       ViewPlugin,
-      WidgetType,
       type DecorationSet
   } from '@codemirror/view'
   import { basicSetup } from 'codemirror'
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
   import { onMount } from 'svelte'
   import { settings } from '../../stores/settings.svelte.js'
+  import { controllerValuePlugin } from './ControllerValueWidget'
 
   let {
     value = $bindable(''),
@@ -41,10 +41,6 @@
   let element = $state<HTMLDivElement | undefined>()
   let view = $state<EditorView | undefined>()
   let isUpdatingFromPreview = $state(false)
-  let isDragging = $state(false)
-  let dragStartX = $state(0)
-  let currentVar = $state<string | null>(null)
-  let currentController = $state<ControllerSetting | null>(null)
 
   function createCompletions(context: any) {
     // Check for font-family completion
@@ -240,40 +236,9 @@
     return foundAny ? values.join(', ') : null
   }
 
-  class ValueWidget extends WidgetType {
-    value: string
-
-    constructor(value: string) {
-      super()
-      this.value = value
-    }
-
-    eq(other: ValueWidget): boolean {
-      return other.value === this.value
-    }
-
-    toDOM(): HTMLElement {
-      const span = document.createElement('span')
-      span.className = 'cm-sass-value'
-      span.style.cssText = `
-                display: inline-block;
-                color: #888;
-                pointer-events: none;
-                user-select: none;
-                white-space: pre;
-                padding-left: 1ch;
-            `
-      span.textContent = `→ ${this.value}`
-      return span
-    }
-
-    ignoreEvent(): boolean {
-      return true
-    }
-  }
-
+  // Create mark decorations for SASS variables
   function createValueDecorations(view: EditorView): DecorationSet {
-    const widgets: any[] = []
+    const decorations: any[] = []
     const settings = controllerSettings
 
     for (let { from, to } of view.visibleRanges) {
@@ -286,43 +251,151 @@
             const lineContent = line.text
 
             if (lineContent.includes('$') && !lineContent.trim().startsWith('//')) {
-              const value = transformSassValue(lineContent, settings)
-              if (value !== null) {
-                widgets.push(
-                  Decoration.widget({
-                    widget: new ValueWidget(value),
-                    side: 1
-                  }).range(line.to)
-                )
+              const regex = /\$(\w+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g
+              let match
+
+              while ((match = regex.exec(lineContent)) !== null) {
+                const [fullMatch, varName] = match
+                const setting = settings.find((s) => s.var === varName)
+                
+                if (setting) {
+                  const start = line.from + match.index
+                  const end = start + fullMatch.length
+                  const value = transformSassValue(fullMatch, [setting])
+
+                  // Create a mark decoration for the variable
+                  decorations.push(
+                    Decoration.mark({
+                      class: 'cm-sass-variable',
+                      attributes: {
+                        'data-var': varName,
+                        'data-value': value || '',
+                        'data-step': setting.step.toString(),
+                        'title': `${varName} = ${value}`
+                      }
+                    }).range(start, end)
+                  )
+
+                  // Add the computed value as a separate mark
+                  if (value) {
+                    decorations.push(
+                      Decoration.mark({
+                        class: 'cm-sass-value'
+                      }).range(end, end + 1)
+                    )
+                  }
+                }
               }
             }
           }
         }
       })
     }
-    return Decoration.set(widgets)
+
+    return Decoration.set(decorations, true)
   }
 
   const EditorTheme = EditorView.theme({
     '.ͼk': {
       backgroundColor: 'rgba(0, 0, 0, 0.1)'
+    },
+    '.cm-sass-variable': {
+      color: '#0077cc',
+      cursor: 'ew-resize',
+      borderBottom: '2px solid #0077cc',
+      position: 'relative'
+    },
+    '.cm-sass-variable:hover::after': {
+      content: 'attr(data-value)',
+      position: 'absolute',
+      bottom: '-24px',
+      left: '0',
+      backgroundColor: '#333',
+      color: 'white',
+      padding: '2px 6px',
+      borderRadius: '4px',
+      fontSize: '12px',
+      whiteSpace: 'nowrap',
+      zIndex: '100'
+    },
+    '.cm-sass-value': {
+      color: '#666',
+      fontStyle: 'italic'
     }
   })
 
-  const sassValuePlugin = ViewPlugin.fromClass(
+  // Create a ViewPlugin to handle variable dragging
+  const sassVariablePlugin = ViewPlugin.fromClass(
     class {
       decorations: DecorationSet
-
+      dragging: boolean
+      currentVar: string | null
+      startX: number
+      lastValue: number
+      
       constructor(view: EditorView) {
         this.decorations = createValueDecorations(view)
+        this.dragging = false
+        this.currentVar = null
+        this.startX = 0
+        this.lastValue = 0
+        
+        // Add mouse event listeners
+        view.dom.addEventListener('mousedown', this.handleMouseDown.bind(this))
+        window.addEventListener('mousemove', this.handleMouseMove.bind(this))
+        window.addEventListener('mouseup', this.handleMouseUp.bind(this))
       }
-
-      update(update: { view: EditorView }) {
-        this.decorations = createValueDecorations(update.view)
+      
+      update(update: any) {
+        if (update.docChanged || update.viewportChanged) {
+          this.decorations = createValueDecorations(update.view)
+        }
+      }
+      
+      handleMouseDown(event: MouseEvent) {
+        if (!event.altKey) return
+        
+        const target = event.target as HTMLElement
+        if (target.classList.contains('cm-sass-variable')) {
+          this.dragging = true
+          this.currentVar = target.getAttribute('data-var')
+          this.startX = event.clientX
+          
+          const setting = controllerSettings.find(s => s.var === this.currentVar)
+          if (setting) {
+            this.lastValue = setting.value
+          }
+          
+          event.preventDefault()
+        }
+      }
+      
+      handleMouseMove(event: MouseEvent) {
+        if (!this.dragging || !this.currentVar) return
+        
+        const setting = controllerSettings.find(s => s.var === this.currentVar)
+        if (!setting) return
+        
+        const dx = event.clientX - this.startX
+        const sensitivity = 0.01
+        const delta = dx * sensitivity * setting.step
+        
+        const newValue = Number.parseFloat((this.lastValue + delta).toFixed(2))
+        settings.updateControllerValue(this.currentVar, newValue)
+      }
+      
+      handleMouseUp() {
+        this.dragging = false
+        this.currentVar = null
+      }
+      
+      destroy() {
+        window.removeEventListener('mousemove', this.handleMouseMove)
+        window.removeEventListener('mouseup', this.handleMouseUp)
       }
     },
     {
-      decorations: (v) => v.decorations
+      decorations: v => v.decorations
     }
   )
 
@@ -332,90 +405,6 @@
       view.dispatch(view.state.update())
     }
   })
-
-  function handleMouseDown(event: MouseEvent) {
-    if (!event.altKey || !view || !element) return
-
-    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
-    if (pos === null) return
-
-    const line = view.state.doc.lineAt(pos)
-    const lineText = line.text
-
-    const regex = /\$(\w+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g
-    let match
-    let found = false
-
-    while ((match = regex.exec(lineText)) !== null) {
-        const [fullMatch, varName] = match
-        const start = line.from + match.index
-        const end = start + fullMatch.length
-
-        if (pos >= start && pos <= end) {
-            const controller = controllerSettings.find((s) => s.var === varName)
-            if (controller) {
-                isDragging = true
-                dragStartX = event.clientX
-                currentVar = varName
-                currentController = controller
-                found = true
-
-                element.classList.add('dragging')
-
-                const overlay = document.createElement('div') as HTMLDivElement
-                overlay.className = 'drag-overlay'
-                overlay.textContent = `${varName}: ${controller.value}`
-                document.body.appendChild(overlay)
-
-                overlay.style.left = `${event.clientX + 10}px`
-                overlay.style.top = `${event.clientY - 25}px`
-                break
-            }
-        }
-    }
-
-    if (!found) {
-        isDragging = false
-        currentVar = null
-        currentController = null
-    }
-  }
-
-  function handleMouseMove(event: MouseEvent) {
-    if (!isDragging || !currentController || !currentVar) return
-
-    const overlay = document.querySelector('.drag-overlay') as HTMLDivElement | null
-    if (!overlay) return
-
-    overlay.style.left = `${event.clientX + 10}px`
-    overlay.style.top = `${event.clientY - 25}px`
-
-    const dx = event.clientX - dragStartX
-    const sensitivity = 0.01 // Adjust this value to control drag sensitivity
-    const delta = dx * sensitivity * currentController.step
-
-    const newValue = Number.parseFloat((currentController.value + delta).toFixed(2))
-    settings.updateControllerValue(currentVar, newValue)
-
-    overlay.textContent = `${currentVar}: ${newValue}`
-
-    dragStartX = event.clientX
-  }
-
-  function handleMouseUp() {
-    if (!isDragging) return
-
-    isDragging = false
-    currentVar = null
-    currentController = null
-    if (element && view) {
-        element.classList.remove('dragging')
-        const overlay = document.querySelector('.drag-overlay')
-        if (overlay) {
-            overlay.remove()
-        }
-    }
-  }
 
   onMount(() => {
     if (!element) return
@@ -432,7 +421,8 @@
         lintGutter(),
         EditorTheme,
         duplicatePropertiesLinter,
-        sassValuePlugin,
+        controllerValuePlugin.init(controllerSettings),
+        sassVariablePlugin,
         sassLanguage.data.of({
           autocomplete: createCompletions
         }),
@@ -456,17 +446,10 @@
       parent: element
     })
 
-    element.addEventListener('mousedown', handleMouseDown)
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-
     return () => {
-        if (view && element) {
-            view.destroy()
-            element.removeEventListener('mousedown', handleMouseDown)
-            window.removeEventListener('mousemove', handleMouseMove)
-            window.removeEventListener('mouseup', handleMouseUp)
-        }
+      if (view) {
+        view.destroy()
+      }
     }
   })
 </script>
@@ -487,18 +470,20 @@
     overflow: auto;
   }
 
-  :global(.drag-overlay) {
-    position: fixed;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 1000;
-    font-family: monospace;
-  }
-
   :global(.cm-sass-variable) {
     cursor: ew-resize;
+  }
+
+  :global(.cm-controller-value) {
+    display: inline-block;
+    color: #666;
+    margin-left: 0.5em;
+    font-style: italic;
+    cursor: ew-resize;
+    user-select: none;
+  }
+
+  :global(.cm-controller-value:hover) {
+    color: #0077cc;
   }
 </style>
