@@ -3,12 +3,12 @@ import type { PrintRequest, PrintStatusMessage, QueueStatus } from './index';
 // Main process ipc events (from renderer to main)
 export type IpcEvents =
   | {
-      // Print related events
+      // listener event map
       print: [request: PrintRequest]
       'print-status': [status: { printId: string; success: boolean; error?: string }]
     }
   | {
-      // Store related events
+      // handler event map
       getStoreValue: (key: string) => unknown
       setStoreValue: (key: string, value: unknown) => void
       'open-pdf-folder': () => Promise<boolean>
