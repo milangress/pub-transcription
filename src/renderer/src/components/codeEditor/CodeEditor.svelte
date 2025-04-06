@@ -41,10 +41,7 @@
   let element = $state<HTMLDivElement | undefined>()
   let view = $state<EditorView | undefined>()
   let isUpdatingFromPreview = $state(false)
-  let isDragging = $state(false)
-  let dragStartX = $state(0)
-  let currentVar = $state<string | null>(null)
-  let currentController = $state<ControllerSetting | null>(null)
+
 
   function createCompletions(context: any) {
     // Check for font-family completion
@@ -333,89 +330,6 @@
     }
   })
 
-  function handleMouseDown(event: MouseEvent) {
-    if (!event.altKey || !view || !element) return
-
-    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
-    if (pos === null) return
-
-    const line = view.state.doc.lineAt(pos)
-    const lineText = line.text
-
-    const regex = /\$(\w+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g
-    let match
-    let found = false
-
-    while ((match = regex.exec(lineText)) !== null) {
-        const [fullMatch, varName] = match
-        const start = line.from + match.index
-        const end = start + fullMatch.length
-
-        if (pos >= start && pos <= end) {
-            const controller = controllerSettings.find((s) => s.var === varName)
-            if (controller) {
-                isDragging = true
-                dragStartX = event.clientX
-                currentVar = varName
-                currentController = controller
-                found = true
-
-                element.classList.add('dragging')
-
-                const overlay = document.createElement('div') as HTMLDivElement
-                overlay.className = 'drag-overlay'
-                overlay.textContent = `${varName}: ${controller.value}`
-                document.body.appendChild(overlay)
-
-                overlay.style.left = `${event.clientX + 10}px`
-                overlay.style.top = `${event.clientY - 25}px`
-                break
-            }
-        }
-    }
-
-    if (!found) {
-        isDragging = false
-        currentVar = null
-        currentController = null
-    }
-  }
-
-  function handleMouseMove(event: MouseEvent) {
-    if (!isDragging || !currentController || !currentVar) return
-
-    const overlay = document.querySelector('.drag-overlay') as HTMLDivElement | null
-    if (!overlay) return
-
-    overlay.style.left = `${event.clientX + 10}px`
-    overlay.style.top = `${event.clientY - 25}px`
-
-    const dx = event.clientX - dragStartX
-    const sensitivity = 0.01 // Adjust this value to control drag sensitivity
-    const delta = dx * sensitivity * currentController.step
-
-    const newValue = Number.parseFloat((currentController.value + delta).toFixed(2))
-    settings.updateControllerValue(currentVar, newValue)
-
-    overlay.textContent = `${currentVar}: ${newValue}`
-
-    dragStartX = event.clientX
-  }
-
-  function handleMouseUp() {
-    if (!isDragging) return
-
-    isDragging = false
-    currentVar = null
-    currentController = null
-    if (element && view) {
-        element.classList.remove('dragging')
-        const overlay = document.querySelector('.drag-overlay')
-        if (overlay) {
-            overlay.remove()
-        }
-    }
-  }
 
   onMount(() => {
     if (!element) return
@@ -455,19 +369,6 @@
       state,
       parent: element
     })
-
-    element.addEventListener('mousedown', handleMouseDown)
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-
-    return () => {
-        if (view && element) {
-            view.destroy()
-            element.removeEventListener('mousedown', handleMouseDown)
-            window.removeEventListener('mousemove', handleMouseMove)
-            window.removeEventListener('mouseup', handleMouseUp)
-        }
-    }
   })
 </script>
 
@@ -487,18 +388,4 @@
     overflow: auto;
   }
 
-  :global(.drag-overlay) {
-    position: fixed;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 1000;
-    font-family: monospace;
-  }
-
-  :global(.cm-sass-variable) {
-    cursor: ew-resize;
-  }
 </style>
