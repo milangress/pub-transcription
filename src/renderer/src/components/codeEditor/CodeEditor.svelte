@@ -17,9 +17,9 @@
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
   import { onMount } from 'svelte'
   import { settings } from '../../stores/settings.svelte.js'
-  import { createCompletionSource } from './Completions'
-  import { compiledControllerValues, updateControllerValues } from './ControllerValuesExtension'
-  import { propertyHighlighter } from './PropertyHighlighter'
+  import { createCompletionSource } from './css/Completions.js'
+  import { compiledControllerValues, updateControllerValues } from './css/ControllerValuesExtension.js'
+  import { propertyHighlighter } from './css/PropertyHighlighter.js'
 
   let {
     value = $bindable(''),
