@@ -25,7 +25,7 @@
   const emitter = new IpcEmitter<IpcEvents>()
 
   let {
-    excludedFragments = [
+    omittedSilenceFragments = [
       '[ Silence ]',
       '[silence]',
       '[BLANK_AUDIO]',
@@ -96,7 +96,7 @@
 
       // Only commit if it's not in the unwanted list
       if (
-        !excludedFragments.some(
+        !omittedSilenceFragments.some(
           (x) => x.toLowerCase() === formattedSentence.content.toLowerCase().trim()
         )
       ) {
@@ -248,10 +248,6 @@
   WebMidi.addListener('disconnected', (e) => {
     console.log('WebMidi device disconnected:', e)
   })
-
-  // function openPDFFolder(): void {
-  //   window.electronAPI.openPDFFolder()
-  // }
 
   function clearAll(): void {
     console.log('🗑️ Clearing all content')
