@@ -20,6 +20,7 @@
   import { createCompletionSource } from './css/Completions.js'
   import { compiledControllerValues, updateControllerValues } from './css/ControllerValuesExtension.js'
   import { controllerValueSliders, updateControllerSliderValues } from './css/ControllerValueSliderWidget.js'
+  import { propertyEvaluator } from './css/PropertyEvaluator.js'
   import { propertyHighlighter } from './css/PropertyHighlighter.js'
 
   let {
@@ -97,6 +98,7 @@
         compiledControllerValues(controllerSettings),
         controllerValueSliders(),
         propertyHighlighter(),
+        propertyEvaluator(),
         sassLanguage.data.of({
           autocomplete: createCompletionSource(completionOptions)
         }),
