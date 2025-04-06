@@ -50,6 +50,12 @@ const jumpToPreviousBlock: StateCommand = ({ state, dispatch }) => {
   // If we're already at the first line, can't go further up
   if (startLine <= 1) return false
   
+  // Get the current cursor position to maintain horizontal position
+  const selection = state.selection.main
+  const cursorPos = selection.head
+  const cursorLine = state.doc.lineAt(cursorPos)
+  const cursorCol = cursorPos - cursorLine.from
+  
   // Look for the previous block boundary by going up from the current block's start
   let targetLine = startLine - 1
   
@@ -66,8 +72,15 @@ const jumpToPreviousBlock: StateCommand = ({ state, dispatch }) => {
   // If we found a valid target line, move the cursor there
   if (targetLine >= 1) {
     const line = state.doc.line(targetLine)
+    
+    // Calculate the new cursor position, maintaining the same column position
+    // but clamping it to the line length to avoid going past the end
+    const maxCol = line.length
+    const newCol = Math.min(cursorCol, maxCol)
+    const newPos = line.from + newCol
+    
     const transaction = state.update({
-      selection: { anchor: line.from, head: line.from }
+      selection: { anchor: newPos, head: newPos }
     })
     dispatch(transaction)
     return true
@@ -86,6 +99,12 @@ const jumpToNextBlock: StateCommand = ({ state, dispatch }) => {
   // If we're already at the last line, can't go further down
   if (endLine >= state.doc.lines) return false
   
+  // Get the current cursor position to maintain horizontal position
+  const selection = state.selection.main
+  const cursorPos = selection.head
+  const cursorLine = state.doc.lineAt(cursorPos)
+  const cursorCol = cursorPos - cursorLine.from
+  
   // Look for the next block boundary by going down from the current block's end
   let targetLine = endLine + 1
   
@@ -102,8 +121,15 @@ const jumpToNextBlock: StateCommand = ({ state, dispatch }) => {
   // If we found a valid target line, move the cursor there
   if (targetLine <= state.doc.lines) {
     const line = state.doc.line(targetLine)
+    
+    // Calculate the new cursor position, maintaining the same column position
+    // but clamping it to the line length to avoid going past the end
+    const maxCol = line.length
+    const newCol = Math.min(cursorCol, maxCol)
+    const newPos = line.from + newCol
+    
     const transaction = state.update({
-      selection: { anchor: line.from, head: line.from }
+      selection: { anchor: newPos, head: newPos }
     })
     dispatch(transaction)
     return true
