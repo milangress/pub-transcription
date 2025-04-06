@@ -22,20 +22,18 @@
   import { basicSetup } from 'codemirror'
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
   import { onMount } from 'svelte'
-  import { settings } from '../../stores/settings.js'
+  import { settings } from '../../stores/settings.svelte.js'
 
   let {
     value = $bindable(''),
     language = 'css',
     controllerSettings = [],
-    svgFiltersCode = '',
     fontFamilys = [],
-    onChange = (value: string) => {}
+    onChange = (_value: string) => {}
   } = $props<{
     value?: string
     language?: 'css' | 'html'
     controllerSettings?: ControllerSetting[]
-    svgFiltersCode?: string
     fontFamilys?: FontFamily[]
     onChange?: (value: string) => void
   }>()
@@ -47,17 +45,6 @@
   let dragStartX = $state(0)
   let currentVar = $state<string | null>(null)
   let currentController = $state<ControllerSetting | null>(null)
-
-  function extractFilterIds(svgCode: string): string[] {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(svgCode, 'text/html')
-    const filters = doc.querySelectorAll('filter[id]')
-    return Array.from(filters).map((filter) => filter.id)
-  }
-
-  let filterIds = $derived(extractFilterIds(svgFiltersCode))
-
-  $inspect(filterIds)
 
   function createCompletions(context: any) {
     // Check for font-family completion
@@ -111,7 +98,7 @@
       return {
         from: filterWord.from + (hashIndex >= 0 ? hashIndex + 1 : filterWord.text.length),
         validFor: /^[a-zA-Z0-9-]*$/,
-        options: filterIds.map((id) => ({
+        options: settings.filterIds.map((id) => ({
           label: id,
           type: 'filter',
           detail: 'SVG Filter',

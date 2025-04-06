@@ -1,10 +1,10 @@
 <script lang="ts">
   import PrintStatusBar from '@/components/status/PrintStatusBar.svelte'
+  import { settings } from '@/stores/settings.svelte.js'
   import CodeEditor from '@components/codeEditor/CodeEditor.svelte'
   import ControllerManager from '@components/midi/ControllerManager.svelte'
   import BlockTxt from '@components/pageElement/BlockTxt.svelte'
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
-  import { settings } from '@stores/settings.js'
   import type {
       BlockTxtSettings,
       FontFamily,
@@ -75,10 +75,9 @@
 
   // Initialize settings when the app starts
   $effect(() => {
-    if (!$settings.controllerSettings.length) settings.init()
+    if (!settings.controllerSettings.length) settings.init()
   })
 
-  let codeEditorContentSaved = $derived(settings.codeEditorContentSaved.subscribe)
   let currentContentList = $derived([...committedContent, currentSentence])
 
   ipc.on('whisper-ccp-stream:transcription', (_, value: string) => {
@@ -112,9 +111,9 @@
   function formatTTSasTxtObject(tts: string): TxtObject {
     const removeNEWKeyword = String(tts).replace('NEW', '').trim()
     const txtSettings: BlockTxtSettings = {
-      inlineStyle: $settings.inlineStyle,
-      controllerSettings: $settings.controllerSettings,
-      svgFilters: $settings.svgFilters
+      inlineStyle: settings.inlineStyle,
+      controllerSettings: settings.controllerSettings,
+      svgFilters: settings.svgFilters
     }
     return {
       type: BlockTxt as unknown as typeof SvelteComponent,
@@ -126,7 +125,7 @@
 
   // Watch for code changes and mark as unsaved
   $effect(() => {
-    if ($settings.inlineStyle || $settings.svgFilters) {
+    if (settings.inlineStyle || settings.svgFilters) {
       settings.markUnsaved()
     }
   })
@@ -221,8 +220,8 @@
         ...printerSettings,
         printId,
         silent: true,
-        inlineStyle: $settings.inlineStyle,
-        svgFilters: $settings.svgFilters
+        inlineStyle: settings.inlineStyle,
+        svgFilters: settings.svgFilters
       }
 
       emitter.send('print', { 
@@ -275,7 +274,7 @@
           {#if !isPrinting && currentSentence?.type}
             <currentSentence.type
               content={currentSentence.content}
-              settings={$settings}
+              settings={settings}
               isCurrent
             />
           {/if}
@@ -286,18 +285,18 @@
 
   <div class="print-non" class:printFailed={!isSuccessfulPrint}>
     <div class="infobox">
-      <div class="dot" class:greenDot={codeEditorContentSaved}></div>
+      <div class="dot" class:greenDot={settings.codeEditorContentSaved}></div>
       <CodeEditor
-        bind:value={$settings.inlineStyle}
+        bind:value={settings.inlineStyle}
         language="css"
-        controllerSettings={$settings.controllerSettings}
-        svgFiltersCode={$settings.svgFilters}
+        controllerSettings={settings.controllerSettings}
+        svgFiltersCode={settings.svgFilters}
         {fontFamilys}
       />
 
       <hr />
 
-      <BlockTxt content="Text Preview" settings={$settings} />
+      <BlockTxt content="Text Preview" settings={settings} />
 
       <hr />
 
@@ -309,7 +308,7 @@
         {/each}
       </select>
 
-      <ControllerManager bind:controllerSettings={$settings.controllerSettings}></ControllerManager>
+      <ControllerManager bind:controllerSettings={settings.controllerSettings}></ControllerManager>
 
       <hr />
       <div class="printControls">
@@ -324,13 +323,13 @@
       </div>
       <hr />
       <CodeEditor
-        bind:value={$settings.svgFilters}
+        bind:value={settings.svgFilters}
         language="html"
-        controllerSettings={$settings.controllerSettings}
-        svgFiltersCode={$settings.svgFilters}
+        controllerSettings={settings.controllerSettings}
+        svgFiltersCode={settings.svgFilters}
       />
       <div style="display: none">
-        {@html $settings.svgFilters}
+        {@html settings.svgFilters}
       </div>
       <TransInfoMessagesLog />
     </div>

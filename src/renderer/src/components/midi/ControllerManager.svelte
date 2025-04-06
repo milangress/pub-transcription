@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { settings } from '@stores/settings'
+  import { settings } from '@/stores/settings.svelte'
   import type { ControllerSetting } from 'src/renderer/src/types'
   import MIDIKnobPreview from './MIDIKnobPreview.svelte'
 
