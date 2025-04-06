@@ -429,4 +429,7 @@
     border: 1px solid #ddd;
     border-radius: 3px;
   }
+  :global(.ͼ2 .cm-activeLine) {
+    background-color: oklch(0.96 0.25 111.39 / 0.73);
+  }
 </style>

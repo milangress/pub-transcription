@@ -4,8 +4,8 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin } from '@codemir
 
 // Create a base theme for the property highlights
 const propertyHighlightTheme = EditorView.baseTheme({
-  '&light .cm-propertyHighlight': { backgroundColor: 'rgba(0, 119, 255, 0.15)' },
-  '&dark .cm-propertyHighlight': { backgroundColor: 'rgba(0, 119, 255, 0.25)' }
+  '&light .cm-propertyHighlight': { backgroundColor: 'oklch(0.93 0.26 121.72 / 0.19);' },
+  '&dark .cm-propertyHighlight': { backgroundColor: 'oklch(0.93 0.26 121.72 / 0.19);' }
 })
 
 // Decoration for highlighting the entire line
@@ -13,7 +13,7 @@ const propertyHighlight = Decoration.line({
   attributes: { class: 'cm-propertyHighlight' }
 })
 
-// Check if the cursor is on a PropertyName node
+// Check if the cursor is on a PropertyName node or a commented property
 function getPropertyNameAtCursor(
   view: EditorView
 ): { name: string; from: number; to: number } | null {
@@ -21,7 +21,7 @@ function getPropertyNameAtCursor(
   const selection = state.selection.main
   const cursor = selection.head
 
-  // Get the syntax node at cursor position
+  // First try to get property name from syntax tree (for active properties)
   let propertyName: { name: string; from: number; to: number } | null = null
   syntaxTree(state).iterate({
     enter: (node) => {
@@ -36,6 +36,31 @@ function getPropertyNameAtCursor(
     }
   })
 
+  // If not found in syntax tree, check if we're on a commented line
+  if (!propertyName) {
+    const line = state.doc.lineAt(cursor)
+    const lineText = line.text.trim()
+
+    if (lineText.startsWith('//')) {
+      // Try to extract property name from the comment
+      // Match any text followed by a colon, capturing the text
+      const match = lineText.match(/\/\/\s*([a-zA-Z-]+):/)
+      if (match && match[1]) {
+        const name = match[1].trim()
+        // Only create propertyName if cursor is within the property name
+        const nameStart = line.from + lineText.indexOf(name)
+        const nameEnd = nameStart + name.length
+        if (cursor >= nameStart && cursor <= nameEnd) {
+          propertyName = {
+            name,
+            from: nameStart,
+            to: nameEnd
+          }
+        }
+      }
+    }
+  }
+
   return propertyName
 }
 
@@ -43,6 +68,9 @@ function getPropertyNameAtCursor(
 function findMatchingPropertyLines(view: EditorView, propertyName: string): number[] {
   const matches: number[] = []
   const { state } = view
+  
+  // Get the current line number to exclude it
+  const currentLine = state.doc.lineAt(state.selection.main.head)
 
   // Find all PropertyName nodes in the syntax tree
   syntaxTree(state).iterate({
@@ -52,7 +80,10 @@ function findMatchingPropertyLines(view: EditorView, propertyName: string): numb
         if (name === propertyName) {
           // Get the line for this property
           const line = state.doc.lineAt(node.from)
-          matches.push(line.from)
+          // Only add if it's not the current line
+          if (line.number !== currentLine.number) {
+            matches.push(line.from)
+          }
         }
       }
     }
@@ -60,6 +91,9 @@ function findMatchingPropertyLines(view: EditorView, propertyName: string): numb
 
   // Also search for property in commented lines (not found by parser)
   for (let i = 1; i <= state.doc.lines; i++) {
+    // Skip the current line
+    if (i === currentLine.number) continue
+    
     const line = state.doc.line(i)
     const lineText = line.text.trim()
     
@@ -79,14 +113,14 @@ function findMatchingPropertyLines(view: EditorView, propertyName: string): numb
 // Create the decorations for matching properties
 function createPropertyDecorations(view: EditorView): DecorationSet {
   const property = getPropertyNameAtCursor(view)
-  
+
   if (!property) {
     return Decoration.none
   }
-  
+
   const matchingLines = findMatchingPropertyLines(view, property.name)
   const decorations = matchingLines.map((lineStart) => propertyHighlight.range(lineStart))
-  
+
   return Decoration.set(decorations)
 }
 
@@ -94,11 +128,11 @@ function createPropertyDecorations(view: EditorView): DecorationSet {
 const propertyHighlighterPlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet
-    
+
     constructor(view: EditorView) {
       this.decorations = createPropertyDecorations(view)
     }
-    
+
     update(update: { view: EditorView; selectionSet: boolean }): void {
       // Only recalculate decorations when selection changes
       if (update.selectionSet) {
