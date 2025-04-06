@@ -1,7 +1,9 @@
+import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
 import { BrowserWindow } from 'electron'
 import { EventEmitter } from 'events'
 import type { PrintSettings, QueueStatus } from '../types'
-
+import { IpcRendererEvent } from '../types/ipc'
+const emitter = new IpcEmitter<IpcRendererEvent>()
 interface PrintJob {
   content: string
   settings: PrintSettings
@@ -180,7 +182,7 @@ export class PrintQueue {
             throw new Error('Print ID is required in settings')
           }
           console.log(`Sending job ${job.settings.printId} to print window`)
-          this.printWindow.webContents.send('print-job', {
+          emitter.send(this.printWindow.webContents, 'PrintWindow:printJob', {
             content: job.content,
             settings: job.settings,
             attempt: job.retries + 1,

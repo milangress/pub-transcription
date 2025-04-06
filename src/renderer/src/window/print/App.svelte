@@ -148,7 +148,11 @@
     })
 
     // Handle print job setup
-    ipc.on('print-job', async (_event, { content, settings = {}, attempt, maxRetries: maxRetriesVal }) => {
+    ipc.on('PrintWindow:printJob', async (_event, { 
+      content, 
+      settings = {}, 
+      attempt, 
+      maxRetries: maxRetriesVal }) => {
         try {
           console.log('onPrintJob', { content, settings, attempt, maxRetriesVal })
           debugger

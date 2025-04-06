@@ -43,6 +43,11 @@ export interface PrintRequest {
   settings: PrintSettings
 }
 
+export interface PrintJob extends PrintRequest {
+  attempt: number
+  maxRetries: number
+}
+
 /**
  * Queue status update interface
  */
