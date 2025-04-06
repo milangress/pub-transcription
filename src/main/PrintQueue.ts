@@ -143,7 +143,7 @@ export class PrintQueue {
         }, this.timeout)
 
         const cleanup = (): void => {
-          this.printEvents.removeListener('PrintQueueEvent:complete', handleComplete)
+          this.printEvents.removeListener('INTERNAL-PrintQueueEvent:complete', handleComplete)
           clearTimeout(timeoutId)
         }
 
@@ -165,7 +165,7 @@ export class PrintQueue {
           }
         }
 
-        this.printEvents.on('PrintQueueEvent:complete', handleComplete)
+        this.printEvents.on('INTERNAL-PrintQueueEvent:complete', handleComplete)
 
         // Send the job to the print window
         try {
