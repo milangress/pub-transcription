@@ -155,8 +155,10 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
       // Helper to compute all decorations at once
       computeDecorations(view: EditorView): DecorationSet {
         const builder = new RangeSetBuilder<Decoration>()
-        const processedLines = new Set<number>()
-
+        
+        // Keep track of values per line
+        const lineValues = new Map<number, string[]>()
+        
         // Process visible lines for performance
         for (const { from, to } of view.visibleRanges) {
           syntaxTree(view.state).iterate({
@@ -169,31 +171,39 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
               // Find the line containing this expression
               const line = view.state.doc.lineAt(node.from)
 
-              // Skip if we've already processed this line
-              if (processedLines.has(line.number)) {
-                console.log('already processed line', line.number)
-                return
-              }
-
               // Compute the value of this expression
               const value = computeBinaryExpression(view, node, currentSettings)
 
               if (value !== null) {
-                processedLines.add(line.number)
-                const widget = new CompiledValueWidget(value)
-                builder.add(
-                  line.to,
-                  line.to,
-                  Decoration.widget({
-                    widget,
-                    side: 1
-                  })
-                )
+                // Add this value to the line's collection
+                if (!lineValues.has(line.number)) {
+                  lineValues.set(line.number, [])
+                }
+                lineValues.get(line.number)!.push(value)
               }
             }
           })
         }
-
+        
+        // Create decorations for each line
+        for (const [lineNumber, values] of lineValues.entries()) {
+          if (values.length > 0) {
+            // Get the line
+            const line = view.state.doc.line(lineNumber)
+            // Join all values with commas
+            const combinedValue = values.join(', ')
+            const widget = new CompiledValueWidget(combinedValue)
+            builder.add(
+              line.to,
+              line.to,
+              Decoration.widget({
+                widget,
+                side: 1
+              })
+            )
+          }
+        }
+        
         return builder.finish()
       }
 
