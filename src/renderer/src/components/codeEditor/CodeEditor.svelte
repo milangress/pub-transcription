@@ -1,9 +1,7 @@
 <script lang="ts">
   import {
-      autocompletion,
       closeBrackets,
-      completionKeymap,
-      type Completion
+      completionKeymap
   } from '@codemirror/autocomplete'
   import { defaultKeymap, toggleComment, toggleLineComment } from '@codemirror/commands'
   import { html } from '@codemirror/lang-html'
@@ -19,6 +17,7 @@
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
   import { onMount } from 'svelte'
   import { settings } from '../../stores/settings.svelte.js'
+  import { createCompletionSource } from './Completions'
   import { compiledControllerValues, updateControllerValues } from './ControllerValuesExtension'
   import { propertyHighlighter } from './PropertyHighlighter'
 
@@ -40,87 +39,6 @@
   let view = $state<EditorView | undefined>()
   let isUpdatingFromPreview = $state(false)
   let syntaxTreeVizRepresentation = $state('')
-
-  function createCompletions(context: any) {
-    // Check for font-family completion
-    let before = context.matchBefore(/font-family:\s*[^;]*/)
-    if (before) {
-      let word = context.matchBefore(/[^:\s;]*$/)
-      if (!word && !context.explicit) return null
-
-      const options: Completion[] = fontFamilys.map((font) => ({
-        label: font.name,
-        type: 'class',
-        boost: 1
-      }))
-
-      return {
-        from: word?.from ?? before.from,
-        options,
-        validFor: /^[^;]*$/
-      }
-    }
-
-    // Check for MIDI variable completion
-    let varWord = context.matchBefore(/\$\w*/)
-    if (varWord && varWord.from !== null && !(varWord.from === varWord.to && !context.explicit)) {
-      return {
-        from: varWord.from,
-        validFor: /^\$\w*$/,
-        options: controllerSettings.map((setting) => ({
-          label: '$' + setting.var,
-          type: 'variable',
-          detail: `Current value: ${setting.value}`,
-          boost: 1
-        }))
-      }
-    }
-
-    // Check for filter completion
-    let filterWord = context.matchBefore(/url\(#[^)]*/)
-    if (
-      filterWord &&
-      filterWord.from !== null &&
-      !(filterWord.from === filterWord.to && !context.explicit)
-    ) {
-      console.log('Filter completion triggered')
-      const hashIndex = filterWord.text.lastIndexOf('#')
-
-      // Find if there's a closing parenthesis and semicolon after the cursor
-      const afterCursor = context.state.doc.sliceString(filterWord.to, filterWord.to + 10)
-      const hasClosing = afterCursor.match(/^\s*\);/)
-
-      return {
-        from: filterWord.from + (hashIndex >= 0 ? hashIndex + 1 : filterWord.text.length),
-        validFor: /^[a-zA-Z0-9-]*$/,
-        options: settings.filterIds.map((id) => ({
-          label: id,
-          type: 'filter',
-          detail: 'SVG Filter',
-          info: () => {
-            const el = document.createElement('div')
-            el.style.filter = `url(#${id})`
-            el.style.padding = '5px'
-            el.textContent = 'Preview'
-            return el
-          },
-          apply: (view: EditorView, completion: Completion, from: number, to: number) => {
-            const insert = hasClosing ? completion.label : `${completion.label});`
-            view.dispatch({
-              changes: {
-                from,
-                to: hasClosing ? to : to,
-                insert
-              }
-            })
-          }
-        }))
-      }
-    }
-
-    // Let the default completions handle everything else
-    return null
-  }
 
   $effect(() => {
     if (view && value !== view.state.doc.toString() && !isUpdatingFromPreview) {
@@ -161,6 +79,11 @@
     if (!element) return
 
     const languageSupport = language === 'css' ? sass() : html()
+    const completionOptions = {
+      fontFamilies: fontFamilys,
+      controllerSettings,
+      filterIds: settings.filterIds
+    }
 
     const state = EditorState.create({
       doc: value,
@@ -168,12 +91,11 @@
         basicSetup,
         languageSupport,
         closeBrackets(),
-        autocompletion(),
         lintGutter(),
         compiledControllerValues(controllerSettings),
         propertyHighlighter(),
         sassLanguage.data.of({
-          autocomplete: createCompletions
+          autocomplete: createCompletionSource(completionOptions)
         }),
         keymap.of([
           ...defaultKeymap,
