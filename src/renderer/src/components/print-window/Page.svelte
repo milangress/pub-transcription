@@ -1,65 +1,58 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy'
+    import { untrack } from 'svelte'
 
   interface Props {
     // Props
     scale?: number
-    onScaleChange?: any
     showControls?: boolean
-    showDebug?: boolean
     centered?: boolean
     children?: import('svelte').Snippet
   }
 
   let {
     scale = $bindable(1),
-    onScaleChange = undefined,
     showControls = true,
-    showDebug = false,
     centered = true,
     children
   }: Props = $props()
 
   // State
-  let page = $state()
-  let pageContainer = $state()
-  let status = $state('Ready')
-  let lastUpdate = $state('Never')
+  let page: HTMLElement | undefined = $state()
+  let pageContainer: HTMLElement | undefined = $state()
+  let pageContext: HTMLElement | undefined = $state()
 
-  // Reactive statements
-  run(() => {
-    if (page && pageContainer && scale) {
-      status = `Scale: ${scale.toFixed(2)}`
-      lastUpdate = new Date().toLocaleTimeString()
-    }
-  })
-
-  function adjustScale(delta) {
-    const newScale = Math.max(0.1, Math.min(2, scale + delta))
-    if (onScaleChange) {
-      onScaleChange(newScale)
-    } else {
-      scale = newScale
-    }
+  function fittedToPage() {
+    if (!page || !pageContext) return scale
+    const pageRect = page.getBoundingClientRect()
+    const contextRect = pageContext.getBoundingClientRect()
+    const optimalScale = Math.min(
+      (contextRect.width * 0.95) / (pageRect.width / scale),
+      (contextRect.height * 0.95) / (pageRect.height / scale)
+    )
+    return optimalScale
   }
-</script>
 
-{#if showDebug}
-  <div id="debug-info">
-    <div>Status: <span>{status}</span></div>
-    <div>Last update: <span>{lastUpdate}</span></div>
-  </div>
-{/if}
+  function adjustedScale(delta: number) {
+    return Math.max(0.1, Math.min(2, scale + delta))
+  }
+
+  $effect(() => {
+    untrack(() => {
+      scale = fittedToPage()
+    })
+  })
+</script>
 
 {#if showControls}
   <div id="scale-controls">
-    <button onclick={() => adjustScale(-0.1)}>-</button>
-    <span>{scale.toFixed(1)}</span>
-    <button onclick={() => adjustScale(0.1)}>+</button>
+    <button onclick={() => scale = adjustedScale(-0.1)}>-</button>
+    <span>{scale.toFixed(2)}</span>
+    <button onclick={() => scale = adjustedScale(0.1)}>+</button>
+    <button onclick={() => scale = fittedToPage()}>0</button>
   </div>
 {/if}
 
-<div class="page-context" class:centered>
+<div class="page-context" class:centered bind:this={pageContext}>
   <div class="page-container" bind:this={pageContainer} style:transform={`scale(${scale})`}>
     <page size="A3" bind:this={page}>
       <div class="content-context">
@@ -70,18 +63,6 @@
 </div>
 
 <style>
-  /* Debug styles */
-  #debug-info {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: #f0f0f0;
-    padding: 10px;
-    border-bottom: 1px solid #ccc;
-    font-family: monospace;
-    z-index: 1000;
-  }
 
   #scale-controls {
     position: absolute;
