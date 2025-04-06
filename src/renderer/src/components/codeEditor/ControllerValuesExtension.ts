@@ -1,13 +1,13 @@
 import { syntaxTree } from '@codemirror/language'
 import { StateEffect, type Extension } from '@codemirror/state'
 import {
-    Decoration,
-    EditorView,
-    ViewPlugin,
-    WidgetType,
-    type DecorationSet,
-    type PluginValue,
-    type ViewUpdate,
+  Decoration,
+  EditorView,
+  ViewPlugin,
+  WidgetType,
+  type DecorationSet,
+  type PluginValue,
+  type ViewUpdate,
 } from '@codemirror/view'
 import type { ControllerSetting } from 'src/renderer/src/types'
 
@@ -62,44 +62,39 @@ function computeBinaryExpression(
   let number: number | null = null
   let unit: string | null = null
 
-  // Instead of trying to use cursor(), directly examine the node
-  // For a BinaryExpression, we need to get three child nodes:
-  // 1. The variable (SassVariableName)
-  // 2. The operator (BinOp)
-  // 3. The number literal (NumberLiteral)
+  console.log('computing binary expression', node)
 
-  // Walk through the node's children using iteration
-
-  console.log('node', node)
-  const cursor = node.cursor
-  console.log('node', cursor)
-  if (cursor) {
-    // Moving to first child
-    if (cursor.firstChild()) {
-      do {
-        const childName = cursor.name
-        const from = cursor.from
-        const to = cursor.to
-        const text = view.state.doc.sliceString(from, to)
-
+  // We need to find the children of this binary expression
+  // We'll use syntaxTree.iterate for this specific node
+  syntaxTree(view.state).iterate({
+    enter: (childNode) => {
+      // Only process direct children of our node
+      if (childNode.from >= node.from && childNode.to <= node.to && childNode !== node) {
+        const childName = childNode.type.name
+        const childText = view.state.doc.sliceString(childNode.from, childNode.to)
+        console.log('childNode', childName, childText)
         if (childName === 'SassVariableName') {
-          varName = text.substring(1) // Remove the $ prefix
+          varName = childText.substring(1) // Remove the $ prefix
         } else if (childName === 'BinOp') {
-          operator = text.trim()
+          operator = childText.trim()
         } else if (childName === 'NumberLiteral') {
           // Extract the number and unit if present
-          const match = text.match(/^([\d.]+)([a-z%]*)$/)
+          const match = childText.match(/^([\d.]+)([a-z%]*)$/)
           if (match) {
             number = parseFloat(match[1])
             unit = match[2] || ''
           } else {
-            number = parseFloat(text)
+            number = parseFloat(childText)
             unit = ''
           }
         }
-      } while (cursor.nextSibling())
-    }
-  }
+      }
+      // Continue iteration for all nodes
+      return true
+    },
+    from: node.from,
+    to: node.to
+  })
 
   // Find the setting for this variable
   const setting = settings.find((s) => s.var === varName)
@@ -109,6 +104,7 @@ function computeBinaryExpression(
     console.error('missing number, operator, or varName', number, operator, varName)
     return null
   }
+  console.log('Var', varName, setting.value, operator, number)
   // Compute the result based on the operator
   let result
   switch (operator) {
@@ -183,7 +179,7 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
 
               // Compute the value of this expression
               const value = computeBinaryExpression(update.view, node, currentSettings)
-
+              console.log('value', value)
               if (value !== null) {
                 processedLines.add(line.number)
                 const widget = new CompiledValueWidget(value)
@@ -192,6 +188,7 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
                   side: 1
                 })
                 this.decos = Decoration.set(decorationWidget.range(line.to))
+                console.log('decos', this.decos)
               }
             }
           })
