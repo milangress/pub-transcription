@@ -4,59 +4,6 @@ import { type Extension, type StateCommand, EditorSelection } from '@codemirror/
 import { EditorView, keymap } from '@codemirror/view';
 
 /**
- * Gets the CSS property at the current cursor position
- */
-function getPropertyAtCursor(
-  state: EditorView['state']
-): { name: string; from: number; to: number; line: number } | null {
-  const selection = state.selection.main
-  const cursor = selection.head
-
-  // Get the current line where the cursor is
-  const cursorLine = state.doc.lineAt(cursor)
-
-  // Try to find property name in the syntax tree for this line
-  let propertyName: { name: string; from: number; to: number; line: number } | null = null
-
-  syntaxTree(state).iterate({
-    from: cursorLine.from,
-    to: cursorLine.to,
-    enter: (node) => {
-      if (node.type.name === 'PropertyName') {
-        propertyName = {
-          name: state.doc.sliceString(node.from, node.to).trim(),
-          from: node.from,
-          to: node.to,
-          line: cursorLine.number
-        }
-        return false // Stop iteration once found
-      }
-      return true
-    }
-  })
-
-  // If no property found, check if we're on a commented line
-  if (!propertyName) {
-    const lineText = cursorLine.text.trim()
-    if (lineText.startsWith('//')) {
-      // Try to extract property name from the comment
-      const match = lineText.match(/\/\/\s*([a-zA-Z-]+):/)
-      if (match && match[1]) {
-        const name = match[1].trim()
-        propertyName = {
-          name,
-          from: cursorLine.from,
-          to: cursorLine.from + name.length,
-          line: cursorLine.number
-        }
-      }
-    }
-  }
-
-  return propertyName
-}
-
-/**
  * Find all lines containing the CSS block (start from the cursor position)
  */
 function findBlockLines(state: EditorView['state']): { startLine: number; endLine: number } | null {
@@ -99,30 +46,90 @@ function findBlockLines(state: EditorView['state']): { startLine: number; endLin
 }
 
 /**
- * Find all occurrences of a given property within a block
+ * Find all commented lines in a block
  */
-function findPropertyLinesInBlock(
+function findCommentedLines(
+  state: EditorView['state'],
+  startLine: number,
+  endLine: number
+): number[] {
+  const commentedLines: number[] = []
+
+  for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+    const line = state.doc.line(lineNum)
+    if (line.text.trim().startsWith('//')) {
+      commentedLines.push(lineNum)
+    }
+  }
+
+  return commentedLines
+}
+
+/**
+ * Extract all distinct property names from a block
+ */
+function extractBlockProperties(
+  state: EditorView['state'],
+  startLine: number,
+  endLine: number
+): string[] {
+  const properties = new Set<string>()
+
+  for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+    const line = state.doc.line(lineNum)
+
+    // Skip commented lines
+    if (line.text.trim().startsWith('//')) {
+      // Extract property name from comment
+      const match = line.text.trim().match(/\/\/\s*([a-zA-Z-]+):/)
+      if (match && match[1]) {
+        properties.add(match[1].trim())
+      }
+      continue
+    }
+
+    // Extract property from syntax tree
+    syntaxTree(state).iterate({
+      from: line.from,
+      to: line.to,
+      enter: (node) => {
+        if (node.type.name === 'PropertyName') {
+          const name = state.doc.sliceString(node.from, node.to).trim()
+          properties.add(name)
+        }
+        return true
+      }
+    })
+  }
+
+  return Array.from(properties)
+}
+
+/**
+ * Find all occurrences of a property in a specific range of lines
+ */
+function findPropertyLinesInRange(
   state: EditorView['state'],
   propertyName: string,
   startLine: number,
   endLine: number
-): { active: number[]; commented: number[] } {
-  const active: number[] = []
-  const commented: number[] = []
+): number[] {
+  const lines: number[] = []
 
-  // Iterate through all lines in the block
   for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
     const line = state.doc.line(lineNum)
-    const lineText = line.text.trim()
 
-    // First check if it's a commented line with our property
-    if (lineText.startsWith('//') && lineText.includes(propertyName + ':')) {
-      commented.push(lineNum)
+    // Skip commented lines
+    if (line.text.trim().startsWith('//')) {
+      // If commented, check if it contains our property
+      if (line.text.trim().includes(propertyName + ':')) {
+        lines.push(lineNum)
+      }
       continue
     }
 
-    // Use syntax tree to find active property name nodes
-    let foundProperty = false
+    // Check active lines
+    let found = false
     syntaxTree(state).iterate({
       from: line.from,
       to: line.to,
@@ -130,136 +137,168 @@ function findPropertyLinesInBlock(
         if (node.type.name === 'PropertyName') {
           const name = state.doc.sliceString(node.from, node.to).trim()
           if (name === propertyName) {
-            foundProperty = true
-            return false // Stop iteration for this line
+            found = true
+            return false
           }
         }
         return true
       }
     })
 
-    if (foundProperty) {
-      active.push(lineNum)
+    if (found) {
+      lines.push(lineNum)
     }
   }
 
-  return { active, commented }
+  return lines
 }
 
 /**
- * Command function that evaluates and comments out duplicate properties
+ * Command function that evaluates properties in the current CSS block
  */
 const evaluateProperties: StateCommand = ({ state, dispatch }) => {
-  // Find the property at the cursor
-  const property = getPropertyAtCursor(state)
-  if (!property) return false
-
-  // Find the CSS block
+  // Find the current CSS block
   const block = findBlockLines(state)
   if (!block) return false
 
-  // Get all lines with the same property (both active and commented)
-  const { active, commented } = findPropertyLinesInBlock(
-    state,
-    property.name,
-    block.startLine,
-    block.endLine
-  )
+  // Find any commented lines in the block
+  const commentedLines = findCommentedLines(state, block.startLine, block.endLine)
 
-  console.log(`Evaluating property: ${property.name}`)
-  console.log(`Found ${active.length} active occurrences at lines: ${active.join(', ')}`)
-  console.log(`Found ${commented.length} commented occurrences at lines: ${commented.join(', ')}`)
+  console.log(`Block spans lines ${block.startLine} to ${block.endLine}`)
+  console.log(`Found ${commentedLines.length} commented lines in block`)
 
-  // Set up our transactions as a two-step process
-
-  // Step 1: If there are any commented lines, uncomment them
-  if (commented.length > 0) {
-    const commentedRanges = commented.map((lineNum) => {
+  // Step 1: First uncomment all commented lines in the block
+  if (commentedLines.length > 0 && dispatch) {
+    // Create a selection for all commented lines
+    const commentRanges = commentedLines.map((lineNum) => {
       const line = state.doc.line(lineNum)
       return EditorSelection.range(line.from, line.from)
     })
 
-    if (dispatch) {
-      // Set the selection to all commented lines
-      const commentedSelection = EditorSelection.create(commentedRanges)
-      const tr1 = state.update({ selection: commentedSelection })
-      dispatch(tr1)
+    // Apply lineUncomment to all commented lines
+    const commentSelection = EditorSelection.create(commentRanges)
+    const tr = state.update({ selection: commentSelection })
+    dispatch(tr)
+    lineUncomment({ state: tr.state, dispatch })
 
-      // Uncomment these lines
-      lineUncomment({ state: tr1.state, dispatch })
-
-      // We need to wait for this transaction to be applied before proceeding
-      // In a real app, you might want to use a more robust approach
-      setTimeout(() => {
-        // Now let's get the updated state and proceed with step 2
-        const view = EditorView.findFromDOM(document.querySelector('.cm-editor') as HTMLElement)
-        if (view) {
-          const updatedState = view.state
-
-          // Since we uncommented all properties, now handle them as if they're all active
-          const allLines = findPropertyLinesInBlock(
-            updatedState,
-            property.name,
-            block.startLine,
-            block.endLine
-          ).active
-
-          // Keep only the last property active
-          const linesToComment = allLines.slice(0, allLines.length - 1)
-
-          // Create selection ranges for lines to comment
-          const ranges = linesToComment.map((lineNum) => {
-            const line = updatedState.doc.line(lineNum)
-            return EditorSelection.range(line.from, line.from)
-          })
-
-          // Comment these lines
-          if (ranges.length > 0) {
-            const tempSelection = EditorSelection.create(ranges)
-            const tr2 = updatedState.update({ selection: tempSelection })
-            view.dispatch(tr2)
-            toggleLineComment({ state: tr2.state, dispatch: view.dispatch })
-          }
-        }
-      }, 50) // small delay to ensure the first transaction is applied
-    }
+    // Now we need to wait for this transaction to complete before continuing
+    setTimeout(() => {
+      applyBlockEvaluation(block)
+    }, 50)
 
     return true
+  } else {
+    // No commented lines, proceed directly
+    return applyBlockEvaluation(block)
   }
 
-  // If no commented lines, just handle active lines
-  if (active.length <= 1) return false
+  // Helper function to apply the rest of the evaluation
+  function applyBlockEvaluation(block: { startLine: number; endLine: number }): boolean {
+    // Get the updated editor state
+    const view = EditorView.findFromDOM(document.querySelector('.cm-editor') as HTMLElement)
+    if (!view || !dispatch) return false
 
-  // Only comment out all but the last property
-  const linesToComment = active.slice(0, active.length - 1)
+    const updatedState = view.state
 
-  // Create proper selection ranges for each line we want to comment
-  const ranges = linesToComment.map((lineNum) => {
-    const line = state.doc.line(lineNum)
-    return EditorSelection.range(line.from, line.from)
-  })
+    // Step 2: Extract all distinct property names from the block
+    const allProperties = extractBlockProperties(updatedState, block.startLine, block.endLine)
+    console.log(
+      `Found ${allProperties.length} distinct properties in block: ${allProperties.join(', ')}`
+    )
 
-  // Create a transaction that applies comments to these ranges
-  if (ranges.length > 0) {
-    // Set a temporary selection that includes all the lines we want to comment
-    const tempSelection = EditorSelection.create(ranges)
+    // Step 3: For each property, comment out all occurrences outside the block
+    const outsideLinesToComment: number[] = []
 
-    // Apply the toggleLineComment command
-    if (dispatch) {
-      // Update the selection
-      const tr = state.update({
-        selection: tempSelection
+    allProperties.forEach((propName) => {
+      // Find occurrences outside the block (before the block)
+      if (block.startLine > 1) {
+        const beforeLines = findPropertyLinesInRange(updatedState, propName, 1, block.startLine - 1)
+        outsideLinesToComment.push(...beforeLines)
+      }
+
+      // Find occurrences outside the block (after the block)
+      if (block.endLine < updatedState.doc.lines) {
+        const afterLines = findPropertyLinesInRange(
+          updatedState,
+          propName,
+          block.endLine + 1,
+          updatedState.doc.lines
+        )
+        outsideLinesToComment.push(...afterLines)
+      }
+    })
+
+    // Comment out all properties outside the block
+    if (outsideLinesToComment.length > 0) {
+      console.log(`Commenting out ${outsideLinesToComment.length} properties outside block`)
+
+      const outsideRanges = outsideLinesToComment.map((lineNum) => {
+        const line = updatedState.doc.line(lineNum)
+        return EditorSelection.range(line.from, line.from)
       })
-      dispatch(tr)
 
-      // Apply toggle line comment on the selected lines
-      toggleLineComment({ state: tr.state, dispatch })
+      const outsideSelection = EditorSelection.create(outsideRanges)
+      const trOutside = updatedState.update({ selection: outsideSelection })
+      view.dispatch(trOutside)
+      toggleLineComment({ state: trOutside.state, dispatch: view.dispatch })
+
+      // Wait for this to complete before doing the next step
+      setTimeout(() => {
+        handleBlockProperties(block, allProperties)
+      }, 50)
+
+      return true
+    } else {
+      // No outside properties to comment, proceed with block properties
+      return handleBlockProperties(block, allProperties)
     }
-
-    return true
   }
 
-  return false
+  // Helper function to handle properties within the block
+  function handleBlockProperties(
+    block: { startLine: number; endLine: number },
+    properties: string[]
+  ): boolean {
+    const view = EditorView.findFromDOM(document.querySelector('.cm-editor') as HTMLElement)
+    if (!view || !dispatch) return false
+
+    const updatedState = view.state
+
+    // Step 4: For each property in the block, ensure only the last instance is active
+    let anyProcessed = false
+
+    properties.forEach((propName) => {
+      // Find all instances of this property in the block
+      const propLines = findPropertyLinesInRange(
+        updatedState,
+        propName,
+        block.startLine,
+        block.endLine
+      )
+
+      if (propLines.length > 1) {
+        // Keep only the last occurrence active
+        const linesToComment = propLines.slice(0, propLines.length - 1)
+        console.log(
+          `For property '${propName}', commenting out ${linesToComment.length} of ${propLines.length} occurrences`
+        )
+
+        const propRanges = linesToComment.map((lineNum) => {
+          const line = updatedState.doc.line(lineNum)
+          return EditorSelection.range(line.from, line.from)
+        })
+
+        const propSelection = EditorSelection.create(propRanges)
+        const trProp = updatedState.update({ selection: propSelection })
+        view.dispatch(trProp)
+        toggleLineComment({ state: trProp.state, dispatch: view.dispatch })
+
+        anyProcessed = true
+      }
+    })
+
+    return anyProcessed
+  }
 }
 
 /**
