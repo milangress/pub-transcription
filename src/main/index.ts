@@ -38,7 +38,7 @@ function createPrintWindow(): BrowserWindow {
       scrollBounce: false,
       nodeIntegration: true,
       contextIsolation: false,
-      preload: join(__dirname, '../preload/print.js'),
+      preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
   }
@@ -48,7 +48,7 @@ function createPrintWindow(): BrowserWindow {
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     printWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/print.html`)
   } else {
-    printWindow.loadFile(join(__dirname, '../renderer/print.html'))
+    printWindow.loadFile(join(__dirname, '../renderer/debug.html'))
   }
 
   // Initialize debugger state for new window
@@ -189,6 +189,7 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
 
   createWindow()
 
