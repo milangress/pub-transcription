@@ -30,7 +30,7 @@
     language = 'css',
     controllerSettings = [],
     fontFamilys = [],
-    onChange = (_value: string) => {},
+    onChange = () => {},
   } = $props<{
     value: string;
     language: 'css' | 'html';
@@ -62,9 +62,9 @@
     // NOTE: Just a hacky way to make the parser tree more readable
     return tree
       .replace(/LineComment/g, 'LineComment\n  ')
-      .replace(/\"{"/g, '"{"\n  ')
-      .replace(/\";"/g, '";"\n  ')
-      .replace(/\"}"/g, '\n"}"');
+      .replace(/"{"/g, '"{"\n  ')
+      .replace(/";"/g, '";"\n  ')
+      .replace(/"}"/g, '\n"}"');
   }
 
   $effect(() => {

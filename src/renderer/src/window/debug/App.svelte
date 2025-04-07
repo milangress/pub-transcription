@@ -11,6 +11,7 @@
   let status = $state('Waiting for print job...');
   let lastJobTime = $state('Never');
   let stylesLoaded = $state('No');
+  // eslint-disable-next-line no-undef
   let children = $state<NodeListOf<HTMLSpanElement> | null>(null);
   let printLogs = $state<
     Array<{
@@ -147,7 +148,7 @@
       async (_event, { content, settings = {}, attempt, maxRetries: maxRetriesVal }) => {
         try {
           console.log('onPrintJob', { content, settings, attempt, maxRetriesVal });
-          debugger;
+
           // Validate essential data
           if (!settings.printId) {
             console.error('❌ Print job received without printId:', settings);

@@ -7,7 +7,7 @@
   "license": "MIT",
   "author": "Milan Gress <mgress@me.com>",
   "scripts": {
-    "format": "prettier --plugin prettier-plugin-svelte --write .",
+    "format": "prettier --plugin prettier-plugin-svelte --config .prettierrc.yaml --write .",
     "lint": "eslint --cache .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "svelte-check": "svelte-check --tsconfig ./tsconfig.json",

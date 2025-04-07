@@ -1,7 +1,7 @@
 <script lang="ts">
   interface Props {
     isPrintPreview?: boolean;
-    onClick?: any;
+    onClick?: () => void;
   }
 
   let { isPrintPreview = false, onClick = () => {} }: Props = $props();

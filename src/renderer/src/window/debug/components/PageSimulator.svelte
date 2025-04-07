@@ -13,7 +13,6 @@
 
   // State
   let page: HTMLElement | undefined = $state();
-  let pageContainer: HTMLElement | undefined = $state();
   let pageContext: HTMLElement | undefined = $state();
 
   function fittedToPage() {
@@ -48,7 +47,7 @@
 {/if}
 
 <div class="page-context" class:centered bind:this={pageContext}>
-  <div class="page-container" bind:this={pageContainer} style:transform={`scale(${scale})`}>
+  <div class="page-container" style:transform={`scale(${scale})`}>
     <page size="A3" bind:this={page}>
       <div class="content-context">
         {@render children?.()}

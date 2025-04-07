@@ -7,12 +7,10 @@
   const ipc = new IpcListener<IpcRendererEvent>();
   const emitter = new IpcEmitter<IpcEvents>();
 
-  let lastJobTimestamp = $state('Never');
-  let stylesLoadedLenght = $state(0);
+  // eslint-disable-next-line no-undef
   let children = $state<NodeListOf<HTMLSpanElement> | null>(null);
 
   let currentPrintId = $state<string | null>(null);
-  let printProcessStartTime = $state<number | null>(null);
 
   // Refs for DOM elements
   let printContainer: HTMLElement;
@@ -85,7 +83,7 @@
 
   async function executePrint(content, settings) {
     currentPrintId = settings.printId;
-    (status.msg = '📝 ReadyToBePrinted:'), currentPrintId;
+    status.msg = '📝 ReadyToBePrinted:' + currentPrintId;
 
     try {
       await emitter.invoke('PrintWindow:ReadyToBePrinted', { content, settings });
@@ -104,9 +102,6 @@
         try {
           status.msg = `🖨️ Processing: ${settings.printId} (Attempt ${attempt}/${maxRetries})`;
 
-          printProcessStartTime = Date.now();
-          lastJobTimestamp = new Date().toLocaleTimeString();
-
           if (!settings.printId) throw (status.err = 'Print job received without printId');
           if (!content) throw (status.err = 'Print job received without content');
 
@@ -116,11 +111,9 @@
           // Update styles
           if (settings.inlineStyle) {
             inlineStyles = settings.inlineStyle;
-            stylesLoadedLenght = settings.inlineStyle.length;
           } else {
             status.warn = '⚠️ No inline styles provided for print job';
             inlineStyles = '';
-            stylesLoadedLenght = 0;
           }
 
           // Inject SVG filters if they exist
@@ -176,6 +169,7 @@
   <!-- SVG filters container-->
   {#if svgFiltersContent}
     <div id="svg-filters" style="display: none">
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -->
       {@html svgFiltersContent}
     </div>
   {/if}
@@ -183,6 +177,7 @@
   <div class="page-context">
     <page size="A3">
       <div bind:this={printContainer} id="print-container">
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         {@html printContent}
       </div>
     </page>
@@ -208,7 +203,8 @@
     width: calc(297.3mm * 0.86);
     height: calc(420.2mm * 0.895);
     padding: 2cm;
-    background: url('../../assets/scan.png'); /* this path is corrrect!!! */
+    /* this path is corrrect!!! */
+    background: url('../../assets/scan.png');
     background-size: 100% 100%;
     outline: 1px solid red;
   }

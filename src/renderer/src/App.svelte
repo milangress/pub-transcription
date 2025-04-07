@@ -425,7 +425,7 @@
                 settings={{
                   inlineStyle: snapshot.inlineStyle,
                   svgFilters: snapshot.svgFilters,
-                  controllerSettings: $state.snapshot(staticControllerSettings as any[]),
+                  controllerSettings: $state.snapshot(staticControllerSettings as unknown),
                 }}
               />
             </button>
@@ -453,6 +453,7 @@
         controllerSettings={settings.controllerSettings}
       />
       <div style="display: none">
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
         {@html settings.svgFilters}
       </div>
       <TransInfoMessagesLog />

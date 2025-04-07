@@ -19,7 +19,6 @@
   let logContainer = $state<HTMLDivElement>();
   let shouldAutoScroll = $state(true);
   const MAX_STORED_LOGS = 200;
-  let isFirstLoad = $state(true);
 
   let previousLogs = $state<LogEntry[]>([]);
 
@@ -43,7 +42,6 @@
         }));
 
         previousLogs = [...oldLogs, sessionDivider];
-        isFirstLoad = false;
 
         // Initial scroll to bottom
         requestAnimationFrame(() => {
