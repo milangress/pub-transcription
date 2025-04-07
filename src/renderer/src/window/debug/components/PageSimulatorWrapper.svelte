@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Page from './Page.svelte'
+  import Page from './PageSimulator.svelte'
 
   interface Props {
     // Props

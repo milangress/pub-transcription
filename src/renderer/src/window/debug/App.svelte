@@ -1,9 +1,9 @@
 <script lang="ts">
-  import LogContainer from '@components/print-window/LogContainer.svelte'
-  import PageWrapper from '@components/print-window/PageWrapper.svelte'
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer'
   import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc'
   import { onMount } from 'svelte'
+  import LogContainer from './components/LogContainer.svelte'
+  import PageWrapper from './components/PageSimulatorWrapper.svelte'
 
   const ipc = new IpcListener<IpcRendererEvent>()
   const emitter = new IpcEmitter<IpcEvents>()
