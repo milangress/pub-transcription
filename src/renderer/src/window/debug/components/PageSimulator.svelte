@@ -1,54 +1,49 @@
 <script lang="ts">
-    import { untrack } from 'svelte'
+  import { untrack } from 'svelte';
 
   interface Props {
     // Props
-    scale?: number
-    showControls?: boolean
-    centered?: boolean
-    children?: import('svelte').Snippet
+    scale?: number;
+    showControls?: boolean;
+    centered?: boolean;
+    children?: import('svelte').Snippet;
   }
 
-  let {
-    scale = $bindable(1),
-    showControls = true,
-    centered = true,
-    children
-  }: Props = $props()
+  let { scale = $bindable(1), showControls = true, centered = true, children }: Props = $props();
 
   // State
-  let page: HTMLElement | undefined = $state()
-  let pageContainer: HTMLElement | undefined = $state()
-  let pageContext: HTMLElement | undefined = $state()
+  let page: HTMLElement | undefined = $state();
+  let pageContainer: HTMLElement | undefined = $state();
+  let pageContext: HTMLElement | undefined = $state();
 
   function fittedToPage() {
-    if (!page || !pageContext) return scale
-    const pageRect = page.getBoundingClientRect()
-    const contextRect = pageContext.getBoundingClientRect()
+    if (!page || !pageContext) return scale;
+    const pageRect = page.getBoundingClientRect();
+    const contextRect = pageContext.getBoundingClientRect();
     const optimalScale = Math.min(
       (contextRect.width * 0.95) / (pageRect.width / scale),
-      (contextRect.height * 0.95) / (pageRect.height / scale)
-    )
-    return optimalScale
+      (contextRect.height * 0.95) / (pageRect.height / scale),
+    );
+    return optimalScale;
   }
 
   function adjustedScale(delta: number) {
-    return Math.max(0.1, Math.min(2, scale + delta))
+    return Math.max(0.1, Math.min(2, scale + delta));
   }
 
   $effect(() => {
     untrack(() => {
-      scale = fittedToPage()
-    })
-  })
+      scale = fittedToPage();
+    });
+  });
 </script>
 
 {#if showControls}
   <div id="scale-controls">
-    <button onclick={() => scale = adjustedScale(-0.1)}>-</button>
+    <button onclick={() => (scale = adjustedScale(-0.1))}>-</button>
     <span>{scale.toFixed(2)}</span>
-    <button onclick={() => scale = adjustedScale(0.1)}>+</button>
-    <button onclick={() => scale = fittedToPage()}>0</button>
+    <button onclick={() => (scale = adjustedScale(0.1))}>+</button>
+    <button onclick={() => (scale = fittedToPage())}>0</button>
   </div>
 {/if}
 
@@ -63,7 +58,6 @@
 </div>
 
 <style>
-
   #scale-controls {
     position: absolute;
     top: 10px;

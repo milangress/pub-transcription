@@ -1,10 +1,10 @@
 <script lang="ts">
   interface Props {
-    isPrintPreview?: boolean
-    onClick?: any
+    isPrintPreview?: boolean;
+    onClick?: any;
   }
 
-  let { isPrintPreview = false, onClick = () => {} }: Props = $props()
+  let { isPrintPreview = false, onClick = () => {} }: Props = $props();
 </script>
 
 <button

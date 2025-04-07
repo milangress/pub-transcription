@@ -1,28 +1,28 @@
 <script lang="ts">
-  import type { BlockTxtSettings, ControllerSetting } from 'src/renderer/src/types'
-  import { checkPosition } from './checkPosition.js'
+  import type { BlockTxtSettings, ControllerSetting } from 'src/renderer/src/types';
+  import { checkPosition } from './checkPosition.js';
 
   let {
     content = 'Hello World',
     isCurrent = false,
     settings = {
       inlineStyle: '',
-      controllerSettings: []
+      controllerSettings: [],
     },
-    onOverflow = () => {}
+    onOverflow = () => {},
   } = $props<{
-    content?: string
-    isCurrent?: boolean
-    settings?: BlockTxtSettings
-    onOverflow?: () => void
-  }>()
+    content?: string;
+    isCurrent?: boolean;
+    settings?: BlockTxtSettings;
+    onOverflow?: () => void;
+  }>();
 
   function transformSassToCSS(
     str: string | undefined,
-    controllerSettings: ControllerSetting[]
+    controllerSettings: ControllerSetting[],
   ): string {
-    if (!str) return ''
-    const cssStr = str.toString()
+    if (!str) return '';
+    const cssStr = str.toString();
 
     // Remove SASS structure (selector and braces)
     let result = cssStr
@@ -30,30 +30,30 @@
       .replace(/^}$/gm, '')
       // Remove comments
       .replace(/\/\/.*$/gm, '')
-      .replace(/\/\*[\s\S]*?\*\//gm, '')
+      .replace(/\/\*[\s\S]*?\*\//gm, '');
 
     if (controllerSettings && Array.isArray(controllerSettings) && controllerSettings.length > 0) {
       controllerSettings.forEach((setting) => {
         // Replace $variable * number[unit] pattern
-        const varPattern = new RegExp('\\$' + setting.var + '\\s*\\*\\s*([\\d.]+)([a-z%]+)?', 'g')
+        const varPattern = new RegExp('\\$' + setting.var + '\\s*\\*\\s*([\\d.]+)([a-z%]+)?', 'g');
         result = result.replace(varPattern, (_match, number, unit) => {
-          const value = setting.value * parseFloat(number)
-          return unit ? value + unit : value.toString()
-        })
+          const value = setting.value * parseFloat(number);
+          return unit ? value + unit : value.toString();
+        });
 
         // Replace plain $variable pattern
-        const plainVarPattern = new RegExp('\\$' + setting.var + '\\b', 'g')
-        result = result.replace(plainVarPattern, setting.value.toString())
-      })
+        const plainVarPattern = new RegExp('\\$' + setting.var + '\\b', 'g');
+        result = result.replace(plainVarPattern, setting.value.toString());
+      });
     }
 
-    return result.trim()
+    return result.trim();
   }
 
-  let isCurrentClass = $derived(isCurrent ? 'current' : '')
+  let isCurrentClass = $derived(isCurrent ? 'current' : '');
   let compiledStyle = $derived(
-    transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings)
-  )
+    transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings),
+  );
 </script>
 
 <span
@@ -61,7 +61,7 @@
   style={compiledStyle}
   use:checkPosition={!isCurrent
     ? {
-        registerOverflow: () => onOverflow()
+        registerOverflow: () => onOverflow(),
       }
     : null}
 >

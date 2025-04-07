@@ -1,35 +1,35 @@
 <script lang="ts">
-  import { IpcListener } from '@electron-toolkit/typed-ipc/renderer'
-  import type { PrintStatusMessage } from 'src/types'
-  import type { IpcRendererEvent } from 'src/types/ipc'
-  import { onMount } from 'svelte'
-  import { fly } from 'svelte/transition'
-  import PrintStatus from './PrintStatus.svelte'
-  const ipc = new IpcListener<IpcRendererEvent>()
+  import { IpcListener } from '@electron-toolkit/typed-ipc/renderer';
+  import type { PrintStatusMessage } from 'src/types';
+  import type { IpcRendererEvent } from 'src/types/ipc';
+  import { onMount } from 'svelte';
+  import { fly } from 'svelte/transition';
+  import PrintStatus from './PrintStatus.svelte';
+  const ipc = new IpcListener<IpcRendererEvent>();
 
   interface StatusEmojis {
-    LOCAL_REQUEST: string
-    QUEUED: string
-    PRINT_START: string
+    LOCAL_REQUEST: string;
+    QUEUED: string;
+    PRINT_START: string;
     PRINT_COMPLETE: {
-      SUCCESS: string
-      ERROR: string
-    }
+      SUCCESS: string;
+      ERROR: string;
+    };
     PDF_SAVE: {
-      SUCCESS: string
-    }
-    PRINT_ERROR: string
+      SUCCESS: string;
+    };
+    PRINT_ERROR: string;
   }
 
   interface StatusEntry {
-    emoji: string
-    text: string
+    emoji: string;
+    text: string;
   }
 
-  let printStatuses = $state(new Map<string, StatusEntry>())
-  let successPrintCount = $state(0)
-  let successPdfCount = $state(0)
-  let failureCount = $state(0)
+  let printStatuses = $state(new Map<string, StatusEntry>());
+  let successPrintCount = $state(0);
+  let successPdfCount = $state(0);
+  let failureCount = $state(0);
 
   // Status emoji mapping based on action and status
   const STATUS_EMOJIS: StatusEmojis = {
@@ -38,37 +38,37 @@
     PRINT_START: '🎀',
     PRINT_COMPLETE: {
       SUCCESS: '🖨️',
-      ERROR: '🥵'
+      ERROR: '🥵',
     },
     PDF_SAVE: {
-      SUCCESS: '💦'
+      SUCCESS: '💦',
     },
-    PRINT_ERROR: '🥵'
-  }
+    PRINT_ERROR: '🥵',
+  };
 
   function updateStatus(printId: string, newStatus: string, text = ''): void {
     if (!printId) {
-      console.warn('⚠️ Attempted to update status without printId')
-      return
+      console.warn('⚠️ Attempted to update status without printId');
+      return;
     }
-    console.log(`🔄 Updating status for ${printId} to ${newStatus}${text ? ` (${text})` : ''}`)
-    printStatuses.set(printId, { emoji: newStatus, text })
-    printStatuses = new Map(printStatuses) // Create new Map to trigger reactivity
+    console.log(`🔄 Updating status for ${printId} to ${newStatus}${text ? ` (${text})` : ''}`);
+    printStatuses.set(printId, { emoji: newStatus, text });
+    printStatuses = new Map(printStatuses); // Create new Map to trigger reactivity
   }
 
   function scheduleSuccessCleanup(id: string, type: 'print' | 'PDF'): void {
     setTimeout(() => {
-      printStatuses.delete(id)
-      printStatuses = new Map(printStatuses) // Create new Map to trigger reactivity
-      console.log(`🧹 Cleaned up successful ${type} status: ${id}`)
-    }, 20000)
+      printStatuses.delete(id);
+      printStatuses = new Map(printStatuses); // Create new Map to trigger reactivity
+      console.log(`🧹 Cleaned up successful ${type} status: ${id}`);
+    }, 20000);
   }
 
   export function addPrintRequest(): number {
-    const printId = Date.now()
-    updateStatus(printId.toString(), STATUS_EMOJIS.LOCAL_REQUEST, 'Print request created')
-    console.log(`🥚 Added new print request with ID: ${printId}`)
-    return printId
+    const printId = Date.now();
+    updateStatus(printId.toString(), STATUS_EMOJIS.LOCAL_REQUEST, 'Print request created');
+    console.log(`🥚 Added new print request with ID: ${printId}`);
+    return printId;
   }
 
   // Add print request handler
@@ -77,57 +77,57 @@
       'print-queued',
       (_, { success, error, printId }: { success: boolean; error?: string; printId: string }) => {
         if (success) {
-          updateStatus(printId, '🐣', 'Print job queued successfully')
+          updateStatus(printId, '🐣', 'Print job queued successfully');
         } else {
-          updateStatus(printId, '🥵', `Print queue error: ${error}`)
+          updateStatus(printId, '🥵', `Print queue error: ${error}`);
         }
-      }
-    )
+      },
+    );
 
     ipc.on('print-status', (_event, message: PrintStatusMessage) => {
-      const { id, action, status, ...details } = message
-      let emoji = '❓'
-      let text = 'Unknown status'
+      const { id, action, status, ...details } = message;
+      let emoji = '❓';
+      let text = 'Unknown status';
 
       switch (action) {
         case 'PRINT_START':
-          emoji = '🎀'
-          text = details.message || 'Starting print...'
-          break
+          emoji = '🎀';
+          text = details.message || 'Starting print...';
+          break;
         case 'PRINT_COMPLETE':
-          emoji = status === 'SUCCESS' ? '🖨️' : '🥵'
-          text = details.message || (status === 'SUCCESS' ? 'Print complete' : 'Print failed')
+          emoji = status === 'SUCCESS' ? '🖨️' : '🥵';
+          text = details.message || (status === 'SUCCESS' ? 'Print complete' : 'Print failed');
           if (status === 'SUCCESS') {
-            successPrintCount++
-            scheduleSuccessCleanup(id, 'print')
+            successPrintCount++;
+            scheduleSuccessCleanup(id, 'print');
           } else {
-            failureCount++
+            failureCount++;
           }
-          break
+          break;
         case 'PDF_SAVE':
-          emoji = status === 'SUCCESS' ? '💦' : '🥵'
-          text = details.message || (status === 'SUCCESS' ? 'PDF saved' : 'PDF save failed')
+          emoji = status === 'SUCCESS' ? '💦' : '🥵';
+          text = details.message || (status === 'SUCCESS' ? 'PDF saved' : 'PDF save failed');
           if (status === 'SUCCESS') {
-            successPdfCount++
-            scheduleSuccessCleanup(id, 'PDF')
+            successPdfCount++;
+            scheduleSuccessCleanup(id, 'PDF');
           } else {
-            failureCount++
+            failureCount++;
           }
-          break
+          break;
         case 'PRINT_ERROR':
-          emoji = '🥵'
-          text = details.message || 'Print error occurred'
-          failureCount++
-          break
+          emoji = '🥵';
+          text = details.message || 'Print error occurred';
+          failureCount++;
+          break;
       }
 
-      updateStatus(id, emoji, text)
-    })
+      updateStatus(id, emoji, text);
+    });
 
     return () => {
-      console.log('🛑 PrintStatusBar cleanup stopped')
-    }
-  })
+      console.log('🛑 PrintStatusBar cleanup stopped');
+    };
+  });
 </script>
 
 <div class="status-bar">

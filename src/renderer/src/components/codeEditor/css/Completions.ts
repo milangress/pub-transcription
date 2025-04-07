@@ -2,30 +2,30 @@ import {
   autocompletion,
   type Completion,
   type CompletionContext,
-  type CompletionResult
-} from '@codemirror/autocomplete'
-import type { Extension } from '@codemirror/state'
-import { EditorView } from '@codemirror/view'
-import type { ControllerSetting, FontFamily } from 'src/renderer/src/types'
+  type CompletionResult,
+} from '@codemirror/autocomplete';
+import type { Extension } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
+import type { ControllerSetting, FontFamily } from 'src/renderer/src/types';
 
 interface CompletionOptions {
-  fontFamilies: FontFamily[]
-  controllerSettings: ControllerSetting[]
-  filterIds: string[]
+  fontFamilies: FontFamily[];
+  controllerSettings: ControllerSetting[];
+  filterIds: string[];
 }
 
 // Global variables to store current options
-let currentFontFamilies: FontFamily[] = []
-let currentControllerSettings: ControllerSetting[] = []
-let currentFilterIds: string[] = []
+let currentFontFamilies: FontFamily[] = [];
+let currentControllerSettings: ControllerSetting[] = [];
+let currentFilterIds: string[] = [];
 
 /**
  * Updates the current completion options reactively
  */
 export function updateCompletionOptions(options: CompletionOptions): void {
-  currentFontFamilies = options.fontFamilies
-  currentControllerSettings = options.controllerSettings
-  currentFilterIds = options.filterIds
+  currentFontFamilies = options.fontFamilies;
+  currentControllerSettings = options.controllerSettings;
+  currentFilterIds = options.filterIds;
 }
 
 /**
@@ -38,31 +38,31 @@ export function updateCompletionOptions(options: CompletionOptions): void {
 export function createCompletionSource(initialOptions?: CompletionOptions) {
   // Initialize with provided options if available
   if (initialOptions) {
-    updateCompletionOptions(initialOptions)
+    updateCompletionOptions(initialOptions);
   }
 
   return (context: CompletionContext): CompletionResult | null => {
     // Font-family completion
-    const before = context.matchBefore(/font-family:\s*[^;]*/)
+    const before = context.matchBefore(/font-family:\s*[^;]*/);
     if (before) {
-      const word = context.matchBefore(/[^:\s;]*$/)
-      if (!word && !context.explicit) return null
+      const word = context.matchBefore(/[^:\s;]*$/);
+      if (!word && !context.explicit) return null;
 
       const fontOptions: Completion[] = currentFontFamilies.map((font) => ({
         label: font.name,
         type: 'class',
-        boost: 1
-      }))
+        boost: 1,
+      }));
 
       return {
         from: word?.from ?? before.from,
         options: fontOptions,
-        validFor: /^[^;]*$/
-      }
+        validFor: /^[^;]*$/,
+      };
     }
 
     // MIDI variable completion
-    const varWord = context.matchBefore(/\$\w*/)
+    const varWord = context.matchBefore(/\$\w*/);
     if (varWord && varWord.from !== null && !(varWord.from === varWord.to && !context.explicit)) {
       return {
         from: varWord.from,
@@ -71,23 +71,23 @@ export function createCompletionSource(initialOptions?: CompletionOptions) {
           label: '$' + setting.var,
           type: 'variable',
           detail: `Current value: ${setting.value}`,
-          boost: 1
-        }))
-      }
+          boost: 1,
+        })),
+      };
     }
 
     // SVG filter completion
-    const filterWord = context.matchBefore(/url\(#[^)]*/)
+    const filterWord = context.matchBefore(/url\(#[^)]*/);
     if (
       filterWord &&
       filterWord.from !== null &&
       !(filterWord.from === filterWord.to && !context.explicit)
     ) {
-      const hashIndex = filterWord.text.lastIndexOf('#')
+      const hashIndex = filterWord.text.lastIndexOf('#');
 
       // Find if there's a closing parenthesis and semicolon after the cursor
-      const afterCursor = context.state.doc.sliceString(filterWord.to, filterWord.to + 10)
-      const hasClosing = afterCursor.match(/^\s*\);/)
+      const afterCursor = context.state.doc.sliceString(filterWord.to, filterWord.to + 10);
+      const hasClosing = afterCursor.match(/^\s*\);/);
 
       return {
         from: filterWord.from + (hashIndex >= 0 ? hashIndex + 1 : filterWord.text.length),
@@ -97,29 +97,29 @@ export function createCompletionSource(initialOptions?: CompletionOptions) {
           type: 'filter',
           detail: 'SVG Filter',
           info: (): HTMLElement => {
-            const el = document.createElement('div')
-            el.style.filter = `url(#${id})`
-            el.style.padding = '5px'
-            el.textContent = 'Preview'
-            return el
+            const el = document.createElement('div');
+            el.style.filter = `url(#${id})`;
+            el.style.padding = '5px';
+            el.textContent = 'Preview';
+            return el;
           },
           apply: (view: EditorView, completion: Completion, from: number, to: number): void => {
-            const insert = hasClosing ? completion.label : `${completion.label});`
+            const insert = hasClosing ? completion.label : `${completion.label});`;
             view.dispatch({
               changes: {
                 from,
                 to: hasClosing ? to : to,
-                insert
-              }
-            })
-          }
-        }))
-      }
+                insert,
+              },
+            });
+          },
+        })),
+      };
     }
 
     // Let the default completions handle everything else
-    return null
-  }
+    return null;
+  };
 }
 
 /**
@@ -127,9 +127,9 @@ export function createCompletionSource(initialOptions?: CompletionOptions) {
  */
 export function createCompletionExtension(options: CompletionOptions): Extension {
   // Initialize current options
-  updateCompletionOptions(options)
-  
+  updateCompletionOptions(options);
+
   return autocompletion({
-    override: [createCompletionSource()]
-  })
+    override: [createCompletionSource()],
+  });
 }

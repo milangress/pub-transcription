@@ -1,28 +1,28 @@
-import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
-import { ChildProcess, spawn } from 'child_process'
-import { app, BrowserWindow, powerSaveBlocker } from 'electron'
-import { existsSync, mkdirSync } from 'fs'
-import { join } from 'path'
-import ggmlMetal from '../../resources/lib/ggml-metal.metal?asset&asarUnpack'
-import ggmlStreamBin from '../../resources/lib/stream?asset&asarUnpack'
-import ggmlModelSmallEnQ51Bin from '../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack'
-import type { IpcRendererEvent } from '../types/ipc'
+import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
+import { ChildProcess, spawn } from 'child_process';
+import { app, BrowserWindow, powerSaveBlocker } from 'electron';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import ggmlMetal from '../../resources/lib/ggml-metal.metal?asset&asarUnpack';
+import ggmlStreamBin from '../../resources/lib/stream?asset&asarUnpack';
+import ggmlModelSmallEnQ51Bin from '../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
+import type { IpcRendererEvent } from '../types/ipc';
 
-const emitter = new IpcEmitter<IpcRendererEvent>()
+const emitter = new IpcEmitter<IpcRendererEvent>();
 
 // Keep track of the stream process
-let activeStreamProcess: ChildProcess | null = null
+let activeStreamProcess: ChildProcess | null = null;
 
 interface StreamOptions {
-  name: string
-  model: string
-  metal: string
-  threads: number
-  step: number
-  length: number
-  keep: number
-  maxTokens: number
-  saveAudio: boolean
+  name: string;
+  model: string;
+  metal: string;
+  threads: number;
+  step: number;
+  length: number;
+  keep: number;
+  maxTokens: number;
+  saveAudio: boolean;
 }
 
 const DEFAULT_OPTIONS: StreamOptions = {
@@ -34,8 +34,8 @@ const DEFAULT_OPTIONS: StreamOptions = {
   length: 5000,
   keep: 300,
   maxTokens: 64,
-  saveAudio: true
-}
+  saveAudio: true,
+};
 
 /**
  * Creates and manages a child process for real-time audio stream transcription.
@@ -53,42 +53,42 @@ const DEFAULT_OPTIONS: StreamOptions = {
 export function createStreamProcess(
   mainWindow: BrowserWindow,
   options: Partial<StreamOptions> = {},
-  printTranscription: boolean = false
+  printTranscription: boolean = false,
 ): ChildProcess {
-  const mergedOptions = { ...DEFAULT_OPTIONS, ...options }
+  const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
 
   const log = {
     msg: (message: string | object): void => {
-      const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message
-      console.log('\x1b[90m%s\x1b[0m', `[${mergedOptions.name}] ${text}`)
+      const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+      console.log('\x1b[90m%s\x1b[0m', `[${mergedOptions.name}] ${text}`);
     },
     toWindow: (message: string): void => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-        console.log('\x1b[34m%s\x1b[0m', `[${mergedOptions.name}] [send] ${message}`)
-        sendToWindowIfAvailable('whisper-ccp-stream:status', message)
+        console.log('\x1b[34m%s\x1b[0m', `[${mergedOptions.name}] [send] ${message}`);
+        sendToWindowIfAvailable('whisper-ccp-stream:status', message);
       }
     },
     error: (message: string | object): void => {
-      const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message
-      console.error('\x1b[31m%s\x1b[0m', `[${mergedOptions.name}] [error] ${text}`)
-    }
-  }
+      const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+      console.error('\x1b[31m%s\x1b[0m', `[${mergedOptions.name}] [error] ${text}`);
+    },
+  };
 
   const sendToWindowIfAvailable = (channel: keyof IpcRendererEvent, message: string): void => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      emitter.send(mainWindow.webContents, channel, message)
+      emitter.send(mainWindow.webContents, channel, message);
     } else {
-      log.error(`mainWindow Unavailable! Message: ${message}`)
+      log.error(`mainWindow Unavailable! Message: ${message}`);
     }
-  }
+  };
 
   // Create audio directory in userData if it doesn't exist
-  const audioDir = join(app.getPath('userData'), 'audio')
+  const audioDir = join(app.getPath('userData'), 'audio');
   if (!existsSync(audioDir)) {
-    mkdirSync(audioDir, { recursive: true })
+    mkdirSync(audioDir, { recursive: true });
   }
 
-  const spawnOptions = { cwd: audioDir }
+  const spawnOptions = { cwd: audioDir };
   const args = [
     '--model',
     mergedOptions.model,
@@ -101,53 +101,53 @@ export function createStreamProcess(
     '--keep',
     mergedOptions.keep.toString(),
     '--max-tokens',
-    mergedOptions.maxTokens.toString()
-  ]
+    mergedOptions.maxTokens.toString(),
+  ];
 
   if (mergedOptions.saveAudio) {
-    args.push('--save-audio')
+    args.push('--save-audio');
   }
 
-  log.msg(`Starting in ${audioDir}`)
-  log.msg(`Command: ${ggmlStreamBin} ${args.join(' ')}`)
+  log.msg(`Starting in ${audioDir}`);
+  log.msg(`Command: ${ggmlStreamBin} ${args.join(' ')}`);
 
-  const stopPowerSaveBlocker = startPowerSaveBlocker(log.toWindow)
+  const stopPowerSaveBlocker = startPowerSaveBlocker(log.toWindow);
 
-  const ls = spawn(ggmlStreamBin, args, spawnOptions)
-  activeStreamProcess = ls
+  const ls = spawn(ggmlStreamBin, args, spawnOptions);
+  activeStreamProcess = ls;
 
   ls.stdout.on('data', (data: Buffer) => {
-    const string = new TextDecoder().decode(data)
+    const string = new TextDecoder().decode(data);
     if (printTranscription) {
-      log.msg(`stdout: ${string}`)
+      log.msg(`stdout: ${string}`);
     }
-    sendToWindowIfAvailable('whisper-ccp-stream:transcription', string)
-  })
+    sendToWindowIfAvailable('whisper-ccp-stream:transcription', string);
+  });
 
   ls.stderr.on('data', (info: Buffer) => {
-    const string = new TextDecoder().decode(info)
-    log.toWindow(string)
-  })
+    const string = new TextDecoder().decode(info);
+    log.toWindow(string);
+  });
 
   ls.on('error', (error: Error) => {
-    log.error(`Process error: ${error.message}`)
-    log.toWindow(error.message)
-  })
+    log.error(`Process error: ${error.message}`);
+    log.toWindow(error.message);
+  });
 
   ls.on('close', (code: number | null) => {
-    log.error(`Process exited with code ${code}`)
-    activeStreamProcess = null
-    stopPowerSaveBlocker()
-  })
+    log.error(`Process exited with code ${code}`);
+    activeStreamProcess = null;
+    stopPowerSaveBlocker();
+  });
 
-  return ls
+  return ls;
 }
 
 /**
  * Get the currently active stream process, if any
  */
 export function getActiveStreamProcess(): ChildProcess | null {
-  return activeStreamProcess
+  return activeStreamProcess;
 }
 
 /**
@@ -155,22 +155,20 @@ export function getActiveStreamProcess(): ChildProcess | null {
  */
 export function stopStreamProcess(): void {
   if (activeStreamProcess) {
-    activeStreamProcess.kill()
-    activeStreamProcess = null
+    activeStreamProcess.kill();
+    activeStreamProcess = null;
   }
 }
 
 function startPowerSaveBlocker(logtoWindow: (message: string) => void): () => void {
-  const id = powerSaveBlocker.start('prevent-display-sleep')
+  const id = powerSaveBlocker.start('prevent-display-sleep');
   if (powerSaveBlocker.isStarted(id)) {
-    logtoWindow('✅ Power save blocker started')
+    logtoWindow('✅ Power save blocker started');
   } else {
-    logtoWindow('❌ Power save blocker failed to start')
+    logtoWindow('❌ Power save blocker failed to start');
   }
   return () => {
-    powerSaveBlocker.stop(id)
-    logtoWindow('❌ Power save blocker stopped')
-  }
+    powerSaveBlocker.stop(id);
+    logtoWindow('❌ Power save blocker stopped');
+  };
 }
-
-

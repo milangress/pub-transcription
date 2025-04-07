@@ -1,29 +1,29 @@
 <script lang="ts">
-  import PrintStatusBar from '@/components/status/PrintStatusBar.svelte'
-  import { settings } from '@/stores/settings.svelte.js'
-  import { snapshots } from '@/stores/snapshots.svelte.js'
-  import CodeEditor from '@components/codeEditor/CodeEditor.svelte'
-  import ControllerManager from '@components/midi/ControllerManager.svelte'
-  import BlockTxt from '@components/pageElement/BlockTxt.svelte'
-  import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte'
+  import PrintStatusBar from '@/components/status/PrintStatusBar.svelte';
+  import { settings } from '@/stores/settings.svelte.js';
+  import { snapshots } from '@/stores/snapshots.svelte.js';
+  import CodeEditor from '@components/codeEditor/CodeEditor.svelte';
+  import ControllerManager from '@components/midi/ControllerManager.svelte';
+  import BlockTxt from '@components/pageElement/BlockTxt.svelte';
+  import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte';
   import type {
-      BlockTxtSettings,
-      FontFamily,
-      PrinterSettings,
-      TxtObject
-  } from 'src/renderer/src/types'
+    BlockTxtSettings,
+    FontFamily,
+    PrinterSettings,
+    TxtObject,
+  } from 'src/renderer/src/types';
 
-  import type { PrintSettings } from 'src/types'
+  import type { PrintSettings } from 'src/types';
 
-  import type { SvelteComponent } from 'svelte'
-  import { tick } from 'svelte'
-  import { WebMidi } from 'webmidi'
+  import type { SvelteComponent } from 'svelte';
+  import { tick } from 'svelte';
+  import { WebMidi } from 'webmidi';
 
-  import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer'
-  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc'
+  import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
+  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
 
-  const ipc = new IpcListener<IpcRendererEvent>()
-  const emitter = new IpcEmitter<IpcEvents>()
+  const ipc = new IpcListener<IpcRendererEvent>();
+  const emitter = new IpcEmitter<IpcEvents>();
 
   let {
     omittedSilenceFragments = [
@@ -36,24 +36,24 @@
       '[',
       '(buzzer)',
       '(buzzing)',
-      '.'
-    ]
-  } = $props()
+      '.',
+    ],
+  } = $props();
 
   // Original settings for revert functionality
   let originalSettings = $state<{
     inlineStyle: string;
     svgFilters: string;
     controllerValues: Record<string, number>;
-  } | null>(null)
+  } | null>(null);
 
   // Only Contains the final sentences
-  let committedContent = $state<TxtObject[]>([])
+  let committedContent = $state<TxtObject[]>([]);
 
   // Contains all incoming TTS sentences
-  let allIncomingTTSMessages = $state<string[]>([])
+  let allIncomingTTSMessages = $state<string[]>([]);
 
-  let currentSentence = $state<TxtObject>({} as TxtObject)
+  let currentSentence = $state<TxtObject>({} as TxtObject);
 
   let fontFamilys = $state<FontFamily[]>([
     { name: 'Garamondt-Regular' },
@@ -66,102 +66,102 @@
     { name: 'OracleGM-RegularMono' },
     { name: 'Neureal-Regular' },
     { name: 'NIKITA-Regular' },
-    { name: 'Yorkshire' }
-  ])
+    { name: 'Yorkshire' },
+  ]);
 
   let printerSettings = $state<PrinterSettings>({
     deviceName: 'Xerox_Phaser_5550N',
-    forcePrint: false
-  })
+    forcePrint: false,
+  });
 
   // Page counter
-  let pageNumber = $state(1)
+  let pageNumber = $state(1);
 
-  let isSuccessfulPrint = $state(true)
-  let printStatusBar = $state<PrintStatusBar | undefined>(undefined)
+  let isSuccessfulPrint = $state(true);
+  let printStatusBar = $state<PrintStatusBar | undefined>(undefined);
 
   // State for sentences waiting to be committed while printing
-  let isPrinting = $state(false)
-  let isHandlingOverflow = $state(false) // Flag to prevent recursive overflow handling
+  let isPrinting = $state(false);
+  let isHandlingOverflow = $state(false); // Flag to prevent recursive overflow handling
 
   // Initialize settings when the app starts
   $effect(() => {
-    if (!settings.controllerSettings.length) settings.init()
-  })
+    if (!settings.controllerSettings.length) settings.init();
+  });
 
   // Ensure snapshots are loaded when the app starts
   $effect(() => {
     if (settings.controllerSettings.length > 0) {
-      snapshots.loadSnapshots().catch(console.error)
+      snapshots.loadSnapshots().catch(console.error);
     }
-  })
+  });
 
-  let currentContentList = $derived([...committedContent, currentSentence])
+  let currentContentList = $derived([...committedContent, currentSentence]);
 
   ipc.on('whisper-ccp-stream:transcription', (_, value: string) => {
-    allIncomingTTSMessages = [value, ...allIncomingTTSMessages]
-    const formattedSentence = formatTTSasTxtObject(value)
+    allIncomingTTSMessages = [value, ...allIncomingTTSMessages];
+    const formattedSentence = formatTTSasTxtObject(value);
 
     if (isHandlingOverflow) {
-      console.warn('Overflow handling in progress, discarding:', value)
-      return
+      console.warn('Overflow handling in progress, discarding:', value);
+      return;
     }
 
     if (String(value).endsWith('NEW')) {
       // Final sentence received
-      currentSentence = {} as TxtObject // Clear current visualization
+      currentSentence = {} as TxtObject; // Clear current visualization
 
       // Only commit if it's not in the unwanted list
       if (
         !omittedSilenceFragments.some(
-          (x) => x.toLowerCase() === formattedSentence.content.toLowerCase().trim()
+          (x) => x.toLowerCase() === formattedSentence.content.toLowerCase().trim(),
         )
       ) {
-        console.log('Commiting finalSentence', formattedSentence.content)
-        committedContent = [...committedContent, formattedSentence]
+        console.log('Commiting finalSentence', formattedSentence.content);
+        committedContent = [...committedContent, formattedSentence];
       }
     } else {
       // Always show partial results, even if they would be filtered when final
-      currentSentence = formattedSentence
+      currentSentence = formattedSentence;
     }
-  })
+  });
 
   function formatTTSasTxtObject(tts: string): TxtObject {
-    const removeNEWKeyword = String(tts).replace('NEW', '').trim()
+    const removeNEWKeyword = String(tts).replace('NEW', '').trim();
     const txtSettings: BlockTxtSettings = {
       inlineStyle: settings.inlineStyle,
       controllerSettings: settings.controllerSettings,
-      svgFilters: settings.svgFilters
-    }
+      svgFilters: settings.svgFilters,
+    };
     return {
       type: BlockTxt as unknown as typeof SvelteComponent,
       content: removeNEWKeyword,
       settings: JSON.parse(JSON.stringify(txtSettings)), // Deep copy of current settings
-      id: Math.random()
-    }
+      id: Math.random(),
+    };
   }
 
   // Watch for code changes and mark as unsaved
   $effect(() => {
     if (settings.inlineStyle || settings.svgFilters) {
-      settings.markUnsaved()
+      settings.markUnsaved();
     }
-  })
+  });
 
   // Snapshot management functions
   async function saveSnapshot(): Promise<void> {
     // Use a default name instead of prompt
-    const name = `Snapshot ${new Date().toLocaleString()}`
-    
+    const name = `Snapshot ${new Date().toLocaleString()}`;
+
     try {
-      const result = await snapshots.saveSnapshot(name)
+      const result = await snapshots.saveSnapshot(name);
       if (result) {
-        console.log('Snapshot saved successfully:', result)
+        console.log('Snapshot saved successfully:', result);
       } else {
-        console.error('Failed to save snapshot')
+        console.error('Failed to save snapshot');
       }
     } catch (error) {
-      console.error('Error saving snapshot:', error)
+      console.error('Error saving snapshot:', error);
     }
   }
 
@@ -171,143 +171,143 @@
       originalSettings = {
         inlineStyle: settings.inlineStyle,
         svgFilters: settings.svgFilters,
-        controllerValues: {...settings.controllerValues}
-      }
+        controllerValues: { ...settings.controllerValues },
+      };
     }
-    
+
     try {
-      const success = await snapshots.applySnapshot(id)
+      const success = await snapshots.applySnapshot(id);
       if (success) {
-        console.log('Snapshot applied successfully')
+        console.log('Snapshot applied successfully');
       } else {
-        console.error('Failed to apply snapshot')
+        console.error('Failed to apply snapshot');
       }
     } catch (error) {
-      console.error('Error applying snapshot:', error)
+      console.error('Error applying snapshot:', error);
     }
   }
 
   async function deleteSnapshot(id: string): Promise<void> {
     // Remove confirm dialog
     try {
-      const success = await snapshots.deleteSnapshot(id)
+      const success = await snapshots.deleteSnapshot(id);
       if (success) {
-        console.log('Snapshot deleted successfully')
+        console.log('Snapshot deleted successfully');
       } else {
-        console.error('Failed to delete snapshot')
+        console.error('Failed to delete snapshot');
       }
     } catch (error) {
-      console.error('Error deleting snapshot:', error)
+      console.error('Error deleting snapshot:', error);
     }
   }
 
   function revertToOriginal(): void {
-    if (!originalSettings) return
-    
-    settings.inlineStyle = originalSettings.inlineStyle
-    settings.svgFilters = originalSettings.svgFilters
-    
+    if (!originalSettings) return;
+
+    settings.inlineStyle = originalSettings.inlineStyle;
+    settings.svgFilters = originalSettings.svgFilters;
+
     // Restore controller values
     Object.entries(originalSettings.controllerValues).forEach(([varName, value]) => {
-      settings.updateControllerValue(varName, value)
-    })
-    
+      settings.updateControllerValue(varName, value);
+    });
+
     // Clear original settings after applying
-    originalSettings = null
-    
-    console.log('Reverted to original settings')
+    originalSettings = null;
+
+    console.log('Reverted to original settings');
   }
 
   async function handleOverflow(overflowingItem: TxtObject): Promise<void> {
     // Don't handle overflow if we're already handling overflow
-    if (isHandlingOverflow) return
+    if (isHandlingOverflow) return;
 
     try {
-      isHandlingOverflow = true
-      console.log('Handling overflow for:', overflowingItem.content)
+      isHandlingOverflow = true;
+      console.log('Handling overflow for:', overflowingItem.content);
 
       // Find the index of the overflowing item
-      const index = committedContent.findIndex((item) => item.id === overflowingItem.id)
-      if (index === -1) return
+      const index = committedContent.findIndex((item) => item.id === overflowingItem.id);
+      if (index === -1) return;
 
       // If this is the first item on the page and it's overflowing,
       // we need to handle it specially to avoid an infinite loop
       if (index === 0) {
         console.warn(
           'First item on page is overflowing - forcing it to print alone:',
-          overflowingItem.content
-        )
+          overflowingItem.content,
+        );
         // Print just this item on its own page
-        const itemToPrint = [overflowingItem]
-        const remainingItems = committedContent.slice(1)
+        const itemToPrint = [overflowingItem];
+        const remainingItems = committedContent.slice(1);
 
         // Update committed content to only include the overflowing item
-        committedContent = itemToPrint
-        await tick() // Wait for DOM update
+        committedContent = itemToPrint;
+        await tick(); // Wait for DOM update
 
         // Print current page and continue with remaining items
-        await printFile()
+        await printFile();
         // Clear the printed content before setting the remaining items
-        committedContent = []
-        await tick() // Wait for DOM update
-        committedContent = remainingItems
-        return
+        committedContent = [];
+        await tick(); // Wait for DOM update
+        committedContent = remainingItems;
+        return;
       }
 
       // Normal case - split at the overflowing item
-      const itemsToPrint = committedContent.slice(0, index)
-      const itemsForNextPage = committedContent.slice(index)
+      const itemsToPrint = committedContent.slice(0, index);
+      const itemsForNextPage = committedContent.slice(index);
 
       // Print current page and continue with remaining items
-      committedContent = itemsToPrint
-      await tick() // Wait for DOM update
-      await printFile()
+      committedContent = itemsToPrint;
+      await tick(); // Wait for DOM update
+      await printFile();
       // Clear the printed content before setting the remaining items
-      committedContent = []
-      await tick() // Wait for DOM update
-      committedContent = itemsForNextPage
+      committedContent = [];
+      await tick(); // Wait for DOM update
+      committedContent = itemsForNextPage;
     } finally {
-      isHandlingOverflow = false
+      isHandlingOverflow = false;
     }
   }
 
   async function printFile(): Promise<void> {
     if (!printStatusBar) {
-      console.error('❌ No print status bar found')
-      isSuccessfulPrint = false
-      return
+      console.error('❌ No print status bar found');
+      isSuccessfulPrint = false;
+      return;
     }
-    console.log('🖨️ Starting print process')
-    await tick() // Wait for DOM update
+    console.log('🖨️ Starting print process');
+    await tick(); // Wait for DOM update
 
     try {
-      const pageElement = document.querySelector('page')
+      const pageElement = document.querySelector('page');
       if (!pageElement) {
-        console.error('❌ No page element found')
-        isSuccessfulPrint = false
-        return
+        console.error('❌ No page element found');
+        isSuccessfulPrint = false;
+        return;
       }
 
       // Remove any current elements before printing
-      const currentElements = pageElement.querySelectorAll('.current')
+      const currentElements = pageElement.querySelectorAll('.current');
       currentElements.forEach((element) => {
-        element.remove()
-        console.log('removed current element', element.textContent?.trim())
-      })
+        element.remove();
+        console.log('removed current element', element.textContent?.trim());
+      });
 
-      const pageContent = pageElement.innerHTML
+      const pageContent = pageElement.innerHTML;
       if (!pageContent || typeof pageContent !== 'string') {
-        console.error('❌ Invalid page content')
-        isSuccessfulPrint = false
-        return
+        console.error('❌ Invalid page content');
+        isSuccessfulPrint = false;
+        return;
       }
 
       // Create a print request in the status bar
-      const printId = printStatusBar.addPrintRequest().toString() // Convert to string
-      console.log(`📝 Created print request with ID: ${printId}`)
+      const printId = printStatusBar.addPrintRequest().toString(); // Convert to string
+      console.log(`📝 Created print request with ID: ${printId}`);
 
-      console.log('Printing text: ', pageElement.textContent?.trim())
-      if (!printId) return
+      console.log('Printing text: ', pageElement.textContent?.trim());
+      if (!printId) return;
 
       const printSettings: PrintSettings = {
         ...printerSettings,
@@ -315,39 +315,39 @@
         silent: true,
         inlineStyle: settings.inlineStyle,
         svgFilters: settings.svgFilters,
-        pageNumber: pageNumber // Include page number in settings
-      }
+        pageNumber: pageNumber, // Include page number in settings
+      };
 
-      emitter.send('print', { 
-        content: pageContent, 
-        settings: printSettings 
-      })
-      committedContent = []
-      
+      emitter.send('print', {
+        content: pageContent,
+        settings: printSettings,
+      });
+      committedContent = [];
+
       // Increment page number after successful print
-      pageNumber++
+      pageNumber++;
     } catch (error) {
-      console.error('❌ Error during print:', error)
-      isSuccessfulPrint = false
+      console.error('❌ Error during print:', error);
+      isSuccessfulPrint = false;
     }
   }
 
   // Initialize WebMidi
-  WebMidi.enable().catch((err) => console.error('WebMidi could not be enabled:', err))
+  WebMidi.enable().catch((err) => console.error('WebMidi could not be enabled:', err));
 
   // Listen for WebMidi events
   WebMidi.addListener('connected', (e) => {
-    console.log('WebMidi device connected:', e)
-    settings.setupControllers(WebMidi)
-  })
+    console.log('WebMidi device connected:', e);
+    settings.setupControllers(WebMidi);
+  });
 
   WebMidi.addListener('disconnected', (e) => {
-    console.log('WebMidi device disconnected:', e)
-  })
+    console.log('WebMidi device disconnected:', e);
+  });
 
   function clearAll(): void {
-    console.log('🗑️ Clearing all content')
-    committedContent = []
+    console.log('🗑️ Clearing all content');
+    committedContent = [];
   }
 </script>
 
@@ -369,14 +369,13 @@
             />
           {/each}
           {#if !isPrinting && currentSentence?.type}
-            <currentSentence.type
-              content={currentSentence.content}
-              settings={settings}
-              isCurrent
-            />
+            <currentSentence.type content={currentSentence.content} {settings} isCurrent />
           {/if}
-          <div class="page-number" style="position: absolute; bottom: 1em; right: 1em;font-size: 2rem;">
-            <BlockTxt content={`${pageNumber}`} settings={settings} />
+          <div
+            class="page-number"
+            style="position: absolute; bottom: 1em; right: 1em;font-size: 2rem;"
+          >
+            <BlockTxt content={`${pageNumber}`} {settings} />
           </div>
         </div>
       </page>
@@ -390,12 +389,12 @@
         bind:value={settings.inlineStyle}
         language="css"
         controllerSettings={settings.controllerSettings}
-        fontFamilys={fontFamilys}
+        {fontFamilys}
       />
 
       <hr />
 
-      <BlockTxt content="Text Preview" settings={settings} />
+      <BlockTxt content="Text Preview" {settings} />
 
       <hr />
 
@@ -411,27 +410,25 @@
 
       <div class="snapshotsContainer">
         {#each snapshots.snapshots as snapshot (snapshot.id)}
-          {@const staticControllerSettings = settings.controllerSettings.map(ctrl => ({
+          {@const staticControllerSettings = settings.controllerSettings.map((ctrl) => ({
             ...ctrl,
-            value: snapshot.controllerValues[ctrl.var] !== undefined ? 
-              snapshot.controllerValues[ctrl.var] : 
-              ctrl.value
+            value:
+              snapshot.controllerValues[ctrl.var] !== undefined
+                ? snapshot.controllerValues[ctrl.var]
+                : ctrl.value,
           }))}
-          
+
           <div class="snapshotItem">
-            <button 
-              class="snapshotPreview" 
-              onclick={() => applySnapshot(snapshot.id)}
-            >
-              <BlockTxt 
-                content={snapshot.name} 
+            <button class="snapshotPreview" onclick={() => applySnapshot(snapshot.id)}>
+              <BlockTxt
+                content={snapshot.name}
                 settings={{
                   inlineStyle: snapshot.inlineStyle,
                   svgFilters: snapshot.svgFilters,
-                  controllerSettings: $state.snapshot(staticControllerSettings as any[])
+                  controllerSettings: $state.snapshot(staticControllerSettings as any[]),
                 }}
               />
-              </button>
+            </button>
             <div class="snapshotActions">
               <button onclick={() => deleteSnapshot(snapshot.id)}>×</button>
             </div>
@@ -442,11 +439,9 @@
 
       <div class="printControls">
         <button onclick={printFile}>PRINT</button>
-        <input id="pageNumberInput" bind:value={pageNumber} type="number"/>
+        <input id="pageNumberInput" bind:value={pageNumber} type="number" />
         <button onclick={clearAll}>CLEAR ALL</button>
-        <button onclick={() => emitter.invoke('open-pdf-folder')}>
-          OPEN PDFs FOLDER
-        </button>
+        <button onclick={() => emitter.invoke('open-pdf-folder')}> OPEN PDFs FOLDER </button>
         <input bind:value={printerSettings.deviceName} type="text" disabled />
         <label><input bind:checked={printerSettings.forcePrint} type="checkbox" />Force Print</label
         >
@@ -529,8 +524,9 @@
   .content-context:hover {
     outline: 2px solid #00ff00;
   }
-  
-  .printControls, .snapshotControls {
+
+  .printControls,
+  .snapshotControls {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;

@@ -26,14 +26,17 @@ The example SCSS code features a single CSS rule set with various properties, in
 
   // text-shadow: 2px 2px 10px red;
   // text-shadow: 5px 5px #000;
-  text-shadow: 1px 1px 2px red, 0 0 1em blue, 0 0 0.2em blue;
-  
+  text-shadow:
+    1px 1px 2px red,
+    0 0 1em blue,
+    0 0 0.2em blue;
+
   // color: white;
   //text-shadow: 1px 1px 4px black, 0 0 1em black, 0 0 10px black;
-  
+
   filter: url(#outline);
   font-family: American Typewriter;
-  
+
   background: rgba($bgR * 2, $bgG, $bgB, $bgA);
   rotate: $r1 * 1deg;
   font-size: $fsz * 1em;
@@ -135,6 +138,7 @@ StyleSheet
 2. **Comments**: Line comments become LineComment nodes but don't affect the structure of declarations.
 
 3. **Property Values**: Values can be:
+
    - Simple (ValueName)
    - Complex (multiple ValueName nodes)
    - Function calls (CallExpression)

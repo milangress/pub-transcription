@@ -1,14 +1,14 @@
 <script lang="ts">
-  let messages = $state<string[]>([])
-  import { IpcListener } from '@electron-toolkit/typed-ipc/renderer'
-  import type { IpcRendererEvent } from 'src/types/ipc'
+  let messages = $state<string[]>([]);
+  import { IpcListener } from '@electron-toolkit/typed-ipc/renderer';
+  import type { IpcRendererEvent } from 'src/types/ipc';
 
-  const ipc = new IpcListener<IpcRendererEvent>()
+  const ipc = new IpcListener<IpcRendererEvent>();
 
   // Listen for transcription status updates
   ipc.on('whisper-ccp-stream:status', (_, value: string) => {
-    messages = [value, ...messages]
-  })
+    messages = [value, ...messages];
+  });
 </script>
 
 {#each messages as item}

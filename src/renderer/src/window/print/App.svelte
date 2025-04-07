@@ -1,22 +1,22 @@
 <script lang="ts">
-  import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer'
-  import type { PrintJob } from 'src/types/index.ts'
-  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc'
-  import { onMount, tick } from 'svelte'
+  import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
+  import type { PrintJob } from 'src/types/index.ts';
+  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
+  import { onMount, tick } from 'svelte';
 
-  const ipc = new IpcListener<IpcRendererEvent>()
-  const emitter = new IpcEmitter<IpcEvents>()
+  const ipc = new IpcListener<IpcRendererEvent>();
+  const emitter = new IpcEmitter<IpcEvents>();
 
-  let lastJobTimestamp = $state('Never')
-  let stylesLoadedLenght = $state(0)
-  let children = $state<NodeListOf<HTMLSpanElement> | null>(null)
+  let lastJobTimestamp = $state('Never');
+  let stylesLoadedLenght = $state(0);
+  let children = $state<NodeListOf<HTMLSpanElement> | null>(null);
 
-  let currentPrintId = $state<string | null>(null)
-  let printProcessStartTime = $state<number | null>(null)
-  
+  let currentPrintId = $state<string | null>(null);
+  let printProcessStartTime = $state<number | null>(null);
+
   // Refs for DOM elements
   let printContainer: HTMLElement;
-  
+
   // Content state
   let printContent = $state('');
   let inlineStyles = $state('');
@@ -27,157 +27,159 @@
       {
         msg: 'Waiting for print job...',
         error: false,
-        warning: false
-      }
-    ])
+        warning: false,
+      },
+    ]);
 
     #pushLog({
       msg,
       error = false,
-      warning = false
+      warning = false,
     }: {
-      msg: string
-      error?: boolean | Error
-      warning?: boolean
+      msg: string;
+      error?: boolean | Error;
+      warning?: boolean;
     }) {
-      const entry = { msg, error, warning }
-      this.#logs.push(entry)
+      const entry = { msg, error, warning };
+      this.#logs.push(entry);
     }
 
     #sideEffect(entry) {
-      const time = new Date().toTimeString().split(' ')[0]
-      const printIdTitle = currentPrintId ? `${currentPrintId} - ` : ''
-      const message = `[${time}] ${printIdTitle}${entry.msg}`
-      document.title = message
-      if (entry.error) console.error(message)
-      if (entry.warning) console.warn(message)
-      console.log(message)
+      const time = new Date().toTimeString().split(' ')[0];
+      const printIdTitle = currentPrintId ? `${currentPrintId} - ` : '';
+      const message = `[${time}] ${printIdTitle}${entry.msg}`;
+      document.title = message;
+      if (entry.error) console.error(message);
+      if (entry.warning) console.warn(message);
+      console.log(message);
     }
 
     set msg(value: string) {
-      this.#pushLog({ msg: value })
-      this.#sideEffect(this.state)
+      this.#pushLog({ msg: value });
+      this.#sideEffect(this.state);
     }
 
     set warn(value: string) {
-      this.#pushLog({ msg: value, warning: true })
-      this.#sideEffect(this.state)
+      this.#pushLog({ msg: value, warning: true });
+      this.#sideEffect(this.state);
     }
 
     set err(err: Error | string | unknown) {
       // TODO: send error back to main process
-      const errorMsg = err instanceof Error ? err.message : String(err)
-      this.#pushLog({ msg: `❌ ${errorMsg}`, error: err instanceof Error ? err : true })
-      this.#sideEffect(this.state)
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      this.#pushLog({ msg: `❌ ${errorMsg}`, error: err instanceof Error ? err : true });
+      this.#sideEffect(this.state);
     }
 
     get err(): Error {
-      if (this.state.error instanceof Error) return this.state.error
-      return new Error(this.state.msg)
+      if (this.state.error instanceof Error) return this.state.error;
+      return new Error(this.state.msg);
     }
 
     get state() {
-      return this.#logs[this.#logs.length - 1]
+      return this.#logs[this.#logs.length - 1];
     }
   }
 
-  const status = new Status()
+  const status = new Status();
 
   async function executePrint(content, settings) {
-    currentPrintId = settings.printId
-    ;(status.msg = '📝 ReadyToBePrinted:'), currentPrintId
+    currentPrintId = settings.printId;
+    (status.msg = '📝 ReadyToBePrinted:'), currentPrintId;
 
     try {
-      await emitter.invoke('PrintWindow:ReadyToBePrinted', { content, settings })
+      await emitter.invoke('PrintWindow:ReadyToBePrinted', { content, settings });
     } catch (error) {
-      status.err = error
+      status.err = error;
     }
   }
 
   onMount(() => {
-    status.msg = '🖨️ Print window initialized'
+    status.msg = '🖨️ Print window initialized';
 
     // Handle print job setup
     ipc.on(
       'PrintWindow:printJob',
       async (_event, { content, settings, attempt = 1, maxRetries = 1 }: PrintJob) => {
         try {
-          status.msg = `🖨️ Processing: ${settings.printId} (Attempt ${attempt}/${maxRetries})`
+          status.msg = `🖨️ Processing: ${settings.printId} (Attempt ${attempt}/${maxRetries})`;
 
-          printProcessStartTime = Date.now()
-          lastJobTimestamp = new Date().toLocaleTimeString()
+          printProcessStartTime = Date.now();
+          lastJobTimestamp = new Date().toLocaleTimeString();
 
-          if (!settings.printId) throw (status.err = 'Print job received without printId')
-          if (!content) throw (status.err = 'Print job received without content')
+          if (!settings.printId) throw (status.err = 'Print job received without printId');
+          if (!content) throw (status.err = 'Print job received without content');
 
           // Clear the container
           printContent = '';
-          
+
           // Update styles
           if (settings.inlineStyle) {
             inlineStyles = settings.inlineStyle;
             stylesLoadedLenght = settings.inlineStyle.length;
           } else {
-            status.warn = '⚠️ No inline styles provided for print job'
+            status.warn = '⚠️ No inline styles provided for print job';
             inlineStyles = '';
-            stylesLoadedLenght = 0
+            stylesLoadedLenght = 0;
           }
 
           // Inject SVG filters if they exist
           if (settings.svgFilters) {
-            status.msg = '🎨 Adding SVG filters'
+            status.msg = '🎨 Adding SVG filters';
             svgFiltersContent = settings.svgFilters;
           } else {
-            status.warn = '⚠️ No SVG filters provided for print job'
+            status.warn = '⚠️ No SVG filters provided for print job';
             svgFiltersContent = '';
           }
 
           // Set the content
           printContent = content;
-          
+
           // Wait for Svelte to update the DOM
           await tick();
-          
+
           // Get child spans for debugging
           if (printContainer) {
             children = printContainer.querySelectorAll('span');
-            
+
             if (children.length === 0) {
-              status.warn = '⚠️ Print content contains no text spans'
+              status.warn = '⚠️ Print content contains no text spans';
             }
           }
 
-          status.msg = 'Content loaded, waiting 5 seconds before print...'
+          status.msg = 'Content loaded, waiting 5 seconds before print...';
 
-          await new Promise((resolve) => setTimeout(resolve, 5000))
+          await new Promise((resolve) => setTimeout(resolve, 5000));
 
-          status.msg = 'Printing...'
+          status.msg = 'Printing...';
 
-          console.log('Executing print with settings:', { ...settings, printId: currentPrintId })
+          console.log('Executing print with settings:', { ...settings, printId: currentPrintId });
 
           // Execute print with the same settings including printId
-          await executePrint(printContainer.innerHTML, settings)
+          await executePrint(printContainer.innerHTML, settings);
         } catch (error) {
-          status.err = error
+          status.err = error;
         }
-      }
-    )
-  })
+      },
+    );
+  });
 </script>
 
 <div id="print-window-wrapper">
   <!-- Add dynamic styles using svelte syntax -->
   {#if inlineStyles}
-    <style>{@html inlineStyles}</style>
+    <style>
+{@html inlineStyles}
+    </style>
   {/if}
-  
+
   <!-- SVG filters container-->
   {#if svgFiltersContent}
     <div id="svg-filters" style="display: none">
       {@html svgFiltersContent}
     </div>
   {/if}
-  
+
   <div class="page-context">
     <page size="A3">
       <div bind:this={printContainer} id="print-container">

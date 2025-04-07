@@ -1,10 +1,10 @@
 <script lang="ts">
   let { knobNR = 0 } = $props<{
-    knobNR?: number
-  }>()
+    knobNR?: number;
+  }>();
 
-  const maxKnobs: number = 16
-  const midiKnobs: number[] = [...Array(maxKnobs).keys()]
+  const maxKnobs: number = 16;
+  const midiKnobs: number[] = [...Array(maxKnobs).keys()];
 </script>
 
 <div class="midiController">

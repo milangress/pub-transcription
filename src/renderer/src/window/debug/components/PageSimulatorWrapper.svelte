@@ -1,20 +1,15 @@
 <script lang="ts">
-  import Page from './PageSimulator.svelte'
+  import Page from './PageSimulator.svelte';
 
   interface Props {
     // Props
-    scale?: number
-    showControls?: boolean
-    position?: string // 'right', 'center', 'left'
-    children?: import('svelte').Snippet
+    scale?: number;
+    showControls?: boolean;
+    position?: string; // 'right', 'center', 'left'
+    children?: import('svelte').Snippet;
   }
 
-  let {
-    scale = 1,
-    showControls = true,
-    position = 'right',
-    children
-  }: Props = $props()
+  let { scale = 1, showControls = true, position = 'right', children }: Props = $props();
 </script>
 
 <div

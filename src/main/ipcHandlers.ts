@@ -1,24 +1,24 @@
-import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/main'
-import { app, BrowserWindow, shell } from 'electron'
-import Store from 'electron-store'
-import { EventEmitter } from 'events'
-import { existsSync, promises as fs } from 'fs'
-import { join } from 'path'
+import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/main';
+import { app, BrowserWindow, shell } from 'electron';
+import Store from 'electron-store';
+import { EventEmitter } from 'events';
+import { existsSync, promises as fs } from 'fs';
+import { join } from 'path';
 
-import type { PrintCompletionEvent, PrintStatusMessage, SettingsSnapshot } from '../types'
-import type { IpcEvents, IpcRendererEvent } from '../types/ipc'
-import { notificationManager } from './managers/NotificationManager'
-import { printWindowManager } from './managers/PrintWindowManager'
-import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printMessages'
-import { PrintQueue } from './PrintQueue'
-import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager'
+import type { PrintCompletionEvent, PrintStatusMessage, SettingsSnapshot } from '../types';
+import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
+import { notificationManager } from './managers/NotificationManager';
+import { printWindowManager } from './managers/PrintWindowManager';
+import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printMessages';
+import { PrintQueue } from './PrintQueue';
+import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager';
 
-const store = new Store()
-const ipc = new IpcListener<IpcEvents>()
-const emitter = new IpcEmitter<IpcRendererEvent>()
-const printEvents = new EventEmitter()
+const store = new Store();
+const ipc = new IpcListener<IpcEvents>();
+const emitter = new IpcEmitter<IpcRendererEvent>();
+const printEvents = new EventEmitter();
 
-let printQueue: PrintQueue | null = null
+let printQueue: PrintQueue | null = null;
 
 // Default print options
 const DEFAULT_PRINT_OPTIONS = {
@@ -27,29 +27,29 @@ const DEFAULT_PRINT_OPTIONS = {
     top: 0,
     bottom: 0,
     left: 0,
-    right: 0
+    right: 0,
   },
   pageSize: 'A3' as const,
   printBackground: true,
   printSelectionOnly: false,
   landscape: false,
   silent: true,
-  scaleFactor: 100
-}
+  scaleFactor: 100,
+};
 
 // Helper function to send messages to all windows
 function sendToAllWindows(channel: keyof IpcRendererEvent, status: PrintStatusMessage): void {
-  const allWindows = BrowserWindow.getAllWindows()
-  const windows = [...allWindows].filter(Boolean)
+  const allWindows = BrowserWindow.getAllWindows();
+  const windows = [...allWindows].filter(Boolean);
 
   windows.forEach((window) => {
-    console.log('Sending to window', channel, status)
+    console.log('Sending to window', channel, status);
     if (window && !window.isDestroyed()) {
-      emitter.send(window.webContents, channel, status)
+      emitter.send(window.webContents, channel, status);
     } else {
-      console.log('Window is not available', window)
+      console.log('Window is not available', window);
     }
-  })
+  });
 }
 
 export function setupIpcHandlers(): void {
@@ -57,208 +57,208 @@ export function setupIpcHandlers(): void {
   ipc.on('print', async (event, request) => {
     try {
       if (!printQueue) {
-        printQueue = new PrintQueue(printEvents)
+        printQueue = new PrintQueue(printEvents);
       }
 
       if (!request.content || typeof request.content !== 'string') {
-        throw new Error('Invalid content format')
+        throw new Error('Invalid content format');
       }
       if (!request.settings || !request.settings.printId) {
-        throw new Error('Print settings or ID missing')
+        throw new Error('Print settings or ID missing');
       }
 
       console.log('📝 Print request received:', {
         contentLength: request.content.length,
-        PrintId: request.settings.printId
-      })
+        PrintId: request.settings.printId,
+      });
 
       // Create notification for queued print job
       notificationManager.showNotification(request.settings.printId, 'Print Job Queued', {
         body: `Your print job has been added to the queue.`,
-        silent: true
-      })
+        silent: true,
+      });
 
-      await printQueue.add(request.content, request.settings)
+      await printQueue.add(request.content, request.settings);
 
       // Send queue notification immediately
       emitter.send(event.sender, 'print-queued', {
         success: true,
-        printId: request.settings.printId
-      })
+        printId: request.settings.printId,
+      });
     } catch (error) {
-      console.error('Print queue error:', error)
+      console.error('Print queue error:', error);
 
       // Show error notification
       if (request.settings?.printId) {
         notificationManager.showNotification(request.settings.printId, 'Print Error', {
           body: `Error: ${error instanceof Error ? error.message : String(error)}`,
-          silent: false
-        })
+          silent: false,
+        });
       }
 
       emitter.send(event.sender, 'print-queued', {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        printId: request.settings?.printId
-      })
+        printId: request.settings?.printId,
+      });
     }
-  })
+  });
 
   // Store value handlers
   ipc.handle('getStoreValue', (_event, key) => {
-    return store.get(key)
-  })
+    return store.get(key);
+  });
 
   ipc.handle('setStoreValue', (_event, key, value) => {
-    return store.set(key, value)
-  })
+    return store.set(key, value);
+  });
 
   // Settings snapshot handlers
   ipc.handle('save-settings-snapshot', async (_event, snapshot: SettingsSnapshot) => {
     try {
-      return await saveSnapshot(snapshot)
+      return await saveSnapshot(snapshot);
     } catch (error) {
-      console.error('Error in save-settings-snapshot handler:', error)
-      throw error
+      console.error('Error in save-settings-snapshot handler:', error);
+      throw error;
     }
-  })
+  });
 
   ipc.handle('get-settings-snapshots', async () => {
     try {
-      return await getSnapshots()
+      return await getSnapshots();
     } catch (error) {
-      console.error('Error in get-settings-snapshots handler:', error)
+      console.error('Error in get-settings-snapshots handler:', error);
       return {
         snapshots: [],
         success: false,
-        error: error instanceof Error ? error.message : String(error)
-      }
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
-  })
+  });
 
   ipc.handle('load-settings-snapshot', async (_event, id: string) => {
     try {
-      return await loadSnapshot(id)
+      return await loadSnapshot(id);
     } catch (error) {
-      console.error(`Error in load-settings-snapshot handler for ID ${id}:`, error)
-      throw error
+      console.error(`Error in load-settings-snapshot handler for ID ${id}:`, error);
+      throw error;
     }
-  })
+  });
 
   ipc.handle('delete-settings-snapshot', async (_event, id: string) => {
     try {
-      return await deleteSnapshot(id)
+      return await deleteSnapshot(id);
     } catch (error) {
-      console.error(`Error in delete-settings-snapshot handler for ID ${id}:`, error)
-      return false
+      console.error(`Error in delete-settings-snapshot handler for ID ${id}:`, error);
+      return false;
     }
-  })
+  });
 
   // PDF folder handler
   ipc.handle('open-pdf-folder', async () => {
-    const pdfDir = join(app.getPath('userData'), 'pdfs')
+    const pdfDir = join(app.getPath('userData'), 'pdfs');
     if (!existsSync(pdfDir)) {
-      await fs.mkdir(pdfDir, { recursive: true })
+      await fs.mkdir(pdfDir, { recursive: true });
     }
-    await shell.openPath(pdfDir)
-    return true
-  })
+    await shell.openPath(pdfDir);
+    return true;
+  });
 
   // Print execution handler
   ipc.handle('PrintWindow:ReadyToBePrinted', async (_event, request) => {
     try {
       // Get the print window from the manager
-      const printWindow = printWindowManager.getOrCreatePrintWindow()
+      const printWindow = printWindowManager.getOrCreatePrintWindow();
 
       console.log('📝 Execute print request:', {
         contentLength: request.content.length,
-        printId: request.settings.printId
-      })
+        printId: request.settings.printId,
+      });
 
       if (!request.settings || !request.settings.printId) {
-        throw new Error('Print ID is required')
+        throw new Error('Print ID is required');
       }
 
       const printOptions = {
         ...DEFAULT_PRINT_OPTIONS,
-        silent: request.settings.silent ?? DEFAULT_PRINT_OPTIONS.silent
-      }
+        silent: request.settings.silent ?? DEFAULT_PRINT_OPTIONS.silent,
+      };
 
       const pdfOptions = {
         margins: printOptions.margins,
         pageSize: printOptions.pageSize,
         landscape: printOptions.landscape,
-        printBackground: printOptions.printBackground
-      }
+        printBackground: printOptions.printBackground,
+      };
 
       const statusMsg = createPrintStatusMessage(
         request.settings.printId,
         PRINT_ACTIONS.PRINT_START,
         PRINT_STATUS.INFO,
-        { message: '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥' }
-      )
-      sendToAllWindows('print-status', statusMsg)
+        { message: '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥' },
+      );
+      sendToAllWindows('print-status', statusMsg);
 
       // Handle direct printing
       if (request.settings.forcePrint === true) {
         await new Promise<void>((resolve, reject) => {
-          console.log('Printing...', printOptions)
+          console.log('Printing...', printOptions);
           printWindow.webContents.print(printOptions, (success, errorType) => {
             if (!success) {
-              console.error('Printing failed', errorType)
+              console.error('Printing failed', errorType);
               const errorMsg = createPrintStatusMessage(
                 request.settings.printId,
                 PRINT_ACTIONS.PRINT_COMPLETE,
                 PRINT_STATUS.ERROR,
-                { message: 'Printing failed', error: errorType }
-              )
-              sendToAllWindows('print-status', errorMsg)
+                { message: 'Printing failed', error: errorType },
+              );
+              sendToAllWindows('print-status', errorMsg);
 
               // Update notification for print failure
               notificationManager.showNotification(request.settings.printId, 'Print Failed', {
                 body: `Printing failed: ${errorType}`,
-                silent: false
-              })
+                silent: false,
+              });
 
-              reject(new Error(errorType))
+              reject(new Error(errorType));
             } else {
-              console.log('Printing completed')
+              console.log('Printing completed');
               const successMsg = createPrintStatusMessage(
                 request.settings.printId,
                 PRINT_ACTIONS.PRINT_COMPLETE,
                 PRINT_STATUS.SUCCESS,
-                { message: '🖨️ Print completed' }
-              )
-              sendToAllWindows('print-status', successMsg)
+                { message: '🖨️ Print completed' },
+              );
+              sendToAllWindows('print-status', successMsg);
 
               // Update notification for print completion
               // We'll update it again if PDF is also saved
               notificationManager.showNotification(request.settings.printId, 'Print Completed', {
                 body: '🖨️ Print job completed successfully',
-                silent: true
-              })
+                silent: true,
+              });
 
-              resolve()
+              resolve();
             }
-          })
-        })
+          });
+        });
       }
 
       // Handle PDF saving
-      const dateString = new Date().toISOString().replace(/:/g, '-')
-      const pdfDir = join(app.getPath('userData'), 'pdfs')
+      const dateString = new Date().toISOString().replace(/:/g, '-');
+      const pdfDir = join(app.getPath('userData'), 'pdfs');
 
       if (!existsSync(pdfDir)) {
-        await fs.mkdir(pdfDir, { recursive: true })
+        await fs.mkdir(pdfDir, { recursive: true });
       }
 
-      const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`)
-      console.log('Printing to PDF...', pdfPath, pdfOptions)
-      const pdfData = await printWindow.webContents.printToPDF(pdfOptions)
+      const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`);
+      console.log('Printing to PDF...', pdfPath, pdfOptions);
+      const pdfData = await printWindow.webContents.printToPDF(pdfOptions);
 
       if (pdfData) {
-        await fs.writeFile(pdfPath, pdfData)
-        console.log(`Wrote PDF successfully to ${pdfPath}`)
+        await fs.writeFile(pdfPath, pdfData);
+        console.log(`Wrote PDF successfully to ${pdfPath}`);
 
         const pdfMsg = createPrintStatusMessage(
           request.settings.printId,
@@ -266,76 +266,76 @@ export function setupIpcHandlers(): void {
           PRINT_STATUS.SUCCESS,
           {
             message: `💦 Wrote PDF successfully to ${pdfPath}`,
-            path: pdfPath
-          }
-        )
-        sendToAllWindows('print-status', pdfMsg)
+            path: pdfPath,
+          },
+        );
+        sendToAllWindows('print-status', pdfMsg);
 
         // Create or update notification about completed job
         // This notification combines both print and PDF status if forcePrint was enabled
         const notificationTitle = request.settings.forcePrint
           ? 'Print Job & PDF Completed'
-          : 'PDF Generated Successfully'
+          : 'PDF Generated Successfully';
 
         const notificationBody = request.settings.forcePrint
           ? `Print completed and PDF saved. Click to open.`
-          : `PDF saved successfully. Click to open.`
+          : `PDF saved successfully. Click to open.`;
 
         notificationManager.showNotification(request.settings.printId, notificationTitle, {
           body: notificationBody,
           silent: true,
-          path: pdfPath
-        })
+          path: pdfPath,
+        });
 
         // Emit success event for PrintQueue
         const completionEvent: PrintCompletionEvent = {
           printId: request.settings.printId,
-          success: true
-        }
-        printEvents.emit('INTERNAL-PrintQueueEvent:complete', completionEvent)
+          success: true,
+        };
+        printEvents.emit('INTERNAL-PrintQueueEvent:complete', completionEvent);
       }
 
-      return true
+      return true;
     } catch (error) {
-      console.error('Print/PDF error:', error)
+      console.error('Print/PDF error:', error);
       const errorMsg = createPrintStatusMessage(
         request.settings.printId,
         PRINT_ACTIONS.PRINT_ERROR,
         PRINT_STATUS.ERROR,
         {
           message: `🥵 Error: ${error instanceof Error ? error.message : String(error)}`,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      )
-      sendToAllWindows('print-status', errorMsg)
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+      sendToAllWindows('print-status', errorMsg);
 
       // Update notification for error
       notificationManager.showNotification(request.settings.printId, 'Print Job Failed', {
         body: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        silent: false
-      })
+        silent: false,
+      });
 
       // Emit error event for PrintQueue
       const completionEvent: PrintCompletionEvent = {
         printId: request.settings.printId,
         success: false,
-        error: error instanceof Error ? error.message : String(error)
-      }
-      printEvents.emit('INTERNAL-PrintQueueEvent:complete', completionEvent)
+        error: error instanceof Error ? error.message : String(error),
+      };
+      printEvents.emit('INTERNAL-PrintQueueEvent:complete', completionEvent);
 
-      throw error
+      throw error;
     }
-  })
+  });
 
   // Print status handler
   ipc.on('print-status', (_event, status) => {
     if (!status.printId) {
-      console.error('❌ Print status received without printId:', status)
-      return
+      console.error('❌ Print status received without printId:', status);
+      return;
     }
 
     // Ensure we have a print window through the manager
-    printWindowManager.getOrCreatePrintWindow()
+    printWindowManager.getOrCreatePrintWindow();
 
     const statusMsg = createPrintStatusMessage(
       status.printId,
@@ -343,11 +343,11 @@ export function setupIpcHandlers(): void {
       status.success ? PRINT_STATUS.SUCCESS : PRINT_STATUS.ERROR,
       {
         message: status.error || (status.success ? '🖨️ Print completed' : '❌ Print failed'),
-        error: status.error
-      }
-    )
-    sendToAllWindows('print-status', statusMsg)
-  })
+        error: status.error,
+      },
+    );
+    sendToAllWindows('print-status', statusMsg);
+  });
 
   // Set up print events listener for when print queue jobs are completed
   printEvents.on('INTERNAL-PrintQueueEvent:complete', (event: PrintCompletionEvent) => {
@@ -359,9 +359,9 @@ export function setupIpcHandlers(): void {
         // For successful jobs, the notification will be dismissed after a delay
         // to give the user time to see the success message
         setTimeout(() => {
-          notificationManager.dismissNotification(event.printId)
-        }, 5000) // Dismiss after 5 seconds
+          notificationManager.dismissNotification(event.printId);
+        }, 5000); // Dismiss after 5 seconds
       }
     }
-  })
+  });
 }

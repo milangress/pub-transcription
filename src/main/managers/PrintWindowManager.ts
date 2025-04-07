@@ -1,24 +1,24 @@
-import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
-import { BrowserWindow, app } from 'electron'
-import { join } from 'path'
-import type { PrintJob } from '../../types'
-import type { IpcRendererEvent } from '../../types/ipc'
+import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
+import { BrowserWindow, app } from 'electron';
+import { join } from 'path';
+import type { PrintJob } from '../../types';
+import type { IpcRendererEvent } from '../../types/ipc';
 
-const emitter = new IpcEmitter<IpcRendererEvent>()
+const emitter = new IpcEmitter<IpcRendererEvent>();
 
 /**
  * Manages the print window instance, handling creation, recreation, and state
  */
 export class PrintWindowManager {
-  private printWindow: BrowserWindow | null = null
-  private debuggerAttached = false
+  private printWindow: BrowserWindow | null = null;
+  private debuggerAttached = false;
 
   /**
    * Creates a print window if one doesn't exist or returns the existing one
    */
   public getOrCreatePrintWindow(): BrowserWindow {
     if (this.printWindow && !this.printWindow.isDestroyed()) {
-      return this.printWindow
+      return this.printWindow;
     }
 
     const options = {
@@ -30,89 +30,89 @@ export class PrintWindowManager {
         nodeIntegration: true,
         contextIsolation: false,
         preload: join(__dirname, '../preload/index.js'),
-        sandbox: false
-      }
-    }
+        sandbox: false,
+      },
+    };
 
-    this.printWindow = new BrowserWindow(options)
+    this.printWindow = new BrowserWindow(options);
 
     if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-      this.printWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/debug.html`)
+      this.printWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/debug.html`);
     } else {
-      this.printWindow.loadFile(join(__dirname, '../renderer/debug.html'))
+      this.printWindow.loadFile(join(__dirname, '../renderer/debug.html'));
     }
 
     // Initialize debugger state for new window
-    this.debuggerAttached = false
+    this.debuggerAttached = false;
 
     // Clean up debugger on window close
     this.printWindow.on('closed', () => {
       if (this.debuggerAttached && this.printWindow?.webContents) {
         try {
-          this.printWindow.webContents.debugger.detach()
+          this.printWindow.webContents.debugger.detach();
         } catch (error) {
-          console.error('Failed to detach debugger:', error)
+          console.error('Failed to detach debugger:', error);
         }
-        this.debuggerAttached = false
+        this.debuggerAttached = false;
       }
-      this.printWindow = null
-    })
+      this.printWindow = null;
+    });
 
-    return this.printWindow
+    return this.printWindow;
   }
 
   public async ensurePrintWindowIsReady(): Promise<BrowserWindow> {
-    const window = this.getOrCreatePrintWindow()
+    const window = this.getOrCreatePrintWindow();
     if (!window || window.isDestroyed()) {
-      throw new Error('Print window is not available')
+      throw new Error('Print window is not available');
     }
 
     if (window.webContents.isLoading()) {
       await new Promise<void>((resolve) => {
         const checkReady = setInterval(() => {
           if (!window.webContents.isLoading()) {
-            clearInterval(checkReady)
-            resolve()
+            clearInterval(checkReady);
+            resolve();
           }
-        }, 100)
-      })
+        }, 100);
+      });
     }
 
-    return window
+    return window;
   }
 
   /**
    * Sends content to the print window for printing
    */
   public async sendJobToPrintWindow(printJob: PrintJob): Promise<void> {
-    const printWindow = await this.ensurePrintWindowIsReady()
+    const printWindow = await this.ensurePrintWindowIsReady();
 
     if (typeof printJob.content !== 'string') {
-      throw new Error('Print content must be a string')
+      throw new Error('Print content must be a string');
     }
 
     if (!printJob.settings?.printId) {
-      throw new Error('Print ID is required in settings')
+      throw new Error('Print ID is required in settings');
     }
 
-    console.log(`Sending job ${printJob.settings.printId} to print window`)
-    emitter.send(printWindow.webContents, 'PrintWindow:printJob', printJob)
+    console.log(`Sending job ${printJob.settings.printId} to print window`);
+    emitter.send(printWindow.webContents, 'PrintWindow:printJob', printJob);
   }
 
   /**
    * Gets current print window instance
    */
   public getPrintWindow(): BrowserWindow | null {
-    return this.printWindow
+    return this.printWindow;
   }
 
   /**
    * Shows the print window
    */
   public showPrintWindow(): void {
-    const window = this.getOrCreatePrintWindow()
+    const window = this.getOrCreatePrintWindow();
     if (window && !window.isDestroyed()) {
-      window.show()
+      window.show();
     }
   }
 
@@ -120,9 +120,9 @@ export class PrintWindowManager {
    * Checks if we're in development mode
    */
   private isDev(): boolean {
-    return !app.isPackaged
+    return !app.isPackaged;
   }
 }
 
 // Create a singleton instance
-export const printWindowManager = new PrintWindowManager()
+export const printWindowManager = new PrintWindowManager();

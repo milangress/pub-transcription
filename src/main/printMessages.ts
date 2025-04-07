@@ -1,4 +1,4 @@
-import type { PrintAction, PrintStatus, PrintStatusMessage } from '../types'
+import type { PrintAction, PrintStatus, PrintStatusMessage } from '../types';
 
 /**
  * Print status action types
@@ -8,8 +8,8 @@ export const PRINT_ACTIONS = {
   PRINT_START: 'PRINT_START',
   PRINT_COMPLETE: 'PRINT_COMPLETE',
   PDF_SAVE: 'PDF_SAVE',
-  PRINT_ERROR: 'PRINT_ERROR'
-} as const
+  PRINT_ERROR: 'PRINT_ERROR',
+} as const;
 
 /**
  * Print status types
@@ -18,14 +18,14 @@ export const PRINT_ACTIONS = {
 export const PRINT_STATUS = {
   SUCCESS: 'SUCCESS',
   ERROR: 'ERROR',
-  INFO: 'INFO'
-} as const
+  INFO: 'INFO',
+} as const;
 
 interface PrintStatusDetails {
-  message?: string
-  error?: string
-  path?: string
-  details?: Record<string, unknown>
+  message?: string;
+  error?: string;
+  path?: string;
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -40,13 +40,13 @@ export function createPrintStatusMessage(
   printId: string,
   action: PrintAction,
   status: PrintStatus,
-  details: PrintStatusDetails = {}
+  details: PrintStatusDetails = {},
 ): PrintStatusMessage {
   return {
     id: printId,
     timestamp: Date.now(),
     action,
     status,
-    ...details
-  }
+    ...details,
+  };
 }

@@ -1,11 +1,11 @@
 <script lang="ts">
   interface Props {
-    content?: string
-    isCurrent?: boolean
+    content?: string;
+    isCurrent?: boolean;
   }
 
-  let { content = 'Hello World', isCurrent = false }: Props = $props()
-  let isCurrentClass = $derived(isCurrent ? 'current' : '')
+  let { content = 'Hello World', isCurrent = false }: Props = $props();
+  let isCurrentClass = $derived(isCurrent ? 'current' : '');
 </script>
 
 <img src={content} alt="img" class={isCurrentClass} />

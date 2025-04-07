@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { quintOut } from 'svelte/easing'
-  import { slide } from 'svelte/transition'
+  import { quintOut } from 'svelte/easing';
+  import { slide } from 'svelte/transition';
 
   interface Status {
-    emoji: string
-    text?: string
+    emoji: string;
+    text?: string;
   }
 
   let { printId, status } = $props<{
-    printId: string
-    status: Status
-  }>()
+    printId: string;
+    status: Status;
+  }>();
 </script>
 
 <div class="status-item" title="{printId} – {status.text || 'Print status update'}">

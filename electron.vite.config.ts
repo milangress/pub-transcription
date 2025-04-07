@@ -1,20 +1,20 @@
-import { svelte } from '@sveltejs/vite-plugin-svelte'
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import { resolve } from 'path'
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import { resolve } from 'path';
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/preload/index.ts')
-        }
-      }
-    }
+          index: resolve(__dirname, 'src/preload/index.ts'),
+        },
+      },
+    },
   },
   renderer: {
     plugins: [svelte()],
@@ -23,9 +23,9 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'src/renderer/index.html'),
           print: resolve(__dirname, 'src/renderer/print.html'),
-          debug: resolve(__dirname, 'src/renderer/debug.html')
-        }
-      }
+          debug: resolve(__dirname, 'src/renderer/debug.html'),
+        },
+      },
     },
     resolve: {
       alias: {
@@ -35,8 +35,8 @@ export default defineConfig({
         '@utils': resolve('src/renderer/src/utils'),
         '@preload': resolve('src/preload'),
         '@electron': resolve('src/main'),
-        '@types': resolve('src/types')
-      }
-    }
-  }
-})
+        '@types': resolve('src/types'),
+      },
+    },
+  },
+});

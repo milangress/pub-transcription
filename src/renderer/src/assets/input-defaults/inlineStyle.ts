@@ -21,4 +21,4 @@ export default `.el {
   font-size: $fsz * 1em;
   font-family: NIKITA-Regular;
 } 
-`
+`;

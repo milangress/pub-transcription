@@ -1,14 +1,14 @@
-import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
-import { BrowserWindow } from 'electron'
-import type { IpcRendererEvent } from '../../types/ipc'
+import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
+import { BrowserWindow } from 'electron';
+import type { IpcRendererEvent } from '../../types/ipc';
 
-const emitter = new IpcEmitter<IpcRendererEvent>()
+const emitter = new IpcEmitter<IpcRendererEvent>();
 interface SimulationController {
-  start: () => void
-  stop: () => void
+  start: () => void;
+  stop: () => void;
 }
 
-let simulationInterval: NodeJS.Timeout | null = null
+let simulationInterval: NodeJS.Timeout | null = null;
 
 /**
  * Simulates a real-time transcript stream for development testing purposes.
@@ -23,7 +23,7 @@ let simulationInterval: NodeJS.Timeout | null = null
 export function simulatedTranscriptController(
   mainWindow: BrowserWindow,
   sendMessageEvery = 1800,
-  balance = 0.2
+  balance = 0.2,
 ): SimulationController {
   // Words that are saved in the printed transcript
   const naturalPhrases: string[] = [
@@ -69,8 +69,8 @@ export function simulatedTranscriptController(
     'Like',
     'So basically',
     'The thing is',
-    "What I'm trying to say is"
-  ]
+    "What I'm trying to say is",
+  ];
 
   // Segments that are typicaly produced by whisper and are ignored by the print preview
   const unwantedSegments: string[] = [
@@ -83,66 +83,66 @@ export function simulatedTranscriptController(
     '[',
     '(buzzer)',
     '(buzzing)',
-    '.'
-  ]
+    '.',
+  ];
 
   function getRandomMessage(): string {
     // 20% chance for unwanted segments
     if (Math.random() < balance) {
-      return unwantedSegments[Math.floor(Math.random() * unwantedSegments.length)]
+      return unwantedSegments[Math.floor(Math.random() * unwantedSegments.length)];
     }
 
     // Generate a more natural sounding message
-    const wordCount = Math.floor(Math.random() * 3) + 1 // 1-3 phrases for variety
-    const sentence: string[] = []
+    const wordCount = Math.floor(Math.random() * 3) + 1; // 1-3 phrases for variety
+    const sentence: string[] = [];
     for (let i = 0; i < wordCount; i++) {
-      sentence.push(naturalPhrases[Math.floor(Math.random() * naturalPhrases.length)])
+      sentence.push(naturalPhrases[Math.floor(Math.random() * naturalPhrases.length)]);
     }
-    return sentence.join(' ')
+    return sentence.join(' ');
   }
 
   function simulateStream(): void {
     // Clear any existing interval
     if (simulationInterval) {
-      clearInterval(simulationInterval)
-      simulationInterval = null
+      clearInterval(simulationInterval);
+      simulationInterval = null;
     }
 
     simulationInterval = setInterval(() => {
       if (!mainWindow || mainWindow.isDestroyed()) {
         if (simulationInterval) {
-          clearInterval(simulationInterval)
-          simulationInterval = null
+          clearInterval(simulationInterval);
+          simulationInterval = null;
         }
-        return
+        return;
       }
 
-      const message = getRandomMessage()
+      const message = getRandomMessage();
 
       // Every 3-5 messages, send a NEW message
       if (Math.random() < 0.25) {
-        emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', `${message}NEW`)
+        emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', `${message}NEW`);
       } else {
-        emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', message)
+        emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', message);
       }
-    }, sendMessageEvery)
+    }, sendMessageEvery);
 
     // Clean up interval when window is closed or reloaded
     mainWindow.on('closed', () => {
       if (simulationInterval) {
-        clearInterval(simulationInterval)
-        simulationInterval = null
+        clearInterval(simulationInterval);
+        simulationInterval = null;
       }
-    })
+    });
   }
 
   return {
     start: simulateStream,
     stop: (): void => {
       if (simulationInterval) {
-        clearInterval(simulationInterval)
-        simulationInterval = null
+        clearInterval(simulationInterval);
+        simulationInterval = null;
       }
-    }
-  }
+    },
+  };
 }

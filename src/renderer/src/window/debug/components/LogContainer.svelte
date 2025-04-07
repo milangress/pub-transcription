@@ -1,121 +1,120 @@
 <script lang="ts">
-  import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer'
-  import type { IpcEvents } from 'src/types/ipc'
-  const emitter = new IpcEmitter<IpcEvents>()
+  import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer';
+  import type { IpcEvents } from 'src/types/ipc';
+  const emitter = new IpcEmitter<IpcEvents>();
 
-  import { onMount, untrack } from 'svelte'
+  import { onMount, untrack } from 'svelte';
 
   interface LogEntry {
-    timestamp: string
-    message: string
-    pdfUrl?: string | null
-    spanCount?: number | null
-    type: string
-    printId?: string | null
-    isOldSession?: boolean
+    timestamp: string;
+    message: string;
+    pdfUrl?: string | null;
+    spanCount?: number | null;
+    type: string;
+    printId?: string | null;
+    isOldSession?: boolean;
   }
 
-  let { logs = $bindable<LogEntry[]>([]) } = $props()
-  let logContainer = $state<HTMLDivElement>()
-  let shouldAutoScroll = $state(true)
-  const MAX_STORED_LOGS = 200
-  let isFirstLoad = $state(true)
+  let { logs = $bindable<LogEntry[]>([]) } = $props();
+  let logContainer = $state<HTMLDivElement>();
+  let shouldAutoScroll = $state(true);
+  const MAX_STORED_LOGS = 200;
+  let isFirstLoad = $state(true);
 
-  let previousLogs = $state<LogEntry[]>([])
+  let previousLogs = $state<LogEntry[]>([]);
 
   // Load saved logs on mount
   onMount(async () => {
     try {
-      const savedLogs = ((await emitter.invoke('getStoreValue', 'printLogs')) || []) as LogEntry[]
+      const savedLogs = ((await emitter.invoke('getStoreValue', 'printLogs')) || []) as LogEntry[];
       if (savedLogs.length > 0) {
         // Add session divider only on first load
         const sessionDivider: LogEntry = {
           timestamp: new Date().toLocaleTimeString(),
           message: '---------------- Previous Session ----------------',
           type: 'divider',
-          isOldSession: true
-        }
-
+          isOldSession: true,
+        };
 
         // Mark all saved logs as old session
         const oldLogs = savedLogs.map((log: LogEntry) => ({
           ...log,
-          isOldSession: true
-        }))
+          isOldSession: true,
+        }));
 
-        previousLogs = [...oldLogs, sessionDivider]
-        isFirstLoad = false
+        previousLogs = [...oldLogs, sessionDivider];
+        isFirstLoad = false;
 
         // Initial scroll to bottom
         requestAnimationFrame(() => {
-          scrollToBottom()
-        })
+          scrollToBottom();
+        });
       }
     } catch (error) {
-      console.error('Failed to load saved logs:', error)
+      console.error('Failed to load saved logs:', error);
     }
-  })
+  });
 
   // Check if user is near bottom
   function isNearBottom() {
-    if (!logContainer) return true
-    const threshold = 150
-    const position = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight
-    return position <= threshold
+    if (!logContainer) return true;
+    const threshold = 150;
+    const position = logContainer.scrollHeight - logContainer.scrollTop - logContainer.clientHeight;
+    return position <= threshold;
   }
 
   // Handle scroll events
   function handleScroll() {
-    shouldAutoScroll = isNearBottom()
+    shouldAutoScroll = isNearBottom();
   }
 
   // Toggle auto-scroll
   function toggleAutoScroll() {
-    shouldAutoScroll = !shouldAutoScroll
+    shouldAutoScroll = !shouldAutoScroll;
     if (shouldAutoScroll) {
       requestAnimationFrame(() => {
-        scrollToBottom()
-      })
+        scrollToBottom();
+      });
     }
   }
 
   function scrollToBottom() {
-    if (!logContainer) return
-    logContainer.scrollTop = logContainer.scrollHeight
+    if (!logContainer) return;
+    logContainer.scrollTop = logContainer.scrollHeight;
   }
 
   // Clear logs function
   async function clearLogs() {
     if (confirm('Are you sure you want to clear all logs?')) {
-      await emitter.invoke('setStoreValue', 'printLogs', [])
-      logs = []
-      previousLogs = []
+      await emitter.invoke('setStoreValue', 'printLogs', []);
+      logs = [];
+      previousLogs = [];
     }
   }
-  let mergedLogs = $derived([...previousLogs, ...logs])
+  let mergedLogs = $derived([...previousLogs, ...logs]);
 
-  let logsToStore = $derived(mergedLogs.slice(-MAX_STORED_LOGS).map((log: LogEntry) => log))
+  let logsToStore = $derived(mergedLogs.slice(-MAX_STORED_LOGS).map((log: LogEntry) => log));
 
-  $inspect(logsToStore)
+  $inspect(logsToStore);
 
   $effect(() => {
     if (logsToStore.length) {
       untrack(() => {
-        console.log('Saving logs:', $state.snapshot(logsToStore[logsToStore.length - 1]))
+        console.log('Saving logs:', $state.snapshot(logsToStore[logsToStore.length - 1]));
         emitter
           .invoke('setStoreValue', 'printLogs', $state.snapshot(logsToStore))
-          .catch((error) => console.error('Failed to save logs:', error))
-      })
+          .catch((error) => console.error('Failed to save logs:', error));
+      });
     }
-  })
+  });
 
   $effect(() => {
     if (shouldAutoScroll && logsToStore) {
       requestAnimationFrame(() => {
-        scrollToBottom()
-      })
+        scrollToBottom();
+      });
     }
-  })
+  });
 
   // Save logs when they change
   // $effect(() => {
