@@ -95,7 +95,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
       })
     } catch (error) {
       console.error('Print queue error:', error)
-      
+
       // Show error notification
       if (request.settings?.printId) {
         notificationManager.showNotification(request.settings.printId, 'Print Error', {
@@ -103,7 +103,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
           silent: false
         })
       }
-      
+
       emitter.send(event.sender, 'print-queued', {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -227,13 +227,13 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
                 { message: 'Printing failed', error: errorType }
               )
               sendToAllWindows(printWindow, 'print-status', errorMsg)
-              
+
               // Update notification for print failure
               notificationManager.showNotification(request.settings.printId, 'Print Failed', {
                 body: `Printing failed: ${errorType}`,
                 silent: false
               })
-              
+
               reject(new Error(errorType))
             } else {
               console.log('Printing completed')
@@ -244,14 +244,14 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
                 { message: '🖨️ Print completed' }
               )
               sendToAllWindows(printWindow, 'print-status', successMsg)
-              
+
               // Update notification for print completion
               // We'll update it again if PDF is also saved
               notificationManager.showNotification(request.settings.printId, 'Print Completed', {
                 body: '🖨️ Print job completed successfully',
                 silent: true
               })
-              
+
               resolve()
             }
           })
@@ -284,17 +284,17 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
           }
         )
         sendToAllWindows(printWindow, 'print-status', pdfMsg)
-        
+
         // Create or update notification about completed job
         // This notification combines both print and PDF status if forcePrint was enabled
-        const notificationTitle = request.settings.forcePrint ? 
-          'Print Job & PDF Completed' : 
-          'PDF Generated Successfully'
-          
-        const notificationBody = request.settings.forcePrint ?
-          `Print completed and PDF saved. Click to open.` :
-          `PDF saved successfully. Click to open.`
-          
+        const notificationTitle = request.settings.forcePrint
+          ? 'Print Job & PDF Completed'
+          : 'PDF Generated Successfully'
+
+        const notificationBody = request.settings.forcePrint
+          ? `Print completed and PDF saved. Click to open.`
+          : `PDF saved successfully. Click to open.`
+
         notificationManager.showNotification(request.settings.printId, notificationTitle, {
           body: notificationBody,
           silent: true,
@@ -322,7 +322,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
         }
       )
       sendToAllWindows(printWindow, 'print-status', errorMsg)
-      
+
       // Update notification for error
       notificationManager.showNotification(request.settings.printId, 'Print Job Failed', {
         body: `Error: ${error instanceof Error ? error.message : String(error)}`,
@@ -364,7 +364,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
     )
     sendToAllWindows(printWindow, 'print-status', statusMsg)
   })
-  
+
   // Set up print events listener for when print queue jobs are completed
   printEvents.on('INTERNAL-PrintQueueEvent:complete', (event: PrintCompletionEvent) => {
     // If we have a notification for this print job, update it based on success/failure
