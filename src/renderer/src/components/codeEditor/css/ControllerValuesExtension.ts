@@ -128,14 +128,8 @@ const compiledValueTheme = EditorView.theme({
   }
 })
 
-// Simple function to update controller settings
-export function updateControllerValues(view: EditorView, settings: ControllerSetting[]): void {
+export function updateControllerValues(settings: ControllerSetting[]): void {
   currentSettings = settings
-
-  if (view) {
-    // Force an editor update to refresh decorations
-    view.dispatch({})
-  }
 }
 
 // Extension for displaying compiled controller values
@@ -147,6 +141,7 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
   const plugin = ViewPlugin.fromClass(
     class implements PluginValue {
       decos: DecorationSet
+      debounceTimer: number | null = null
 
       constructor(view: EditorView) {
         this.decos = this.computeDecorations(view)
@@ -208,7 +203,6 @@ export function compiledControllerValues(initialSettings: ControllerSetting[] = 
       }
 
       update(update: ViewUpdate): void {
-        // Always update decorations on any change
         this.decos = this.computeDecorations(update.view)
       }
     },
