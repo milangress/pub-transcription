@@ -61,7 +61,7 @@ export class PrintWindowManager {
     return this.printWindow;
   }
 
-  public async ensurePrintWindowIsReady(): Promise<BrowserWindow> {
+  public async awaitWindowReady(): Promise<BrowserWindow> {
     const window = this.getOrCreatePrintWindow();
     if (!window || window.isDestroyed()) {
       throw new Error('Print window is not available');
@@ -85,7 +85,7 @@ export class PrintWindowManager {
    * Sends content to the print window for printing
    */
   public async sendJobToPrintWindow(printJob: PrintJob): Promise<void> {
-    const printWindow = await this.ensurePrintWindowIsReady();
+    const printWindow = await this.awaitWindowReady();
 
     if (typeof printJob.content !== 'string') {
       throw new Error('Print content must be a string');

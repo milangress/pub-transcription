@@ -1,15 +1,15 @@
 import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/main';
-import { app, BrowserWindow, shell } from 'electron';
+import { app, shell } from 'electron';
 import Store from 'electron-store';
 import { EventEmitter } from 'events';
 import { existsSync, promises as fs } from 'fs';
 import { join } from 'path';
 
-import type { PrintCompletionEvent, PrintStatusMessage, SettingsSnapshot } from '../types';
+import type { PrintCompletionEvent, SettingsSnapshot } from '../types';
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
 import { notificationManager } from './managers/NotificationManager';
+import { printStatusManager } from './managers/PrintStatusManager';
 import { printWindowManager } from './managers/PrintWindowManager';
-import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printMessages';
 import { PrintQueue } from './PrintQueue';
 import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager';
 
@@ -36,21 +36,6 @@ const DEFAULT_PRINT_OPTIONS = {
   silent: true,
   scaleFactor: 100,
 };
-
-// Helper function to send messages to all windows
-function sendToAllWindows(channel: keyof IpcRendererEvent, status: PrintStatusMessage): void {
-  const allWindows = BrowserWindow.getAllWindows();
-  const windows = [...allWindows].filter(Boolean);
-
-  windows.forEach((window) => {
-    console.log('Sending to window', channel, status);
-    if (window && !window.isDestroyed()) {
-      emitter.send(window.webContents, channel, status);
-    } else {
-      console.log('Window is not available', window);
-    }
-  });
-}
 
 export function setupIpcHandlers(): void {
   // Print request handler
@@ -191,13 +176,7 @@ export function setupIpcHandlers(): void {
         printBackground: printOptions.printBackground,
       };
 
-      const statusMsg = createPrintStatusMessage(
-        request.settings.printId,
-        PRINT_ACTIONS.PRINT_START,
-        PRINT_STATUS.INFO,
-        { message: '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥' },
-      );
-      sendToAllWindows('print-status', statusMsg);
+      printStatusManager.printStart(request.settings.printId);
 
       // Handle direct printing
       if (request.settings.forcePrint === true) {
@@ -206,38 +185,11 @@ export function setupIpcHandlers(): void {
           printWindow.webContents.print(printOptions, (success, errorType) => {
             if (!success) {
               console.error('Printing failed', errorType);
-              const errorMsg = createPrintStatusMessage(
-                request.settings.printId,
-                PRINT_ACTIONS.PRINT_COMPLETE,
-                PRINT_STATUS.ERROR,
-                { message: 'Printing failed', error: errorType },
-              );
-              sendToAllWindows('print-status', errorMsg);
-
-              // Update notification for print failure
-              notificationManager.showNotification(request.settings.printId, 'Print Failed', {
-                body: `Printing failed: ${errorType}`,
-                silent: false,
-              });
-
+              printStatusManager.printError(request.settings.printId, errorType);
               reject(new Error(errorType));
             } else {
               console.log('Printing completed');
-              const successMsg = createPrintStatusMessage(
-                request.settings.printId,
-                PRINT_ACTIONS.PRINT_COMPLETE,
-                PRINT_STATUS.SUCCESS,
-                { message: '🖨️ Print completed' },
-              );
-              sendToAllWindows('print-status', successMsg);
-
-              // Update notification for print completion
-              // We'll update it again if PDF is also saved
-              notificationManager.showNotification(request.settings.printId, 'Print Completed', {
-                body: '🖨️ Print job completed successfully',
-                silent: true,
-              });
-
+              printStatusManager.printSuccess(request.settings.printId);
               resolve();
             }
           });
@@ -260,16 +212,7 @@ export function setupIpcHandlers(): void {
         await fs.writeFile(pdfPath, pdfData);
         console.log(`Wrote PDF successfully to ${pdfPath}`);
 
-        const pdfMsg = createPrintStatusMessage(
-          request.settings.printId,
-          PRINT_ACTIONS.PDF_SAVE,
-          PRINT_STATUS.SUCCESS,
-          {
-            message: `💦 Wrote PDF successfully to ${pdfPath}`,
-            path: pdfPath,
-          },
-        );
-        sendToAllWindows('print-status', pdfMsg);
+        printStatusManager.pdfSuccess(request.settings.printId, pdfPath);
 
         // Create or update notification about completed job
         // This notification combines both print and PDF status if forcePrint was enabled
@@ -287,33 +230,16 @@ export function setupIpcHandlers(): void {
           path: pdfPath,
         });
 
-        // Emit success event for PrintQueue
-        const completionEvent: PrintCompletionEvent = {
+        printEvents.emit('INTERNAL-PrintQueueEvent:complete', {
           printId: request.settings.printId,
           success: true,
-        };
-        printEvents.emit('INTERNAL-PrintQueueEvent:complete', completionEvent);
+        } as PrintCompletionEvent);
       }
 
       return true;
     } catch (error) {
       console.error('Print/PDF error:', error);
-      const errorMsg = createPrintStatusMessage(
-        request.settings.printId,
-        PRINT_ACTIONS.PRINT_ERROR,
-        PRINT_STATUS.ERROR,
-        {
-          message: `🥵 Error: ${error instanceof Error ? error.message : String(error)}`,
-          error: error instanceof Error ? error.message : String(error),
-        },
-      );
-      sendToAllWindows('print-status', errorMsg);
-
-      // Update notification for error
-      notificationManager.showNotification(request.settings.printId, 'Print Job Failed', {
-        body: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        silent: false,
-      });
+      printStatusManager.printError(request.settings.printId, error);
 
       // Emit error event for PrintQueue
       const completionEvent: PrintCompletionEvent = {
@@ -337,16 +263,11 @@ export function setupIpcHandlers(): void {
     // Ensure we have a print window through the manager
     printWindowManager.getOrCreatePrintWindow();
 
-    const statusMsg = createPrintStatusMessage(
-      status.printId,
-      status.success ? PRINT_ACTIONS.PRINT_COMPLETE : PRINT_ACTIONS.PRINT_ERROR,
-      status.success ? PRINT_STATUS.SUCCESS : PRINT_STATUS.ERROR,
-      {
-        message: status.error || (status.success ? '🖨️ Print completed' : '❌ Print failed'),
-        error: status.error,
-      },
-    );
-    sendToAllWindows('print-status', statusMsg);
+    if (status.success) {
+      printStatusManager.printSuccess(status.printId, status.error || '🖨️ Print completed');
+    } else {
+      printStatusManager.printError(status.printId, status.error || 'Print failed');
+    }
   });
 
   // Set up print events listener for when print queue jobs are completed
