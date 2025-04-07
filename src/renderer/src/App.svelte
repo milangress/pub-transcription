@@ -1,6 +1,7 @@
 <script lang="ts">
   import PrintStatusBar from '@/components/status/PrintStatusBar.svelte'
   import { settings } from '@/stores/settings.svelte.js'
+  import { snapshots } from '@/stores/snapshots.svelte.js'
   import CodeEditor from '@components/codeEditor/CodeEditor.svelte'
   import ControllerManager from '@components/midi/ControllerManager.svelte'
   import BlockTxt from '@components/pageElement/BlockTxt.svelte'
@@ -91,7 +92,7 @@
   // Ensure snapshots are loaded when the app starts
   $effect(() => {
     if (settings.controllerSettings.length > 0) {
-      settings.loadSnapshots().catch(console.error)
+      snapshots.loadSnapshots().catch(console.error)
     }
   })
 
@@ -153,7 +154,7 @@
     const name = `Snapshot ${new Date().toLocaleString()}`
     
     try {
-      const result = await settings.saveSnapshot(name)
+      const result = await snapshots.saveSnapshot(name)
       if (result) {
         console.log('Snapshot saved successfully:', result)
       } else {
@@ -175,7 +176,7 @@
     }
     
     try {
-      const success = await settings.applySnapshot(id)
+      const success = await snapshots.applySnapshot(id)
       if (success) {
         console.log('Snapshot applied successfully')
       } else {
@@ -189,7 +190,7 @@
   async function deleteSnapshot(id: string): Promise<void> {
     // Remove confirm dialog
     try {
-      const success = await settings.deleteSnapshot(id)
+      const success = await snapshots.deleteSnapshot(id)
       if (success) {
         console.log('Snapshot deleted successfully')
       } else {
@@ -409,7 +410,7 @@
       </div>
 
       <div class="snapshotsContainer">
-        {#each settings.snapshots as snapshot (snapshot.id)}
+        {#each snapshots.snapshots as snapshot (snapshot.id)}
           {@const staticControllerSettings = settings.controllerSettings.map(ctrl => ({
             ...ctrl,
             value: snapshot.controllerValues[ctrl.var] !== undefined ? 
