@@ -1,0 +1,217 @@
+<script lang="ts">
+  import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer'
+  import type { PrintJob } from 'src/types/index.ts'
+  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc'
+  import { onMount } from 'svelte'
+
+  const ipc = new IpcListener<IpcRendererEvent>()
+  const emitter = new IpcEmitter<IpcEvents>()
+
+  let lastJobTimestamp = $state('Never')
+  let stylesLoadedLenght = $state(0)
+  let children = $state<NodeListOf<HTMLSpanElement> | null>(null)
+
+  let currentPrintId = $state<string | null>(null)
+  let printProcessStartTime = $state<number | null>(null)
+
+  class Status {
+    #logs: { msg: string; error: boolean | Error; warning: boolean }[] = $state([
+      {
+        msg: 'Waiting for print job...',
+        error: false,
+        warning: false
+      }
+    ])
+
+    #pushLog({
+      msg,
+      error = false,
+      warning = false
+    }: {
+      msg: string
+      error?: boolean | Error
+      warning?: boolean
+    }) {
+      const entry = { msg, error, warning }
+      this.#logs.push(entry)
+    }
+
+    #sideEffect(entry) {
+      const time = new Date().toTimeString().split(' ')[0]
+      const printIdTitle = currentPrintId ? `${currentPrintId} - ` : ''
+      const message = `[${time}] ${printIdTitle}${entry.msg}`
+      document.title = message
+      if (entry.error) console.error(message)
+      if (entry.warning) console.warn(message)
+      console.log(message)
+    }
+
+    set msg(value: string) {
+      this.#pushLog({ msg: value })
+      this.#sideEffect(this.state)
+    }
+
+    set warn(value: string) {
+      this.#pushLog({ msg: value, warning: true })
+      this.#sideEffect(this.state)
+    }
+
+    set err(err: Error | string | unknown) {
+      // TODO: send error back to main process
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      this.#pushLog({ msg: `❌ ${errorMsg}`, error: err instanceof Error ? err : true })
+      this.#sideEffect(this.state)
+    }
+
+    get err(): Error {
+      if (this.state.error instanceof Error) return this.state.error
+      return new Error(this.state.msg)
+    }
+
+    get state() {
+      return this.#logs[this.#logs.length - 1]
+    }
+  }
+
+  const status = new Status()
+
+  async function executePrint(content, settings) {
+    currentPrintId = settings.printId
+    ;(status.msg = '📝 ReadyToBePrinted:'), currentPrintId
+
+    try {
+      await emitter.invoke('PrintWindow:ReadyToBePrinted', { content, settings })
+    } catch (error) {
+      status.err = error
+    }
+  }
+
+  onMount(() => {
+    status.msg = '🖨️ Print window initialized'
+
+    // Handle print job setup
+    ipc.on(
+      'PrintWindow:printJob',
+      async (_event, { content, settings, attempt = 1, maxRetries = 1 }: PrintJob) => {
+        try {
+          status.msg = `🖨️ Processing: ${settings.printId} (Attempt ${attempt}/${maxRetries})`
+
+          printProcessStartTime = Date.now()
+          lastJobTimestamp = new Date().toLocaleTimeString()
+
+          if (!settings.printId) throw (status.err = 'Print job received without printId')
+          if (!content) throw (status.err = 'Print job received without content')
+
+          // Get the container
+          const container = document.getElementById('print-container')
+          if (!container) {
+            throw (status.err = '⚠️ Print container not found')
+          }
+
+          container.innerHTML = ''
+
+          // Inject any dynamic styles
+          if (settings.inlineStyle) {
+            // TODO: should also overwrite previous styles
+            const styleSheet = document.createElement('style')
+            styleSheet.textContent = settings.inlineStyle
+            document.head.appendChild(styleSheet)
+
+            // Update styles loaded status
+            stylesLoadedLenght = settings.inlineStyle.length
+          } else {
+            status.warn = '⚠️ No inline styles provided for print job'
+            stylesLoadedLenght = 0
+          }
+
+          // Inject SVG filters if they exist
+          if (settings.svgFilters) {
+            status.msg = '🎨 Adding SVG filters'
+            // reuse the same div for all svg filters
+            let filtersDiv = document.getElementById('svg-filters')
+            if (!filtersDiv) {
+              filtersDiv = document.createElement('div')
+              filtersDiv.id = 'svg-filters'
+              filtersDiv.style.display = 'none'
+              document.body.appendChild(filtersDiv)
+            }
+            filtersDiv.innerHTML = settings.svgFilters
+          } else {
+            status.warn = '⚠️ No SVG filters provided for print job'
+          }
+
+          // Set the content
+          container.innerHTML = content
+          children = container.querySelectorAll('span')
+
+          if (children && children.length === 0) {
+            status.warn = '⚠️ Print content contains no text spans'
+          }
+
+          status.msg = 'Content loaded, waiting 5 seconds before print...'
+
+          await new Promise((resolve) => setTimeout(resolve, 5000))
+
+          status.msg = 'Printing...'
+
+          console.log('Executing print with settings:', { ...settings, printId: currentPrintId })
+
+          // Execute print with the same settings including printId
+          await executePrint(container.innerHTML, settings)
+        } catch (error) {
+          status.err = error
+        }
+      }
+    )
+  })
+</script>
+
+<div id="print-window-wrapper">
+  
+    <div class="page-context">
+      <page size="A3">
+        <div id="print-container"></div>
+      </page>
+    </div>
+
+</div>
+
+<style>
+  :global(body, html) {
+    padding: 0;
+    margin: 0;
+    overflow: scroll;
+  }
+
+  .page-context {
+    margin: 1cm;
+  }
+
+  page[size='A3'] {
+    font-size: 2em;
+    font-weight: 100;
+    text-align: left;
+    display: block;
+    width: calc(297.3mm * 0.86);
+    height: calc(420.2mm * 0.895);
+    padding: 2cm;
+    background: url('../../assets/scan.png'); /* this path is corrrect!!! */
+    background-size: 100% 100%;
+    outline: 1px solid red;
+  }
+
+  @media print {
+    :global(*) {
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    page[size='A3'] {
+      background: white;
+      transform: none !important;
+      outline: none;
+    }
+    .page-context {
+      margin: 0;
+    }
+  }
+</style>
