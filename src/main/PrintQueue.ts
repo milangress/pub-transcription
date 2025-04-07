@@ -1,5 +1,5 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, app } from 'electron'
 import { EventEmitter } from 'events'
 import type { PrintSettings, QueueStatus } from '../types/index.ts'
 import type { IpcRendererEvent } from '../types/ipc.d.ts'
@@ -93,6 +93,8 @@ export class PrintQueue {
 
   private updateQueueStatus(): void {
     const status = this.getQueueStatus()
+    // Update the app badge count to reflect queue length
+    app.badgeCount = status.queueLength
     if (this.printWindow && !this.printWindow.isDestroyed()) {
       this.printWindow.webContents.send('queue-status', status)
     }
@@ -247,6 +249,8 @@ export class PrintQueue {
     }
     this.queue = []
     this.isProcessing = false
+    // Reset badge count when cleaning up the queue
+    app.badgeCount = 0
   }
 
   /**
