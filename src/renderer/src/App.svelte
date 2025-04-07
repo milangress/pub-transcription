@@ -73,6 +73,9 @@
     forcePrint: false
   })
 
+  // Page counter
+  let pageNumber = $state(1)
+
   let isSuccessfulPrint = $state(true)
   let printStatusBar = $state<PrintStatusBar | undefined>(undefined)
 
@@ -310,7 +313,8 @@
         printId,
         silent: true,
         inlineStyle: settings.inlineStyle,
-        svgFilters: settings.svgFilters
+        svgFilters: settings.svgFilters,
+        pageNumber: pageNumber // Include page number in settings
       }
 
       emitter.send('print', { 
@@ -318,6 +322,9 @@
         settings: printSettings 
       })
       committedContent = []
+      
+      // Increment page number after successful print
+      pageNumber++
     } catch (error) {
       console.error('❌ Error during print:', error)
       isSuccessfulPrint = false
@@ -340,6 +347,11 @@
   function clearAll(): void {
     console.log('🗑️ Clearing all content')
     committedContent = []
+  }
+
+  function resetPageNumber(): void {
+    pageNumber = 1
+    console.log('🔄 Reset page number to 1')
   }
 </script>
 
@@ -367,6 +379,9 @@
               isCurrent
             />
           {/if}
+          <div class="page-number" style="position: absolute; bottom: 1em; right: 1em;font-size: 2rem;">
+            <BlockTxt content={`${pageNumber}`} settings={settings} />
+          </div>
         </div>
       </page>
     </div>
@@ -431,6 +446,7 @@
 
       <div class="printControls">
         <button onclick={printFile}>PRINT</button>
+        <input id="pageNumberInput" bind:value={pageNumber} type="number"/>
         <button onclick={clearAll}>CLEAR ALL</button>
         <button onclick={() => emitter.invoke('open-pdf-folder')}>
           OPEN PDFs FOLDER
@@ -517,10 +533,12 @@
   .content-context:hover {
     outline: 2px solid #00ff00;
   }
+  
   .printControls, .snapshotControls {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
+    flex-wrap: wrap;
   }
   .printFailed {
     background: red;
@@ -588,6 +606,10 @@
 
   .snapshotActions button:hover {
     color: #f00;
+  }
+  #pageNumberInput {
+    width: 5em;
+    text-align: center;
   }
 
   @media print {
