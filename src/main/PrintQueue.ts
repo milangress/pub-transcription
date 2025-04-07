@@ -246,6 +246,15 @@ export class PrintQueue {
   cleanup(): void {
     if (this.queue.length > 0) {
       console.log(`Cleaning up ${this.queue.length} remaining print jobs`)
+      
+      // Emit completion events for all remaining jobs to clean up notifications
+      this.queue.forEach(job => {
+        this.printEvents.emit('INTERNAL-PrintQueueEvent:complete', {
+          printId: job.settings.printId,
+          success: false,
+          error: 'Print queue was cleared'
+        })
+      })
     }
     this.queue = []
     this.isProcessing = false
