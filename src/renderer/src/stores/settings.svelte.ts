@@ -118,8 +118,8 @@ class SettingsStore {
   updateControllerValue(varName: string, newValue: number): void {
     const controller = this.controllerSettings.find((c) => c.var === varName)
     if (controller) {
-      // Round to 3 decimal places and remove trailing zeros
-      controller.value = parseFloat(newValue.toFixed(3))
+      // Round to 2 decimal places and remove trailing zeros
+      controller.value = parseFloat(newValue.toFixed(2))
     }
   }
 

@@ -32,9 +32,9 @@
     fontFamilys = [],
     onChange = (_value: string) => {}
   } = $props<{
-    value?: string
-    language?: 'css' | 'html'
-    controllerSettings?: ControllerSetting[]
+    value: string
+    language: 'css' | 'html'
+    controllerSettings: ControllerSetting[]
     fontFamilys?: FontFamily[]
     onChange?: (value: string) => void
   }>()
@@ -43,6 +43,8 @@
   let view = $state<EditorView | undefined>()
   let isUpdatingFromPreview = $state(false)
   let syntaxTreeVizRepresentation = $state('')
+
+  console.log('My fontFamilys', fontFamilys)
 
   $effect(() => {
     if (view && value !== view.state.doc.toString() && !isUpdatingFromPreview) {
@@ -75,17 +77,17 @@
   $effect(() => {
     if (view && controllerSettings) {
       const currentSettings = $state.snapshot(controllerSettings)
-      
       // Update controller values extension
       updateControllerValues(view, currentSettings)
       updateControllerSliderValues(view, currentSettings)
-      
       // Update completions with latest settings
+      console.log('fontFamilys', fontFamilys)
       updateCompletionOptions({
-        fontFamilies: $state.snapshot(fontFamilys),
+        fontFamilies: fontFamilys,
         controllerSettings: currentSettings,
-        filterIds: settings.filterIds
-      })
+          filterIds: $state.snapshot(settings.filterIds)
+        })
+      
     }
   })
 

@@ -348,11 +348,6 @@
     console.log('🗑️ Clearing all content')
     committedContent = []
   }
-
-  function resetPageNumber(): void {
-    pageNumber = 1
-    console.log('🔄 Reset page number to 1')
-  }
 </script>
 
 <!-- svelte:head meta title -->
@@ -394,7 +389,7 @@
         bind:value={settings.inlineStyle}
         language="css"
         controllerSettings={settings.controllerSettings}
-        {fontFamilys}
+        fontFamilys={fontFamilys}
       />
 
       <hr />
@@ -432,7 +427,7 @@
                 settings={{
                   inlineStyle: snapshot.inlineStyle,
                   svgFilters: snapshot.svgFilters,
-                  controllerSettings: $state.snapshot(staticControllerSettings as any)
+                  controllerSettings: $state.snapshot(staticControllerSettings as any[])
                 }}
               />
               </button>
