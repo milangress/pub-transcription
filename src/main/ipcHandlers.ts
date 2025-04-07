@@ -8,8 +8,8 @@ import { join } from 'path';
 import type { PrintCompletionEvent, SettingsSnapshot } from '../types';
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
 import { notificationManager } from './managers/NotificationManager';
-import { printStatusManager } from './managers/PrintStatusManager';
 import { printWindowManager } from './managers/PrintWindowManager';
+import { notifyStatus } from './managers/setPrintStatus';
 import { PrintQueue } from './PrintQueue';
 import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager';
 
@@ -176,7 +176,7 @@ export function setupIpcHandlers(): void {
         printBackground: printOptions.printBackground,
       };
 
-      printStatusManager.printStart(request.settings.printId);
+      notifyStatus.printStart(request.settings.printId);
 
       // Handle direct printing
       if (request.settings.forcePrint === true) {
@@ -185,11 +185,11 @@ export function setupIpcHandlers(): void {
           printWindow.webContents.print(printOptions, (success, errorType) => {
             if (!success) {
               console.error('Printing failed', errorType);
-              printStatusManager.printError(request.settings.printId, errorType);
+              notifyStatus.printError(request.settings.printId, errorType);
               reject(new Error(errorType));
             } else {
               console.log('Printing completed');
-              printStatusManager.printSuccess(request.settings.printId);
+              notifyStatus.printSuccess(request.settings.printId);
               resolve();
             }
           });
@@ -212,7 +212,7 @@ export function setupIpcHandlers(): void {
         await fs.writeFile(pdfPath, pdfData);
         console.log(`Wrote PDF successfully to ${pdfPath}`);
 
-        printStatusManager.pdfSuccess(request.settings.printId, pdfPath);
+        notifyStatus.pdfSuccess(request.settings.printId, pdfPath);
 
         // Create or update notification about completed job
         // This notification combines both print and PDF status if forcePrint was enabled
@@ -239,7 +239,7 @@ export function setupIpcHandlers(): void {
       return true;
     } catch (error) {
       console.error('Print/PDF error:', error);
-      printStatusManager.printError(request.settings.printId, error);
+      notifyStatus.printError(request.settings.printId, error);
 
       // Emit error event for PrintQueue
       const completionEvent: PrintCompletionEvent = {
@@ -264,9 +264,9 @@ export function setupIpcHandlers(): void {
     printWindowManager.getOrCreatePrintWindow();
 
     if (status.success) {
-      printStatusManager.printSuccess(status.printId, status.error || '🖨️ Print completed');
+      notifyStatus.printSuccess(status.printId, status.error || '🖨️ Print completed');
     } else {
-      printStatusManager.printError(status.printId, status.error || 'Print failed');
+      notifyStatus.printError(status.printId, status.error || 'Print failed');
     }
   });
 

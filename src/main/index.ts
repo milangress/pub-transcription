@@ -5,12 +5,12 @@ import { join } from 'path';
 import icon from '../../resources/favicon.png?asset';
 
 import { AudioRecorder } from './audioRecorder';
+import { simulatedTranscriptController } from './dev/simulateTranscriptForDevTesting';
 import { setupIpcHandlers } from './ipcHandlers';
 import { printWindowManager } from './managers/PrintWindowManager';
 import { PrintQueue } from './PrintQueue';
 import { createStreamProcess } from './streamProcess';
 import { checkApplicationFolder } from './utils/applicationFolder';
-import { simulatedTranscriptController } from './utils/simulateTranscriptForDevTesting';
 
 // Create event emitter for print events
 const printEvents = new EventEmitter();
