@@ -63,3 +63,24 @@ export interface PrintCompletionEvent {
   success: boolean
   error?: string
 }
+
+/**
+ * Settings snapshot interface
+ */
+export interface SettingsSnapshot {
+  id: string
+  name: string
+  timestamp: number
+  inlineStyle: string
+  svgFilters: string
+  controllerValues: Record<string, number>
+}
+
+/**
+ * Settings snapshot list response interface
+ */
+export interface SettingsSnapshotListResponse {
+  snapshots: SettingsSnapshot[]
+  success: boolean
+  error?: string
+}

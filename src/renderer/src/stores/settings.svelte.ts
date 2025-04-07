@@ -1,7 +1,9 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer'
 import { mapRange } from '@utils/math.js'
 import type { ControllerSetting, Settings } from 'src/renderer/src/types'
+import type { SettingsSnapshot } from 'src/types'
 import type { IpcEvents } from 'src/types/ipc'
+import { v4 as uuidv4 } from 'uuid'
 import { WebMidi } from 'webmidi'
 import defaultInlineStyle from '../assets/input-defaults/inlineStyle.js'
 import inputJson from '../assets/input-defaults/input.json'
@@ -24,6 +26,8 @@ class SettingsStore {
   #codeEditorContentSaved = $state(true)
   #lastSavedInlineStyle = $state('')
   #lastSavedSvgFilters = $state('')
+  #snapshots = $state<SettingsSnapshot[]>([])
+  #snapshotsLoaded = $state(false)
 
   constructor() {
     // Initialize with default values
@@ -197,6 +201,112 @@ class SettingsStore {
 
   get filterIds(): string[] {
     return extractFilterIds(this.svgFilters)
+  }
+
+  // Create and save a new settings snapshot
+  async saveSnapshot(name: string = ''): Promise<SettingsSnapshot | null> {
+    try {
+      // Create a snapshot of the current settings
+      const snapshot: SettingsSnapshot = {
+        id: uuidv4(),
+        name: name || `Snapshot ${new Date().toLocaleString()}`,
+        timestamp: Date.now(),
+        inlineStyle: this.inlineStyle,
+        svgFilters: this.svgFilters,
+        controllerValues: this.controllerValues
+      }
+
+      // Save the snapshot via IPC
+      const savedSnapshot = await emitter.invoke('save-settings-snapshot', snapshot)
+      console.log('Saved settings snapshot:', savedSnapshot)
+
+      // Update local snapshots list
+      await this.loadSnapshots()
+
+      return savedSnapshot
+    } catch (error) {
+      console.error('Error saving settings snapshot:', error)
+      return null
+    }
+  }
+
+  // Load all available snapshots
+  async loadSnapshots(): Promise<SettingsSnapshot[]> {
+    try {
+      const response = await emitter.invoke('get-settings-snapshots')
+      
+      if (response.success) {
+        this.#snapshots = response.snapshots
+        this.#snapshotsLoaded = true
+      } else {
+        console.error('Error loading snapshots:', response.error)
+      }
+      
+      return this.#snapshots
+    } catch (error) {
+      console.error('Error loading snapshots:', error)
+      return []
+    }
+  }
+
+  // Apply a settings snapshot
+  async applySnapshot(id: string): Promise<boolean> {
+    try {
+      const snapshot = await emitter.invoke('load-settings-snapshot', id)
+      
+      if (!snapshot) {
+        console.error(`Snapshot with ID ${id} not found`)
+        return false
+      }
+      
+      // Apply the snapshot values
+      this.inlineStyle = snapshot.inlineStyle
+      this.svgFilters = snapshot.svgFilters
+      
+      // Update controller values
+      if (snapshot.controllerValues) {
+        Object.entries(snapshot.controllerValues).forEach(([varName, value]) => {
+          this.updateControllerValue(varName, value)
+        })
+      }
+      
+      // Save the applied values to electron store
+      await this.#debouncedSave()
+      
+      console.log(`Applied snapshot: ${snapshot.name}`)
+      return true
+    } catch (error) {
+      console.error(`Error applying snapshot with ID ${id}:`, error)
+      return false
+    }
+  }
+
+  // Delete a settings snapshot
+  async deleteSnapshot(id: string): Promise<boolean> {
+    try {
+      const success = await emitter.invoke('delete-settings-snapshot', id)
+      
+      if (success) {
+        // Refresh snapshots list
+        await this.loadSnapshots()
+        console.log(`Deleted snapshot with ID ${id}`)
+      } else {
+        console.error(`Failed to delete snapshot with ID ${id}`)
+      }
+      
+      return success
+    } catch (error) {
+      console.error(`Error deleting snapshot with ID ${id}:`, error)
+      return false
+    }
+  }
+
+  // Get all snapshots
+  get snapshots(): SettingsSnapshot[] {
+    if (!this.#snapshotsLoaded) {
+      this.loadSnapshots().catch(console.error)
+    }
+    return this.#snapshots
   }
 }
 

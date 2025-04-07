@@ -5,10 +5,11 @@ import { EventEmitter } from 'events'
 import { existsSync, promises as fs } from 'fs'
 import { join } from 'path'
 
-import type { PrintCompletionEvent, PrintStatusMessage } from '../types'
+import type { PrintCompletionEvent, PrintStatusMessage, SettingsSnapshot } from '../types'
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc'
 import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printMessages'
 import { PrintQueue } from './PrintQueue'
+import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager'
 
 const store = new Store()
 const ipc = new IpcListener<IpcEvents>()
@@ -102,6 +103,47 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
 
   ipc.handle('setStoreValue', (_event, key, value) => {
     return store.set(key, value)
+  })
+
+  // Settings snapshot handlers
+  ipc.handle('save-settings-snapshot', async (_event, snapshot: SettingsSnapshot) => {
+    try {
+      return await saveSnapshot(snapshot)
+    } catch (error) {
+      console.error('Error in save-settings-snapshot handler:', error)
+      throw error
+    }
+  })
+
+  ipc.handle('get-settings-snapshots', async () => {
+    try {
+      return await getSnapshots()
+    } catch (error) {
+      console.error('Error in get-settings-snapshots handler:', error)
+      return {
+        snapshots: [],
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      }
+    }
+  })
+
+  ipc.handle('load-settings-snapshot', async (_event, id: string) => {
+    try {
+      return await loadSnapshot(id)
+    } catch (error) {
+      console.error(`Error in load-settings-snapshot handler for ID ${id}:`, error)
+      throw error
+    }
+  })
+
+  ipc.handle('delete-settings-snapshot', async (_event, id: string) => {
+    try {
+      return await deleteSnapshot(id)
+    } catch (error) {
+      console.error(`Error in delete-settings-snapshot handler for ID ${id}:`, error)
+      return false
+    }
   })
 
   // PDF folder handler
