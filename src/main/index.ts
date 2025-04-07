@@ -135,7 +135,6 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-
   createWindow()
 
   // Check if we should move to Applications folder
