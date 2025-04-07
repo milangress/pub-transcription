@@ -5,24 +5,25 @@ import type { IpcRendererEvent } from '../../types/ipc';
 import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from '../printMessages';
 import { notificationManager } from './NotificationManager';
 
-class PrintStatusManager {
-  private emitter: IpcEmitter<IpcRendererEvent>;
-
-  constructor() {
-    this.emitter = new IpcEmitter<IpcRendererEvent>();
-  }
+export function notifyStatus(): {
+  printStart: (printId: string, message?: string) => void;
+  printSuccess: (printId: string, message?: string) => void;
+  printError: (printId: string, error: unknown) => void;
+  pdfSuccess: (printId: string, pdfPath: string) => void;
+} {
+  const emitter = new IpcEmitter<IpcRendererEvent>();
 
   /**
    * Send a status message to all open windows
    */
-  private sendToAllWindows(status: PrintStatusMessage): void {
+  function sendToAllWindows(status: PrintStatusMessage): void {
     const allWindows = BrowserWindow.getAllWindows();
     const windows = [...allWindows].filter(Boolean);
 
     windows.forEach((window) => {
       console.log('Sending to window', 'print-status', status);
       if (window && !window.isDestroyed()) {
-        this.emitter.send(window.webContents, 'print-status', status);
+        emitter.send(window.webContents, 'print-status', status);
       } else {
         console.log('Window is not available', window);
       }
@@ -32,24 +33,24 @@ class PrintStatusManager {
   /**
    * Notify that print has started
    */
-  printStart(printId: string, message?: string): void {
+  function printStart(printId: string, message?: string): void {
     const status = createPrintStatusMessage(printId, PRINT_ACTIONS.PRINT_START, PRINT_STATUS.INFO, {
       message: message || '(っ◔◡◔)っ ♥🎀 we are trying to print 🎀♥',
     });
-    this.sendToAllWindows(status);
+    sendToAllWindows(status);
   }
 
   /**
    * Notify that print has completed successfully
    */
-  printSuccess(printId: string, message?: string): void {
+  function printSuccess(printId: string, message?: string): void {
     const status = createPrintStatusMessage(
       printId,
       PRINT_ACTIONS.PRINT_COMPLETE,
       PRINT_STATUS.SUCCESS,
       { message: message || '🖨️ Print completed' },
     );
-    this.sendToAllWindows(status);
+    sendToAllWindows(status);
 
     // Update notification for print completion
     notificationManager.showNotification(printId, 'Print Completed', {
@@ -61,7 +62,7 @@ class PrintStatusManager {
   /**
    * Notify that print has failed
    */
-  printError(printId: string, error: unknown): void {
+  function printError(printId: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const status = createPrintStatusMessage(
       printId,
@@ -72,7 +73,7 @@ class PrintStatusManager {
         error: errorMessage,
       },
     );
-    this.sendToAllWindows(status);
+    sendToAllWindows(status);
 
     // Update notification for print failure
     notificationManager.showNotification(printId, 'Print Failed', {
@@ -84,13 +85,18 @@ class PrintStatusManager {
   /**
    * Notify that PDF has been saved successfully
    */
-  pdfSuccess(printId: string, pdfPath: string): void {
+  function pdfSuccess(printId: string, pdfPath: string): void {
     const status = createPrintStatusMessage(printId, PRINT_ACTIONS.PDF_SAVE, PRINT_STATUS.SUCCESS, {
       message: `💦 Wrote PDF successfully to ${pdfPath}`,
       path: pdfPath,
     });
-    this.sendToAllWindows(status);
+    sendToAllWindows(status);
   }
-}
 
-export const printStatusManager = new PrintStatusManager();
+  return {
+    printStart,
+    printSuccess,
+    printError,
+    pdfSuccess,
+  };
+}
