@@ -2,6 +2,7 @@ appId: place.milan.pubtranscriptions
 productName: Pub-Transcriptions
 directories:
   buildResources: build
+icon: resources/favicon.png
 files:
   - '!**/.vscode/*'
   - '!src/*'
