@@ -7,9 +7,9 @@ import icon from '../../resources/favicon.png?asset'
 import { AudioRecorder } from './audioRecorder'
 import { setupIpcHandlers } from './ipcHandlers'
 import { PrintQueue } from './PrintQueue'
-import { simulatedTranscriptController } from './simulateTranscriptForDevTesting'
 import { createStreamProcess } from './streamProcess'
 import { checkApplicationFolder } from './utils/applicationFolder'
+import { simulatedTranscriptController } from './utils/simulateTranscriptForDevTesting'
 
 // Local types
 interface PrintWindowOptions extends Electron.BrowserWindowConstructorOptions {

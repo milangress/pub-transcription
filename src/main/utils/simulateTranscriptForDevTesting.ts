@@ -1,6 +1,6 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
 import { BrowserWindow } from 'electron'
-import type { IpcRendererEvent } from '../types/ipc'
+import type { IpcRendererEvent } from '../../types/ipc'
 
 const emitter = new IpcEmitter<IpcRendererEvent>()
 interface SimulationController {
