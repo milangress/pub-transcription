@@ -2,7 +2,7 @@
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer'
   import type { PrintJob } from 'src/types/index.ts'
   import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc'
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
 
   const ipc = new IpcListener<IpcRendererEvent>()
   const emitter = new IpcEmitter<IpcEvents>()
@@ -13,6 +13,15 @@
 
   let currentPrintId = $state<string | null>(null)
   let printProcessStartTime = $state<number | null>(null)
+  
+  // Refs for DOM elements
+  let printContainer: HTMLElement;
+  let svgFiltersDiv: HTMLElement;
+  
+  // Content state
+  let printContent = $state('');
+  let inlineStyles = $state('');
+  let svgFiltersContent = $state('');
 
   class Status {
     #logs: { msg: string; error: boolean | Error; warning: boolean }[] = $state([
@@ -102,50 +111,41 @@
           if (!settings.printId) throw (status.err = 'Print job received without printId')
           if (!content) throw (status.err = 'Print job received without content')
 
-          // Get the container
-          const container = document.getElementById('print-container')
-          if (!container) {
-            throw (status.err = '⚠️ Print container not found')
-          }
-
-          container.innerHTML = ''
-
-          // Inject any dynamic styles
+          // Clear the container
+          printContent = '';
+          
+          // Update styles
           if (settings.inlineStyle) {
-            // TODO: should also overwrite previous styles
-            const styleSheet = document.createElement('style')
-            styleSheet.textContent = settings.inlineStyle
-            document.head.appendChild(styleSheet)
-
-            // Update styles loaded status
-            stylesLoadedLenght = settings.inlineStyle.length
+            inlineStyles = settings.inlineStyle;
+            stylesLoadedLenght = settings.inlineStyle.length;
           } else {
             status.warn = '⚠️ No inline styles provided for print job'
+            inlineStyles = '';
             stylesLoadedLenght = 0
           }
 
           // Inject SVG filters if they exist
           if (settings.svgFilters) {
             status.msg = '🎨 Adding SVG filters'
-            // reuse the same div for all svg filters
-            let filtersDiv = document.getElementById('svg-filters')
-            if (!filtersDiv) {
-              filtersDiv = document.createElement('div')
-              filtersDiv.id = 'svg-filters'
-              filtersDiv.style.display = 'none'
-              document.body.appendChild(filtersDiv)
-            }
-            filtersDiv.innerHTML = settings.svgFilters
+            svgFiltersContent = settings.svgFilters;
           } else {
             status.warn = '⚠️ No SVG filters provided for print job'
+            svgFiltersContent = '';
           }
 
           // Set the content
-          container.innerHTML = content
-          children = container.querySelectorAll('span')
-
-          if (children && children.length === 0) {
-            status.warn = '⚠️ Print content contains no text spans'
+          printContent = content;
+          
+          // Wait for Svelte to update the DOM
+          await tick();
+          
+          // Get child spans for debugging
+          if (printContainer) {
+            children = printContainer.querySelectorAll('span');
+            
+            if (children.length === 0) {
+              status.warn = '⚠️ Print content contains no text spans'
+            }
           }
 
           status.msg = 'Content loaded, waiting 5 seconds before print...'
@@ -157,7 +157,7 @@
           console.log('Executing print with settings:', { ...settings, printId: currentPrintId })
 
           // Execute print with the same settings including printId
-          await executePrint(container.innerHTML, settings)
+          await executePrint(printContainer.innerHTML, settings)
         } catch (error) {
           status.err = error
         }
@@ -167,13 +167,25 @@
 </script>
 
 <div id="print-window-wrapper">
+  <!-- Add dynamic styles using svelte syntax -->
+  {#if inlineStyles}
+    <style>{@html inlineStyles}</style>
+  {/if}
   
-    <div class="page-context">
-      <page size="A3">
-        <div id="print-container"></div>
-      </page>
+  <!-- SVG filters container -->
+  {#if svgFiltersContent}
+    <div bind:this={svgFiltersDiv} id="svg-filters" style="display: none">
+      {@html svgFiltersContent}
     </div>
-
+  {/if}
+  
+  <div class="page-context">
+    <page size="A3">
+      <div bind:this={printContainer} id="print-container">
+        {@html printContent}
+      </div>
+    </page>
+  </div>
 </div>
 
 <style>
