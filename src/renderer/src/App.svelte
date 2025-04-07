@@ -130,7 +130,9 @@
     }
   })
 
-  async function handleOverflow(overflowingItem: TxtObject): Promise<void> {
+  async function handleOverflow(overflowingItem: TxtObject): 
+  Promise<void> {
+
     // Don't handle overflow if we're already handling overflow
     if (isHandlingOverflow) return
 
@@ -184,6 +186,11 @@
   }
 
   async function printFile(): Promise<void> {
+    if (!printStatusBar) {
+      console.error('❌ No print status bar found')
+      isSuccessfulPrint = false
+      return
+    }
     console.log('🖨️ Starting print process')
     await tick() // Wait for DOM update
 
@@ -210,7 +217,7 @@
       }
 
       // Create a print request in the status bar
-      const printId = printStatusBar?.addPrintRequest().toString() // Convert to string
+      const printId = printStatusBar.addPrintRequest().toString() // Convert to string
       console.log(`📝 Created print request with ID: ${printId}`)
 
       console.log('Printing text: ', pageElement.textContent?.trim())
