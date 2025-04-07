@@ -1,5 +1,5 @@
 import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/main'
-import { app, shell } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import Store from 'electron-store'
 import { EventEmitter } from 'events'
 import { existsSync, promises as fs } from 'fs'
@@ -39,8 +39,9 @@ const DEFAULT_PRINT_OPTIONS = {
 
 // Helper function to send messages to all windows
 function sendToAllWindows(channel: keyof IpcRendererEvent, status: PrintStatusMessage): void {
-  const printWindow = printWindowManager.getPrintWindow()
-  const windows = Array.from([printWindow])
+  const allWindows = BrowserWindow.getAllWindows()
+  const windows = [...allWindows].filter(Boolean)
+
   windows.forEach((window) => {
     console.log('Sending to window', channel, status)
     if (window && !window.isDestroyed()) {
