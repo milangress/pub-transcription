@@ -39,6 +39,13 @@
     ]
   } = $props()
 
+  // Original settings for revert functionality
+  let originalSettings = $state<{
+    inlineStyle: string;
+    svgFilters: string;
+    controllerValues: Record<string, number>;
+  } | null>(null)
+
   // Only Contains the final sentences
   let committedContent = $state<TxtObject[]>([])
 
@@ -76,6 +83,13 @@
   // Initialize settings when the app starts
   $effect(() => {
     if (!settings.controllerSettings.length) settings.init()
+  })
+
+  // Ensure snapshots are loaded when the app starts
+  $effect(() => {
+    if (settings.controllerSettings.length > 0) {
+      settings.loadSnapshots().catch(console.error)
+    }
   })
 
   let currentContentList = $derived([...committedContent, currentSentence])
@@ -130,9 +144,77 @@
     }
   })
 
-  async function handleOverflow(overflowingItem: TxtObject): 
-  Promise<void> {
+  // Snapshot management functions
+  async function saveSnapshot(): Promise<void> {
+    // Use a default name instead of prompt
+    const name = `Snapshot ${new Date().toLocaleString()}`
+    
+    try {
+      const result = await settings.saveSnapshot(name)
+      if (result) {
+        console.log('Snapshot saved successfully:', result)
+      } else {
+        console.error('Failed to save snapshot')
+      }
+    } catch (error) {
+      console.error('Error saving snapshot:', error)
+    }
+  }
 
+  async function applySnapshot(id: string): Promise<void> {
+    // Store original settings before applying snapshot if not already stored
+    if (!originalSettings) {
+      originalSettings = {
+        inlineStyle: settings.inlineStyle,
+        svgFilters: settings.svgFilters,
+        controllerValues: {...settings.controllerValues}
+      }
+    }
+    
+    try {
+      const success = await settings.applySnapshot(id)
+      if (success) {
+        console.log('Snapshot applied successfully')
+      } else {
+        console.error('Failed to apply snapshot')
+      }
+    } catch (error) {
+      console.error('Error applying snapshot:', error)
+    }
+  }
+
+  async function deleteSnapshot(id: string): Promise<void> {
+    // Remove confirm dialog
+    try {
+      const success = await settings.deleteSnapshot(id)
+      if (success) {
+        console.log('Snapshot deleted successfully')
+      } else {
+        console.error('Failed to delete snapshot')
+      }
+    } catch (error) {
+      console.error('Error deleting snapshot:', error)
+    }
+  }
+
+  function revertToOriginal(): void {
+    if (!originalSettings) return
+    
+    settings.inlineStyle = originalSettings.inlineStyle
+    settings.svgFilters = originalSettings.svgFilters
+    
+    // Restore controller values
+    Object.entries(originalSettings.controllerValues).forEach(([varName, value]) => {
+      settings.updateControllerValue(varName, value)
+    })
+    
+    // Clear original settings after applying
+    originalSettings = null
+    
+    console.log('Reverted to original settings')
+  }
+
+  async function handleOverflow(overflowingItem: TxtObject): Promise<void> {
     // Don't handle overflow if we're already handling overflow
     if (isHandlingOverflow) return
 
@@ -309,6 +391,44 @@
       <ControllerManager bind:controllerSettings={settings.controllerSettings}></ControllerManager>
 
       <hr />
+      <div class="snapshotControls">
+        <button onclick={() => saveSnapshot()}>Save Snapshot</button>
+        {#if originalSettings}
+          <button onclick={() => revertToOriginal()}>Revert Changes</button>
+        {/if}
+      </div>
+
+      <div class="snapshotsContainer">
+        {#each settings.snapshots as snapshot (snapshot.id)}
+          {@const staticControllerSettings = settings.controllerSettings.map(ctrl => ({
+            ...ctrl,
+            value: snapshot.controllerValues[ctrl.var] !== undefined ? 
+              snapshot.controllerValues[ctrl.var] : 
+              ctrl.value
+          }))}
+          
+          <div class="snapshotItem">
+            <button 
+              class="snapshotPreview" 
+              onclick={() => applySnapshot(snapshot.id)}
+            >
+              <BlockTxt 
+                content={snapshot.name} 
+                settings={{
+                  inlineStyle: snapshot.inlineStyle,
+                  svgFilters: snapshot.svgFilters,
+                  controllerSettings: $state.snapshot(staticControllerSettings as any)
+                }}
+              />
+              </button>
+            <div class="snapshotActions">
+              <button onclick={() => deleteSnapshot(snapshot.id)}>×</button>
+            </div>
+          </div>
+        {/each}
+      </div>
+      <hr />
+
       <div class="printControls">
         <button onclick={printFile}>PRINT</button>
         <button onclick={clearAll}>CLEAR ALL</button>
@@ -397,7 +517,7 @@
   .content-context:hover {
     outline: 2px solid #00ff00;
   }
-  .printControls {
+  .printControls, .snapshotControls {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
@@ -414,6 +534,60 @@
   }
   .greenDot {
     background: green;
+  }
+
+  .snapshotsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .snapshotItem {
+    display: flex;
+    align-items: flex-start;
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    position: relative;
+  }
+
+  .snapshotItem:hover {
+    border-color: #888;
+  }
+
+  .snapshotPreview {
+    flex: 1;
+    cursor: pointer;
+    padding: 0.25rem;
+    background: none;
+    border: none;
+    text-align: left;
+    width: 100%;
+    margin: 0;
+  }
+
+  .snapshotPreview:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  .snapshotActions {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+  }
+
+  .snapshotActions button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #888;
+  }
+
+  .snapshotActions button:hover {
+    color: #f00;
   }
 
   @media print {
