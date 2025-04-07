@@ -13,7 +13,7 @@ export type PrintStatus = 'SUCCESS' | 'ERROR' | 'INFO'
  */
 export interface PrintSettings {
   printId: string
-  pageNumber?: number
+  pageNumber: number
   deviceName?: string
   forcePrint: boolean
   silent?: boolean
