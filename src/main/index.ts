@@ -48,7 +48,7 @@ function createPrintWindow(): BrowserWindow {
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     printWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/print.html`)
   } else {
-    printWindow.loadFile(join(__dirname, '../renderer/debug.html'))
+    printWindow.loadFile(join(__dirname, '../renderer/print.html'))
   }
 
   // Initialize debugger state for new window
