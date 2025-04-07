@@ -1,7 +1,7 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
 import { BrowserWindow, app } from 'electron'
 import { join } from 'path'
-import type { PrintSettings } from '../../types'
+import type { PrintJob } from '../../types'
 import type { IpcRendererEvent } from '../../types/ipc'
 
 const emitter = new IpcEmitter<IpcRendererEvent>()
@@ -61,38 +61,12 @@ export class PrintWindowManager {
     return this.printWindow
   }
 
-  /**
-   * Sends content to the print window for printing
-   */
-  public async sendContentToPrintWindow(
-    content: string,
-    settings: PrintSettings,
-    retries: number,
-    maxRetries: number
-  ): Promise<void> {
+  public async ensurePrintWindowIsReady(): Promise<BrowserWindow> {
     const window = this.getOrCreatePrintWindow()
-
     if (!window || window.isDestroyed()) {
       throw new Error('Print window is not available')
     }
 
-    if (typeof content !== 'string') {
-      throw new Error('Print content must be a string')
-    }
-
-    if (!settings?.printId) {
-      throw new Error('Print ID is required in settings')
-    }
-
-    console.log(`Sending job ${settings.printId} to print window`)
-    emitter.send(window.webContents, 'PrintWindow:printJob', {
-      content,
-      settings,
-      attempt: retries + 1,
-      maxRetries
-    })
-
-    // Wait for the window to be ready if it's new
     if (window.webContents.isLoading()) {
       await new Promise<void>((resolve) => {
         const checkReady = setInterval(() => {
@@ -103,6 +77,26 @@ export class PrintWindowManager {
         }, 100)
       })
     }
+
+    return window
+  }
+
+  /**
+   * Sends content to the print window for printing
+   */
+  public async sendJobToPrintWindow(printJob: PrintJob): Promise<void> {
+    const printWindow = await this.ensurePrintWindowIsReady()
+
+    if (typeof printJob.content !== 'string') {
+      throw new Error('Print content must be a string')
+    }
+
+    if (!printJob.settings?.printId) {
+      throw new Error('Print ID is required in settings')
+    }
+
+    console.log(`Sending job ${printJob.settings.printId} to print window`)
+    emitter.send(printWindow.webContents, 'PrintWindow:printJob', printJob)
   }
 
   /**
