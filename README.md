@@ -91,6 +91,8 @@ Parameter space exploration through:
 - `CTRL-Shift-Enter` : Full execution
 - `ALT-Enter` : Block execution
 
+- `ALT` while draging a val to not clamp to range
+
 Code completion for:
 
 - MIDI variables (`$`)

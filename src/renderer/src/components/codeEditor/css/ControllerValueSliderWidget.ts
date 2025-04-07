@@ -1,12 +1,12 @@
 import { syntaxTree } from '@codemirror/language'
 import { RangeSetBuilder, type Extension } from '@codemirror/state'
 import {
-    Decoration,
-    EditorView,
-    ViewPlugin,
-    WidgetType,
-    type DecorationSet,
-    type ViewUpdate
+  Decoration,
+  EditorView,
+  ViewPlugin,
+  WidgetType,
+  type DecorationSet,
+  type ViewUpdate
 } from '@codemirror/view'
 import type { ControllerSetting } from 'src/renderer/src/types'
 import { settings as SettingsStore } from '../../../stores/settings.svelte.js'
@@ -86,7 +86,8 @@ function controllerSliders(view: EditorView): DecorationSet {
 function updateValueFromDrag(
   initialValue: number,
   dragPixels: number,
-  setting: ControllerSetting
+  setting: ControllerSetting,
+  skipClamping: boolean = false
 ): number {
   const [min, max] = setting.range
   const range = max - min
@@ -104,8 +105,8 @@ function updateValueFromDrag(
   // Apply the change
   const newValue = initialValue + changeAmount
   
-  // Clamp to range
-  return Math.max(min, Math.min(max, newValue))
+  // Clamp to range unless skipClamping is true
+  return skipClamping ? newValue : Math.max(min, Math.min(max, newValue))
 }
 
 // Simple function to update controller settings
@@ -137,7 +138,7 @@ export const controllerSliderPlugin = (): Extension => {
       }
 
       update(update: ViewUpdate): void {
-          this.decorations = controllerSliders(update.view)
+        this.decorations = controllerSliders(update.view)
       }
     },
     {
@@ -203,8 +204,11 @@ export const controllerSliderPlugin = (): Extension => {
             const setting = currentSettings.find((s) => s.var === this.draggedVarName)
             if (!setting) return
 
+            // Check if Option (Alt) key is pressed to skip clamping
+            const skipClamping = e.altKey
+
             // Update value based on drag
-            const newValue = updateValueFromDrag(this.startValue, deltaX, setting)
+            const newValue = updateValueFromDrag(this.startValue, deltaX, setting, skipClamping)
 
             // Update the value using the settings store
             SettingsStore.updateControllerValue(this.draggedVarName, newValue)
@@ -264,7 +268,6 @@ const sliderWidgetTheme = EditorView.theme({
     backgroundColor: 'oklch(0.95 0.24 107.73 / 0.9)'
   },
   '.cm-controller-slider-dragging': {
-
     backgroundColor: 'oklch(0.95 0.24 107.73 / 0.9)'
   }
 })
