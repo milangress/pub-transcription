@@ -66,7 +66,7 @@
     console.log('📝 Executing print with ID:', currentPrintId)
 
     try {
-      await emitter.invoke('execute-print', { content, settings })
+      await emitter.invoke('PrintWindow:ReadyToBePrinted', { content, settings })
       // Status updates will come from main process
     } catch (error) {
       console.error('❌ Print error:', error)

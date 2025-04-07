@@ -173,7 +173,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
   })
 
   // Print execution handler
-  ipc.handle('execute-print', async (_event, request) => {
+  ipc.handle('PrintWindow:ReadyToBePrinted', async (_event, request) => {
     try {
       // Ensure we have a print window
       if (!printWindow || printWindow.isDestroyed()) {
@@ -370,7 +370,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
     // If we have a notification for this print job, update it based on success/failure
     if (notificationManager.hasNotification(event.printId)) {
       if (!event.success && event.error) {
-        // Don't dismiss on error - notification already updated in execute-print handler
+        // Don't dismiss on error - notification already updated in PrintWindow:ReadyToBePrinted handler
       } else {
         // For successful jobs, the notification will be dismissed after a delay
         // to give the user time to see the success message

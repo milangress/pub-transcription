@@ -12,7 +12,7 @@ export type IpcEvents =
       getStoreValue: (key: string) => unknown
       setStoreValue: (key: string, value: unknown) => void
       'open-pdf-folder': () => Promise<boolean>
-      'execute-print': (request: PrintRequest) => Promise<boolean>
+      'PrintWindow:ReadyToBePrinted': (request: PrintRequest) => Promise<boolean>
       // Settings snapshot handlers
       'save-settings-snapshot': (snapshot: SettingsSnapshot) => Promise<SettingsSnapshot>
       'get-settings-snapshots': () => Promise<SettingsSnapshotListResponse>
