@@ -44,7 +44,7 @@ export class NotificationManager {
       if (existingNotification) {
         existingNotification.close()
         this.activeNotifications.delete(printId)
-        
+
         // Wait a bit before showing the updated notification to ensure it appears as new
         setTimeout(() => {
           this.createAndShowNotification(printId, title, options)
@@ -92,7 +92,7 @@ export class NotificationManager {
       body: options?.body || `Print job ${printId} is in progress`,
       silent: options?.silent !== undefined ? options.silent : false
     }
-    
+
     // Add actions for PDF notifications
     if (options?.path) {
       notificationOptions.actions = [
@@ -102,26 +102,27 @@ export class NotificationManager {
         }
       ]
     }
-    
+
     const notification = new Notification(notificationOptions)
-    
+
     // Add click handler for PDF actions
     if (options?.path) {
       notification.on('action', (_event, index) => {
-        if (index === 0) { // First action (Open PDF)
+        if (index === 0) {
+          // First action (Open PDF)
           this.openFile(options.path!)
         }
       })
-      
+
       // Also open PDF on regular click
       notification.on('click', () => {
         this.openFile(options.path!)
       })
     }
-    
+
     // Store the notification reference
     this.activeNotifications.set(printId, notification)
-    
+
     // Show the notification
     notification.show()
   }
@@ -151,13 +152,14 @@ export class NotificationManager {
    */
   openFile(filePath: string): void {
     if (filePath) {
-      shell.openPath(filePath)
-        .then(result => {
+      shell
+        .openPath(filePath)
+        .then((result) => {
           if (result !== '') {
             console.error(`Error opening file: ${result}`)
           }
         })
-        .catch(err => {
+        .catch((err) => {
           console.error('Error opening file:', err)
         })
     }
@@ -165,4 +167,4 @@ export class NotificationManager {
 }
 
 // Export a singleton instance
-export const notificationManager = new NotificationManager() 
+export const notificationManager = new NotificationManager()

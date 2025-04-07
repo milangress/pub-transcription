@@ -1,9 +1,8 @@
-import { IpcEmitter } from '@electron-toolkit/typed-ipc/main'
-import { BrowserWindow, app } from 'electron'
+import { app } from 'electron'
 import { EventEmitter } from 'events'
 import type { PrintSettings, QueueStatus } from '../types/index.ts'
-import type { IpcRendererEvent } from '../types/ipc.d.ts'
-const emitter = new IpcEmitter<IpcRendererEvent>()
+import { printWindowManager } from './managers/PrintWindowManager'
+
 interface PrintJob {
   content: string
   settings: PrintSettings
@@ -48,22 +47,10 @@ export class PrintQueue {
   private isProcessing = false
   private readonly maxRetries = 3
   private readonly timeout = 5 * 60 * 1000 // 5 minutes timeout
-  private readonly createWindowCallback: () => BrowserWindow
   private readonly printEvents: EventEmitter
-  private printWindow: BrowserWindow | null = null
 
-  constructor(
-    printWindow: BrowserWindow | null,
-    createWindowCallback: () => BrowserWindow,
-    printEvents: EventEmitter
-  ) {
-    this.createWindowCallback = createWindowCallback
+  constructor(printEvents: EventEmitter) {
     this.printEvents = printEvents
-    this.setPrintWindow(printWindow)
-  }
-
-  setPrintWindow(window: BrowserWindow | null): void {
-    this.printWindow = window
     this.updateQueueStatus()
   }
 
@@ -95,9 +82,6 @@ export class PrintQueue {
     const status = this.getQueueStatus()
     // Update the app badge count to reflect queue length
     app.badgeCount = status.queueLength
-    if (this.printWindow && !this.printWindow.isDestroyed()) {
-      this.printWindow.webContents.send('queue-status', status)
-    }
   }
 
   private async processNext(): Promise<void> {
@@ -108,25 +92,7 @@ export class PrintQueue {
     const job = this.queue[0]
 
     try {
-      // Ensure we have a print window
-      if (!this.printWindow || this.printWindow.isDestroyed()) {
-        if (this.createWindowCallback) {
-          this.printWindow = this.createWindowCallback()
-          // Wait for print window to be ready
-          await new Promise<void>((resolve) => {
-            const checkReady = setInterval(() => {
-              if (this.printWindow && !this.printWindow.webContents.isLoading()) {
-                clearInterval(checkReady)
-                resolve()
-              }
-            }, 100)
-          })
-        } else {
-          throw new Error('Print window is not available and cannot be created')
-        }
-      }
-
-      // Send content to print window and wait for response
+      // Process the job using the PrintWindowManager
       const result = await new Promise<PrintJobResult>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
           cleanup()
@@ -171,11 +137,8 @@ export class PrintQueue {
 
         this.printEvents.on('INTERNAL-PrintQueueEvent:complete', handleComplete)
 
-        // Send the job to the print window
+        // Send the job to the print window via the PrintWindowManager
         try {
-          if (!this.printWindow || this.printWindow.isDestroyed()) {
-            throw new Error('Print window is not available')
-          }
           // Ensure content is a string and settings has printId
           if (typeof job.content !== 'string') {
             throw new Error('Print content must be a string')
@@ -183,12 +146,16 @@ export class PrintQueue {
           if (!job.settings?.printId) {
             throw new Error('Print ID is required in settings')
           }
+          
           console.log(`Sending job ${job.settings.printId} to print window`)
-          emitter.send(this.printWindow.webContents, 'PrintWindow:printJob', {
-            content: job.content,
-            settings: job.settings,
-            attempt: job.retries + 1,
-            maxRetries: this.maxRetries
+          printWindowManager.sendContentToPrintWindow(
+            job.content,
+            job.settings,
+            job.retries,
+            this.maxRetries
+          ).catch(err => {
+            cleanup()
+            reject(err)
           })
         } catch (error) {
           cleanup()

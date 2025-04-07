@@ -6,6 +6,7 @@ import icon from '../../resources/favicon.png?asset'
 
 import { AudioRecorder } from './audioRecorder'
 import { setupIpcHandlers } from './ipcHandlers'
+import { printWindowManager } from './managers/PrintWindowManager'
 import { PrintQueue } from './PrintQueue'
 import { createStreamProcess } from './streamProcess'
 import { checkApplicationFolder } from './utils/applicationFolder'
@@ -16,72 +17,11 @@ const printEvents = new EventEmitter()
 
 // Global references
 let mainWindow: BrowserWindow | null = null
-let printWindow: BrowserWindow | null = null
-let debuggerAttached = false
 let simulationController: ReturnType<typeof simulatedTranscriptController> | null = null
 let printQueue: PrintQueue | null = null
 let audioRecorder: AudioRecorder | null = null
 
 const isDev = (): boolean => !app.isPackaged
-
-function createPrintWindow(): BrowserWindow {
-  if (printWindow && !printWindow.isDestroyed()) {
-    return printWindow
-  }
-
-  const options = {
-    width: 450,
-    height: 950,
-    //show: isDev(),
-    show: true,
-    webPreferences: {
-      scrollBounce: false,
-      nodeIntegration: true,
-      contextIsolation: false,
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
-    }
-  }
-
-  printWindow = new BrowserWindow(options)
-
-  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-    printWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/print.html`)
-  } else {
-    printWindow.loadFile(join(__dirname, '../renderer/print.html'))
-  }
-
-  // Initialize debugger state for new window
-  debuggerAttached = false
-
-  // Clean up debugger on window close
-  printWindow.on('closed', () => {
-    if (debuggerAttached && printWindow?.webContents) {
-      try {
-        printWindow.webContents.debugger.detach()
-      } catch (error) {
-        console.error('Failed to detach debugger:', error)
-      }
-      debuggerAttached = false
-    }
-    printWindow = null
-
-    // Update print queue with new window reference
-    if (printQueue) {
-      printQueue.setPrintWindow(null)
-    }
-  })
-
-  // Initialize print queue if it doesn't exist
-  if (!printQueue) {
-    printQueue = new PrintQueue(printWindow, createPrintWindow, printEvents)
-  } else {
-    // Update existing print queue with new window reference
-    printQueue.setPrintWindow(printWindow)
-  }
-
-  return printWindow
-}
 
 function createWindow(): void {
   // Create the browser window.
@@ -102,10 +42,10 @@ function createWindow(): void {
   mainWindow = new BrowserWindow(options)
 
   if (isDev()) {
-    createPrintWindow()
+    printWindowManager.getOrCreatePrintWindow()
     mainWindow.webContents.openDevTools()
   } else {
-    createPrintWindow()
+    printWindowManager.getOrCreatePrintWindow()
   }
 
   // Load the app
@@ -115,8 +55,13 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  // Initialize print queue if it doesn't exist
+  if (!printQueue) {
+    printQueue = new PrintQueue(printEvents)
+  }
+
   // Register IPC handlers
-  setupIpcHandlers(createPrintWindow)
+  setupIpcHandlers()
 
   // Window event handlers
   let isWindowShown = false
@@ -143,7 +88,7 @@ function createWindow(): void {
   mainWindow.on('closed', () => {
     // If there are active print jobs, show the print window
     if (printQueue?.hasActiveJobs()) {
-      printWindow?.show()
+      printWindowManager.showPrintWindow()
     }
 
     // Clean up stream process
