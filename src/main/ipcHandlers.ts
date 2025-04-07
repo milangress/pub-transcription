@@ -1,5 +1,5 @@
 import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/main'
-import { app, BrowserWindow, Notification, shell } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import Store from 'electron-store'
 import { EventEmitter } from 'events'
 import { existsSync, promises as fs } from 'fs'
@@ -7,6 +7,7 @@ import { join } from 'path'
 
 import type { PrintCompletionEvent, PrintStatusMessage, SettingsSnapshot } from '../types'
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc'
+import { notificationManager } from './managers/NotificationManager'
 import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printMessages'
 import { PrintQueue } from './PrintQueue'
 import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager'
@@ -17,95 +18,6 @@ const emitter = new IpcEmitter<IpcRendererEvent>()
 const printEvents = new EventEmitter()
 
 let printQueue: PrintQueue | null = null
-const activeNotifications = new Map<string, Notification>()
-
-/**
- * Manages notifications for print jobs
- * @param printId - The ID of the print job
- * @param action - The action being performed (create, update, or dismiss)
- * @param options - Additional notification options
- */
-function managePrintNotification(
-  printId: string,
-  action: 'create' | 'update' | 'dismiss',
-  options?: {
-    title?: string
-    body?: string
-    silent?: boolean
-    pdfPath?: string
-  }
-): void {
-  // Check if Notification is supported
-  if (!Notification.isSupported()) {
-    console.log('Notifications are not supported on this system')
-    return
-  }
-
-  // Dismiss existing notification if present
-  if (activeNotifications.has(printId)) {
-    const existingNotification = activeNotifications.get(printId)
-    if (existingNotification) {
-      existingNotification.close()
-      activeNotifications.delete(printId)
-      
-      // Wait a bit before showing the updated notification to ensure it appears as new
-      if (action === 'update') {
-        setTimeout(() => {
-          createAndShowNotification()
-        }, 300)
-        return
-      } else if (action === 'dismiss') {
-        return
-      }
-    }
-  }
-
-  // Create new notification
-  if (action === 'create' || action === 'update') {
-    createAndShowNotification()
-  }
-  
-  function createAndShowNotification(): void {
-    // Prepare notification options
-    const notificationOptions: Electron.NotificationConstructorOptions = {
-      title: options?.title || 'Print Job',
-      body: options?.body || `Print job ${printId} is in progress`,
-      silent: options?.silent !== undefined ? options.silent : false
-    }
-    
-    // Add actions for PDF notifications
-    if (options?.pdfPath) {
-      notificationOptions.actions = [
-        {
-          type: 'button',
-          text: 'Open PDF'
-        }
-      ]
-    }
-    
-    const notification = new Notification(notificationOptions)
-    
-    // Add click handler for PDF actions
-    if (options?.pdfPath) {
-      notification.on('action', (_event, index) => {
-        if (index === 0) { // First action (Open PDF)
-          shell.openPath(options.pdfPath!)
-        }
-      })
-      
-      // Also open PDF on regular click
-      notification.on('click', () => {
-        shell.openPath(options.pdfPath!)
-      })
-    }
-    
-    // Store the notification reference
-    activeNotifications.set(printId, notification)
-    
-    // Show the notification
-    notification.show()
-  }
-}
 
 // Default print options
 const DEFAULT_PRINT_OPTIONS = {
@@ -169,8 +81,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
       })
 
       // Create notification for queued print job
-      managePrintNotification(request.settings.printId, 'create', {
-        title: 'Print Job Queued',
+      notificationManager.showNotification(request.settings.printId, 'Print Job Queued', {
         body: `Your print job has been added to the queue.`,
         silent: true
       })
@@ -187,8 +98,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
       
       // Show error notification
       if (request.settings?.printId) {
-        managePrintNotification(request.settings.printId, 'update', {
-          title: 'Print Error',
+        notificationManager.showNotification(request.settings.printId, 'Print Error', {
           body: `Error: ${error instanceof Error ? error.message : String(error)}`,
           silent: false
         })
@@ -319,8 +229,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
               sendToAllWindows(printWindow, 'print-status', errorMsg)
               
               // Update notification for print failure
-              managePrintNotification(request.settings.printId, 'update', {
-                title: 'Print Failed',
+              notificationManager.showNotification(request.settings.printId, 'Print Failed', {
                 body: `Printing failed: ${errorType}`,
                 silent: false
               })
@@ -338,8 +247,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
               
               // Update notification for print completion
               // We'll update it again if PDF is also saved
-              managePrintNotification(request.settings.printId, 'update', {
-                title: 'Print Completed',
+              notificationManager.showNotification(request.settings.printId, 'Print Completed', {
                 body: '🖨️ Print job completed successfully',
                 silent: true
               })
@@ -387,11 +295,10 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
           `Print completed and PDF saved. Click to open.` :
           `PDF saved successfully. Click to open.`
           
-        managePrintNotification(request.settings.printId, 'update', {
-          title: notificationTitle,
+        notificationManager.showNotification(request.settings.printId, notificationTitle, {
           body: notificationBody,
           silent: true,
-          pdfPath: pdfPath
+          path: pdfPath
         })
 
         // Emit success event for PrintQueue
@@ -417,8 +324,7 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
       sendToAllWindows(printWindow, 'print-status', errorMsg)
       
       // Update notification for error
-      managePrintNotification(request.settings.printId, 'update', {
-        title: 'Print Job Failed',
+      notificationManager.showNotification(request.settings.printId, 'Print Job Failed', {
         body: `Error: ${error instanceof Error ? error.message : String(error)}`,
         silent: false
       })
@@ -462,14 +368,14 @@ export function setupIpcHandlers(createPrintWindow: () => BrowserWindow): void {
   // Set up print events listener for when print queue jobs are completed
   printEvents.on('INTERNAL-PrintQueueEvent:complete', (event: PrintCompletionEvent) => {
     // If we have a notification for this print job, update it based on success/failure
-    if (activeNotifications.has(event.printId)) {
+    if (notificationManager.hasNotification(event.printId)) {
       if (!event.success && event.error) {
         // Don't dismiss on error - notification already updated in execute-print handler
       } else {
         // For successful jobs, the notification will be dismissed after a delay
         // to give the user time to see the success message
         setTimeout(() => {
-          managePrintNotification(event.printId, 'dismiss')
+          notificationManager.dismissNotification(event.printId)
         }, 5000) // Dismiss after 5 seconds
       }
     }
