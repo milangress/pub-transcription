@@ -11,34 +11,6 @@ import { createStreamProcess } from './streamProcess'
 import { checkApplicationFolder } from './utils/applicationFolder'
 import { simulatedTranscriptController } from './utils/simulateTranscriptForDevTesting'
 
-// Local types
-interface PrintWindowOptions extends Electron.BrowserWindowConstructorOptions {
-  width: number
-  height: number
-  show: boolean
-  webPreferences: {
-    scrollBounce: boolean
-    nodeIntegration: boolean
-    contextIsolation: boolean
-    preload: string
-    sandbox?: boolean
-  }
-}
-
-interface MainWindowOptions extends Electron.BrowserWindowConstructorOptions {
-  width: number
-  height: number
-  webPreferences: {
-    titleBarStyle: {
-      hiddenInset: boolean
-    }
-    nodeIntegration: boolean
-    preload: string
-  }
-  icon: string
-  show: boolean
-}
-
 // Create event emitter for print events
 const printEvents = new EventEmitter()
 
@@ -57,10 +29,11 @@ function createPrintWindow(): BrowserWindow {
     return printWindow
   }
 
-  const options: PrintWindowOptions = {
+  const options = {
     width: 450,
     height: 950,
-    show: isDev(),
+    //show: isDev(),
+    show: true,
     webPreferences: {
       scrollBounce: false,
       nodeIntegration: true,
@@ -112,7 +85,7 @@ function createPrintWindow(): BrowserWindow {
 
 function createWindow(): void {
   // Create the browser window.
-  const options: MainWindowOptions = {
+  const options = {
     width: 1200,
     height: 950,
     webPreferences: {
@@ -131,6 +104,8 @@ function createWindow(): void {
   if (isDev()) {
     createPrintWindow()
     mainWindow.webContents.openDevTools()
+  } else {
+    createPrintWindow()
   }
 
   // Load the app
@@ -214,10 +189,10 @@ app.whenReady().then(() => {
   })
 
   createWindow()
-  
+
   // Check if we should move to Applications folder
   checkApplicationFolder(isDev)
-  
+
   initAudioDevices()
 
   app.on('activate', () => {
