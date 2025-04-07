@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import { EventEmitter } from 'events';
 import type { PrintSettings, QueueStatus } from '../types/index.ts';
-import { printWindowManager } from './managers/PrintWindowManager';
+import { printWindowManager } from './windows/PrintWindow.js';
 
 interface PrintJob {
   content: string;

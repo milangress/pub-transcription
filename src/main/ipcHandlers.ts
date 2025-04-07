@@ -7,11 +7,11 @@ import { join } from 'path';
 
 import type { PrintCompletionEvent, SettingsSnapshot } from '../types';
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
-import { notificationManager } from './managers/NotificationManager';
-import { printWindowManager } from './managers/PrintWindowManager';
-import { notifyStatus } from './managers/setPrintStatus';
 import { PrintQueue } from './PrintQueue';
+import { notificationManager } from './render/NotificationManager';
+import { notifyStatus } from './render/setPrintStatus';
 import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager';
+import { printWindowManager } from './windows/PrintWindow';
 
 const store = new Store();
 const ipc = new IpcListener<IpcEvents>();
