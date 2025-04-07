@@ -16,7 +16,6 @@
   
   // Refs for DOM elements
   let printContainer: HTMLElement;
-  let svgFiltersDiv: HTMLElement;
   
   // Content state
   let printContent = $state('');
@@ -172,9 +171,9 @@
     <style>{@html inlineStyles}</style>
   {/if}
   
-  <!-- SVG filters container -->
+  <!-- SVG filters container-->
   {#if svgFiltersContent}
-    <div bind:this={svgFiltersDiv} id="svg-filters" style="display: none">
+    <div id="svg-filters" style="display: none">
       {@html svgFiltersContent}
     </div>
   {/if}
