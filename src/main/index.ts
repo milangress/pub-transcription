@@ -1,6 +1,8 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow } from 'electron';
 
+import { setupEditorIPC } from './ipc/editor';
+import { createMenu } from './menu';
 import { printQueue } from './print/PrintQueue';
 import { setupIpcHandlers } from './services/ipcHandlers';
 import { checkApplicationFolder } from './utils/applicationFolder';
@@ -24,6 +26,12 @@ app.whenReady().then(() => {
   // Register IPC handlers
   setupIpcHandlers();
 
+  // Initialize menu
+  createMenu();
+
+  // Setup IPC handlers
+  setupEditorIPC();
+
   // Create the main window
   mainWindowManager.getOrCreateMainWindow();
 
@@ -40,9 +48,13 @@ app.whenReady().then(() => {
   });
 });
 
-// Quit when all windows are closed
+// Quit when all windows are closed, except on macOS. There, it's common
+// for applications and their menu bar to stay active until the user quits
+// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
 
 // Cleanup on app quit

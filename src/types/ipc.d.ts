@@ -25,6 +25,10 @@ export type IpcEvents =
       'get-settings-snapshots': () => Promise<SettingsSnapshotListResponse>;
       'load-settings-snapshot': (id: string) => Promise<SettingsSnapshot | null>;
       'delete-settings-snapshot': (id: string) => Promise<boolean>;
+      'editor:openFile': (options: {
+        content: string;
+        language: 'css' | 'html';
+      }) => Promise<number>;
     };
 
 // Renderer ipc events (from main to renderer)
@@ -38,4 +42,8 @@ export type IpcRendererEvent = {
   // Transcription related events
   'whisper-ccp-stream:transcription': [data: string];
   'whisper-ccp-stream:status': [status: string];
+
+  // Editor related events
+  'editor:init': [options: { content: string; language: 'css' | 'html' }];
+  'editor:setLanguage': [language: 'css' | 'html'];
 };
