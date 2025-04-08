@@ -6,6 +6,7 @@
   import ControllerManager from '@components/midi/ControllerManager.svelte';
   import BlockTxt from '@components/pageElement/BlockTxt.svelte';
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte';
+  import log from 'electron-log/renderer';
   import type { BlockTxtSettings, FontFamily, TxtObject } from '../src/types';
 
   import type { PrintRequest, PrintTask } from 'src/types';
@@ -113,7 +114,7 @@
           (x) => x.toLowerCase() === formattedSentence.content.toLowerCase().trim(),
         )
       ) {
-        console.log('Commiting finalSentence', formattedSentence.content);
+        log.silly('Commiting:', formattedSentence.content);
         committedContent = [...committedContent, formattedSentence];
       }
     } else {
@@ -307,9 +308,9 @@
 
       const printRequest: PrintRequest = {
         printId,
-        pageNumber: pageNumber,
+        pageNumber: $state.snapshot(pageNumber),
         do: {
-          print: printerSettings,
+          print: $state.snapshot(printerSettings),
         },
         pageContent: {
           inlineStyle: settings.inlineStyle,

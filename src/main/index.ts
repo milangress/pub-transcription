@@ -1,7 +1,6 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow } from 'electron';
 
-import log from 'electron-log/main';
 import { setupIpcHandlers } from './ipcHandlers';
 import { PrintQueue } from './PrintQueue';
 import { checkApplicationFolder } from './utils/applicationFolder';
@@ -14,12 +13,6 @@ const isDev = (): boolean => !app.isPackaged;
 
 // App initialization
 app.whenReady().then(() => {
-  log.initialize();
-  // log.transports.file.level = false;
-  // log.transports.console.level = false;
-  log.scope('user');
-
-  log.info('App initialization');
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron');
 

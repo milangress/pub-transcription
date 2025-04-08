@@ -1,4 +1,5 @@
 import { Notification, shell } from 'electron';
+import { printLogger } from '../utils/logger';
 
 /**
  * NotificationManager handles desktop notifications for print jobs
@@ -14,7 +15,7 @@ export class NotificationManager {
   constructor() {
     // Check if notifications are supported on startup
     if (!Notification.isSupported()) {
-      console.log('Notifications are not supported on this system');
+      printLogger.warn('Notifications are not supported on this system');
     }
   }
 
@@ -156,11 +157,11 @@ export class NotificationManager {
         .openPath(filePath)
         .then((result) => {
           if (result !== '') {
-            console.error(`Error opening file: ${result}`);
+            printLogger.error(`Error opening file: ${result}`);
           }
         })
         .catch((err) => {
-          console.error('Error opening file:', err);
+          printLogger.error('Error opening file:', err);
         });
     }
   }

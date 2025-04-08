@@ -4,6 +4,7 @@ import icon from '../../../resources/favicon.png?asset';
 import { PrintQueue } from '../PrintQueue';
 import { spawnWhisperStream } from '../services/WhisperStream';
 import { isDev } from '../utils/helper';
+import { windowLogger } from '../utils/logger';
 import { simulatedTranscriptController } from '../utils/simulateTranscriptForDevTesting';
 import { printWindowManager } from './PrintWindow';
 
@@ -121,7 +122,7 @@ export class MainWindow {
     if (!this.mainWindow) return;
 
     if (process.argv.includes('--simulate')) {
-      console.log('Running in simulation mode');
+      windowLogger.info('Running in simulation mode');
       this.simulationController = simulatedTranscriptController(this.mainWindow);
       this.simulationController.start();
     } else {

@@ -13,6 +13,7 @@ import { notificationManager } from './print/NotificationManager';
 import { notifyStatus } from './print/setPrintStatus';
 import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './services/snapshots';
 import { openPdfFolder } from './utils/helper';
+import { ipcLogger } from './utils/logger';
 import { printWindowManager } from './window/PrintWindow';
 
 const store = new Store();
@@ -43,7 +44,7 @@ export function setupIpcHandlers(): void {
     try {
       const printJob = printJobSchema.parse(requestUnsave);
 
-      console.log('📝 Print request received:', {
+      ipcLogger.info('📝 Print request received:', {
         contentLength: printJob.pageContent.html.length,
         PrintId: printJob.printId,
       });
@@ -62,7 +63,7 @@ export function setupIpcHandlers(): void {
         printId: printJob.printId,
       });
     } catch (error) {
-      console.error('Print queue error:', error);
+      ipcLogger.error('Print queue error:', error);
       const printId = requestUnsave?.printId ?? '000';
 
       notificationManager.showNotification(printId, 'Print Error', {
@@ -116,7 +117,7 @@ export function setupIpcHandlers(): void {
       // Get the print window from the manager
       const printWindow = printWindowManager.getOrCreatePrintWindow();
 
-      console.log('📝 Execute print request:', {
+      ipcLogger.info('📝 Execute print request:', {
         contentLength: printJob.pageContent.html.length,
         printId: printJob.printId,
       });
@@ -138,14 +139,14 @@ export function setupIpcHandlers(): void {
       // Handle direct printing
       if (printJob.do.print.yes === true) {
         await new Promise<void>((resolve, reject) => {
-          console.log('Printing...', printOptions);
+          ipcLogger.info('Printing...', printOptions);
           printWindow.webContents.print(printOptions, (success, errorType) => {
             if (!success) {
-              console.error('Printing failed', errorType);
+              ipcLogger.error('Printing failed', errorType);
               notifyStatus.printError(printJob.printId, errorType);
               reject(new Error(errorType));
             } else {
-              console.log('Printing completed');
+              ipcLogger.info('Printing completed');
               notifyStatus.printSuccess(printJob.printId);
               resolve();
             }
@@ -163,12 +164,12 @@ export function setupIpcHandlers(): void {
         }
 
         const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`);
-        console.log('Printing to PDF...', pdfPath, pdfOptions);
+        ipcLogger.info('Printing to PDF...', pdfPath, pdfOptions);
         const pdfData = await printWindow.webContents.printToPDF(pdfOptions);
 
         if (pdfData) {
           await fs.writeFile(pdfPath, pdfData);
-          console.log(`Wrote PDF successfully to ${pdfPath}`);
+          ipcLogger.info(`Wrote PDF successfully to ${pdfPath}`);
 
           notifyStatus.pdfSuccess(printJob.printId, pdfPath);
 
@@ -196,7 +197,7 @@ export function setupIpcHandlers(): void {
 
       return true;
     } catch (error) {
-      console.error('Print/PDF error:', error);
+      ipcLogger.error('Print/PDF error:', error);
       const printId = request?.printId || '000';
 
       notifyStatus.printError(printId, error);
@@ -216,7 +217,7 @@ export function setupIpcHandlers(): void {
   // Print status handler
   ipc.on('print-status', (_event, status) => {
     if (!status.printId) {
-      console.error('❌ Print status received without printId:', status);
+      ipcLogger.error('❌ Print status received without printId:', status);
       return;
     }
 

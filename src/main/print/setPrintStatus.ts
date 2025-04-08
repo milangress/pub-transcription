@@ -2,6 +2,7 @@ import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
 import { BrowserWindow } from 'electron';
 import type { PrintStatusMessage } from '../../types';
 import type { IpcRendererEvent } from '../../types/ipc';
+import { printLogger } from '../utils/logger';
 import { notificationManager } from './NotificationManager';
 import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printStatusMessage';
 
@@ -20,11 +21,11 @@ class NotifyStatus {
     const windows = [...allWindows].filter(Boolean);
 
     windows.forEach((window) => {
-      console.log('Sending to window', 'print-status', status);
+      printLogger.info('Sending to window', 'print-status', status);
       if (window && !window.isDestroyed()) {
         this.emitter.send(window.webContents, 'print-status', status);
       } else {
-        console.log('Window is not available', window);
+        printLogger.warn('Window is not available', window);
       }
     });
   }

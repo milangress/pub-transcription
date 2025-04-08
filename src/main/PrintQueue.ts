@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import { EventEmitter } from 'events';
 import type { PrintJob, QueueStatus } from '../types/index.ts';
+import { printLogger } from './utils/logger';
 import { printWindowManager } from './window/PrintWindow.js';
 
 interface PrintQueueJob extends PrintJob {
@@ -63,7 +64,7 @@ export class PrintQueue {
       };
 
       this.queue.push(job);
-      console.log(`Added job to queue. Queue length: ${this.queue.length}`);
+      printLogger.info(`Added job to queue. Queue length: ${this.queue.length}`);
       this.updateQueueStatus();
       this.processNext();
     });
@@ -95,16 +96,18 @@ export class PrintQueue {
           cleanup();
 
           // If we haven't exceeded max retries, move job to end of queue
-          if (job.attempt < this.maxRetries) {
-            job.attempt++;
+          if (job.retries < this.maxRetries) {
+            job.retries++;
             this.queue.push({
               ...job,
               addedAt: Date.now(), // Reset the timestamp
             });
-            console.log(`Job timed out, retrying later. Attempt ${job.retries}/${this.maxRetries}`);
+            printLogger.warn(
+              `Job timed out, retrying later. Attempt ${job.retries}/${this.maxRetries}`,
+            );
             resolve({ success: false, retrying: true });
           } else {
-            console.log(`Job failed after ${this.maxRetries} attempts`);
+            printLogger.error(`Job failed after ${this.maxRetries} attempts`);
             reject(new Error(`Print job failed after ${this.maxRetries} attempts`));
           }
         }, this.timeout);
@@ -136,11 +139,12 @@ export class PrintQueue {
 
         // Send the job to the print window via the printWindow
         try {
-          console.log(`Sending job ${job.printId} to print window`);
+          printLogger.info(`Sending job ${job.printId} to print window`);
+
           printWindowManager
             .sendJobToPrintWindow({
               ...job,
-              attempt: job.attempt,
+              attempt: job.retries,
               maxRetries: this.maxRetries,
             })
             .catch((err) => {
@@ -158,14 +162,14 @@ export class PrintQueue {
       });
 
       if (result.success) {
-        console.log(`Job ${job.printId} completed successfully`);
+        printLogger.info(`Job ${job.printId} completed successfully`);
         job.resolve(result);
       } else if (!result.retrying) {
-        console.log(`Job ${job.printId} failed: ${result.error}`);
+        printLogger.warn(`Job ${job.printId} failed: ${result.error}`);
         job.reject(new Error(result.error || 'Print failed'));
       }
     } catch (error) {
-      console.error('Print job error:', error);
+      printLogger.error('Print job error:', error);
       job.reject(error instanceof Error ? error : new Error(String(error)));
     } finally {
       // Always clean up the current job
@@ -175,13 +179,13 @@ export class PrintQueue {
 
       // Process next job after a delay to allow for SVG filters and window stabilization
       if (this.queue.length > 0) {
-        console.log(`Will process next job in 1s. Queue length: ${this.queue.length}`);
+        printLogger.info(`Will process next job in 1s. Queue length: ${this.queue.length}`);
         setTimeout(() => {
-          console.log('Processing next job after delay');
+          printLogger.info('Processing next job after delay');
           this.processNext();
         }, 1000);
       } else {
-        console.log('Queue is empty');
+        printLogger.info('Queue is empty');
       }
     }
   }
@@ -202,7 +206,7 @@ export class PrintQueue {
 
   cleanup(): void {
     if (this.queue.length > 0) {
-      console.log(`Cleaning up ${this.queue.length} remaining print jobs`);
+      printLogger.info(`Cleaning up ${this.queue.length} remaining print jobs`);
 
       // Emit completion events for all remaining jobs to clean up notifications
       this.queue.forEach((job) => {

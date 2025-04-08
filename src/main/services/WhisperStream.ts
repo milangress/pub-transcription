@@ -7,6 +7,7 @@ import ggmlMetal from '../../../resources/lib/ggml-metal.metal?asset&asarUnpack'
 import ggmlStreamBin from '../../../resources/lib/stream?asset&asarUnpack';
 import ggmlModelSmallEnQ51Bin from '../../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
 import type { IpcRendererEvent } from '../../types/ipc';
+import { serviceLogger } from '../utils/logger';
 import { startPowerSaveBlocker } from '../utils/startPowerSaveBlocker';
 
 const emitter = new IpcEmitter<IpcRendererEvent>();
@@ -61,17 +62,17 @@ export function spawnWhisperStream(
   const log = {
     msg: (message: string | object): void => {
       const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
-      console.log('\x1b[90m%s\x1b[0m', `[${mergedOptions.name}] ${text}`);
+      serviceLogger.debug(`[${mergedOptions.name}] ${text}`);
     },
     toWindow: (message: string): void => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-        console.log('\x1b[34m%s\x1b[0m', `[${mergedOptions.name}] [send] ${message}`);
+        serviceLogger.debug(`[${mergedOptions.name}] [send] ${message}`);
         sendToWindowIfAvailable('whisper-ccp-stream:status', message);
       }
     },
     error: (message: string | object): void => {
       const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
-      console.error('\x1b[31m%s\x1b[0m', `[${mergedOptions.name}] [error] ${text}`);
+      serviceLogger.error(`[${mergedOptions.name}] [error] ${text}`);
     },
   };
 

@@ -1,9 +1,10 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
 import { BrowserWindow, app } from 'electron';
 import { join } from 'path';
-import type { PrintJob } from '../../types';
+import { printJobSchema, type PrintJob } from '../../types';
 import type { IpcRendererEvent } from '../../types/ipc';
 import { isDev } from '../utils/helper';
+import { windowLogger } from '../utils/logger';
 
 const emitter = new IpcEmitter<IpcRendererEvent>();
 
@@ -52,7 +53,7 @@ export class PrintWindowManager {
         try {
           this.printWindow.webContents.debugger.detach();
         } catch (error) {
-          console.error('Failed to detach debugger:', error);
+          windowLogger.error('Failed to detach debugger:', error);
         }
         this.debuggerAttached = false;
       }
@@ -86,17 +87,10 @@ export class PrintWindowManager {
    */
   public async sendJobToPrintWindow(printJob: PrintJob): Promise<void> {
     const printWindow = await this.awaitWindowReady();
+    const cleanPrintJob = printJobSchema.parse(printJob);
 
-    if (typeof printJob.pageContent.html !== 'string') {
-      throw new Error('Print content must be a string');
-    }
-
-    if (!printJob.printId) {
-      throw new Error('Print ID is required in settings');
-    }
-
-    console.log(`Sending job ${printJob.printId} to print window`);
-    emitter.send(printWindow.webContents, 'PrintWindow:printJob', printJob);
+    windowLogger.info(`Sending job ${cleanPrintJob.printId} to print window`, cleanPrintJob);
+    emitter.send(printWindow.webContents, 'PrintWindow:printJob', cleanPrintJob);
   }
 
   /**
