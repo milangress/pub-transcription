@@ -6,6 +6,7 @@ import { existsSync, promises as fs } from 'fs';
 import { join } from 'path';
 
 import type { PrintCompletionEvent, SettingsSnapshot } from '../types';
+import { printJobSchema } from '../types/index';
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
 import { printQueue } from './PrintQueue';
 import { notificationManager } from './print/NotificationManager';
@@ -40,32 +41,30 @@ export function setupIpcHandlers(): void {
   // Print request handler
   ipc.on('print', async (event, requestUnsaved) => {
     try {
-      const request = printRequestSchema.parse(requestUnsaved);
+      const printJob = printJobSchema.parse(requestUnsaved);
 
       console.log('📝 Print request received:', {
-        contentLength: request.content.length,
-        PrintId: request.settings.printId,
+        contentLength: printJob.pageContent.html.length,
+        PrintId: printJob.printId,
       });
 
       // Create notification for queued print job
-      notificationManager.showNotification(request.settings.printId, 'Print Job Queued', {
+      notificationManager.showNotification(printJob.printId, 'Print Job Queued', {
         body: `Your print job has been added to the queue.`,
         silent: true,
       });
 
-      await printQueue.add(request.content, request.settings);
+      await printQueue.add(printJob);
 
       // Send queue notification immediately
       emitter.send(event.sender, 'print-queued', {
         success: true,
-        printId: request.settings.printId,
+        printId: printJob.printId,
       });
     } catch (error) {
       console.error('Print queue error:', error);
 
-      // Show error notification
-      if (request.settings?.printId) {
-        notificationManager.showNotification(request.settings.printId, 'Print Error', {
+        notificationManager.showNotification( '000', 'Print Error', {
           body: `Error: ${error instanceof Error ? error.message : String(error)}`,
           silent: false,
         });
@@ -74,7 +73,7 @@ export function setupIpcHandlers(): void {
       emitter.send(event.sender, 'print-queued', {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        printId: request.settings?.printId,
+        printId: printJob.printId,
       });
     }
   });
@@ -113,21 +112,18 @@ export function setupIpcHandlers(): void {
   // Print execution handler
   ipc.handle('PrintWindow:ReadyToBePrinted', async (_event, request) => {
     try {
+      const printJob = printJobSchema.parse(request);
       // Get the print window from the manager
       const printWindow = printWindowManager.getOrCreatePrintWindow();
 
       console.log('📝 Execute print request:', {
-        contentLength: request.content.length,
-        printId: request.settings.printId,
+        contentLength: request.pageContent.html.length,
+        printId: request.printId,
       });
-
-      if (!request.settings || !request.settings.printId) {
-        throw new Error('Print ID is required');
-      }
 
       const printOptions = {
         ...DEFAULT_PRINT_OPTIONS,
-        silent: request.settings.silent ?? DEFAULT_PRINT_OPTIONS.silent,
+        silent: request.do.print.silent ?? DEFAULT_PRINT_OPTIONS.silent,
       };
 
       const pdfOptions = {
@@ -137,20 +133,20 @@ export function setupIpcHandlers(): void {
         printBackground: printOptions.printBackground,
       };
 
-      notifyStatus.printStart(request.settings.printId);
+      notifyStatus.printStart(printJob.printId);
 
       // Handle direct printing
-      if (request.settings.forcePrint === true) {
+      if (printJob.do.print.yes === true) {
         await new Promise<void>((resolve, reject) => {
           console.log('Printing...', printOptions);
           printWindow.webContents.print(printOptions, (success, errorType) => {
             if (!success) {
               console.error('Printing failed', errorType);
-              notifyStatus.printError(request.settings.printId, errorType);
+              notifyStatus.printError(printJob.printId, errorType);
               reject(new Error(errorType));
             } else {
               console.log('Printing completed');
-              notifyStatus.printSuccess(request.settings.printId);
+              notifyStatus.printSuccess(printJob.printId);
               resolve();
             }
           });
@@ -173,24 +169,24 @@ export function setupIpcHandlers(): void {
         await fs.writeFile(pdfPath, pdfData);
         console.log(`Wrote PDF successfully to ${pdfPath}`);
 
-        notifyStatus.pdfSuccess(request.settings.printId, pdfPath);
+        notifyStatus.pdfSuccess(printJob.printId, pdfPath);
 
-        const notificationTitle = request.settings.forcePrint
+        const notificationTitle = printJob.do.print.yes
           ? 'Print Job & PDF Completed'
           : 'PDF Generated Successfully';
 
-        const notificationBody = request.settings.forcePrint
+        const notificationBody = printJob.do.print.yes
           ? `Print completed and PDF saved. Click to open.`
           : `PDF saved successfully. Click to open.`;
 
-        notificationManager.showNotification(request.settings.printId, notificationTitle, {
+        notificationManager.showNotification(printJob.printId, notificationTitle, {
           body: notificationBody,
           silent: true,
           path: pdfPath,
         });
 
         printEvents.emit('INTERNAL-PrintQueueEvent:complete', {
-          printId: request.settings.printId,
+          printId: printJob.printId,
           success: true,
         } as PrintCompletionEvent);
       }
@@ -198,11 +194,11 @@ export function setupIpcHandlers(): void {
       return true;
     } catch (error) {
       console.error('Print/PDF error:', error);
-      notifyStatus.printError(request.settings.printId, error);
+      notifyStatus.printError(printJob.printId, error);
 
       // Emit error event for PrintQueue
       const completionEvent: PrintCompletionEvent = {
-        printId: request.settings.printId,
+        printId: printJob.printId,
         success: false,
         error: error instanceof Error ? error.message : String(error),
       };

@@ -1,14 +1,11 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow } from 'electron';
-import { EventEmitter } from 'events';
 
 import { setupIpcHandlers } from './ipcHandlers';
 import { PrintQueue } from './PrintQueue';
 import { checkApplicationFolder } from './utils/applicationFolder';
 import { mainWindowManager } from './window/MainWindow';
 import { printWindowManager } from './window/PrintWindow';
-// Create event emitter for print events
-const printEvents = new EventEmitter();
 
 // Global references
 let printQueue: PrintQueue | null = null;
@@ -29,7 +26,7 @@ app.whenReady().then(() => {
 
   // Initialize print queue if it doesn't exist
   if (!printQueue) {
-    printQueue = new PrintQueue(printEvents);
+    printQueue = new PrintQueue();
   }
 
   // Register IPC handlers

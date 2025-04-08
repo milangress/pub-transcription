@@ -17,19 +17,42 @@ export type PrintAction = z.infer<typeof printActionSchema>;
 export const printStatusSchema = z.enum(['SUCCESS', 'ERROR', 'INFO']);
 export type PrintStatus = z.infer<typeof printStatusSchema>;
 
+export const printTaskSchema = z.object({
+  yes: z.boolean(),
+  deviceName: z.string(),
+  silent: z.boolean().optional(),
+});
+export type PrintTask = z.infer<typeof printTaskSchema>;
+
+export const printTasksSchema = z.object({
+  print: printTaskSchema,
+  pdfSave: z
+    .object({
+      yes: z.boolean().optional(),
+    })
+    .optional(),
+  pngSave: z
+    .object({
+      yes: z.boolean().optional(),
+    })
+    .optional(),
+});
+export type PrintTasks = z.infer<typeof printTasksSchema>;
+
 /**
  * Base print settings schema
  */
-export const printSettingsSchema = z.object({
+export const printRequestSchema = z.object({
   printId: z.string(),
   pageNumber: z.number(),
-  deviceName: z.string().optional(),
-  forcePrint: z.boolean(),
-  silent: z.boolean().optional(),
-  inlineStyle: z.string(),
-  svgFilters: z.string(),
+  do: printTasksSchema,
+  pageContent: z.object({
+    inlineStyle: z.string(),
+    svgFilters: z.string(),
+    html: z.string(),
+  }),
 });
-export type PrintSettings = z.infer<typeof printSettingsSchema>;
+export type PrintRequest = z.infer<typeof printRequestSchema>;
 
 /**
  * Print status message schema
@@ -47,20 +70,11 @@ export const printStatusMessageSchema = z.object({
 export type PrintStatusMessage = z.infer<typeof printStatusMessageSchema>;
 
 /**
- * Print request payload schema
- */
-export const printRequestSchema = z.object({
-  content: z.string(),
-  settings: printSettingsSchema,
-});
-export type PrintRequest = z.infer<typeof printRequestSchema>;
-
-/**
  * Print job schema
  */
 export const printJobSchema = printRequestSchema.extend({
-  attempt: z.number(),
-  maxRetries: z.number(),
+  attempt: z.number().default(1),
+  maxRetries: z.number().default(1),
 });
 export type PrintJob = z.infer<typeof printJobSchema>;
 

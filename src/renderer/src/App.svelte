@@ -6,14 +6,9 @@
   import ControllerManager from '@components/midi/ControllerManager.svelte';
   import BlockTxt from '@components/pageElement/BlockTxt.svelte';
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte';
-  import type {
-    BlockTxtSettings,
-    FontFamily,
-    PrinterSettings,
-    TxtObject,
-  } from 'src/renderer/src/types';
+  import type { BlockTxtSettings, FontFamily, TxtObject } from 'src/renderer/src/types';
 
-  import type { PrintSettings } from 'src/types';
+  import type { PrintRequest, PrintTask } from 'src/types';
 
   import type { SvelteComponent } from 'svelte';
   import { tick } from 'svelte';
@@ -69,9 +64,10 @@
     { name: 'Yorkshire' },
   ]);
 
-  let printerSettings = $state<PrinterSettings>({
+  let printerSettings = $state<PrintTask>({
     deviceName: 'Xerox_Phaser_5550N',
-    forcePrint: false,
+    yes: false,
+    silent: undefined,
   });
 
   // Page counter
@@ -309,19 +305,20 @@
       console.log('Printing text: ', pageElement.textContent?.trim());
       if (!printId) return;
 
-      const printSettings: PrintSettings = {
-        ...printerSettings,
+      const printRequest: PrintRequest = {
         printId,
-        silent: true,
-        inlineStyle: settings.inlineStyle,
-        svgFilters: settings.svgFilters,
-        pageNumber: pageNumber, // Include page number in settings
+        pageNumber: pageNumber,
+        do: {
+          print: printerSettings,
+        },
+        pageContent: {
+          inlineStyle: settings.inlineStyle,
+          svgFilters: settings.svgFilters,
+          html: pageContent,
+        },
       };
 
-      emitter.send('print', {
-        content: pageContent,
-        settings: printSettings,
-      });
+      emitter.send('print', printRequest);
       committedContent = [];
 
       // Increment page number after successful print
@@ -443,8 +440,7 @@
         <button onclick={clearAll}>CLEAR ALL</button>
         <button onclick={() => emitter.invoke('open-pdf-folder')}> OPEN PDFs FOLDER </button>
         <input bind:value={printerSettings.deviceName} type="text" disabled />
-        <label><input bind:checked={printerSettings.forcePrint} type="checkbox" />Force Print</label
-        >
+        <label><input bind:checked={printerSettings.yes} type="checkbox" />Force Print</label>
       </div>
       <hr />
       <CodeEditor

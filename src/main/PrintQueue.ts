@@ -1,11 +1,9 @@
 import { app } from 'electron';
 import { EventEmitter } from 'events';
-import type { PrintSettings, QueueStatus } from '../types/index.ts';
+import type { PrintJob, QueueStatus } from '../types/index.ts';
 import { printWindowManager } from './window/PrintWindow.js';
 
-interface PrintJob {
-  content: string;
-  settings: PrintSettings;
+interface PrintQueueJob extends PrintJob {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
   retries: number;
@@ -22,7 +20,7 @@ interface ExtendedQueueStatus extends QueueStatus {
   currentJob: {
     addedAt: number;
     retries: number;
-    settings: PrintSettings;
+    job: PrintQueueJob;
   } | null;
 }
 
@@ -43,7 +41,7 @@ interface PrintQueueResult {
  * - Graceful cleanup of pending jobs
  */
 export class PrintQueue {
-  private queue: PrintJob[] = [];
+  private queue: PrintQueueJob[] = [];
   private isProcessing = false;
   private readonly maxRetries = 3;
   private readonly timeout = 5 * 60 * 1000; // 5 minutes timeout
@@ -54,11 +52,10 @@ export class PrintQueue {
     this.updateQueueStatus();
   }
 
-  async add(content: string, settings: PrintSettings): Promise<PrintQueueResult> {
+  async add(printJob: PrintJob): Promise<PrintQueueResult> {
     const jobPromise = new Promise((resolve, reject) => {
-      const job: PrintJob = {
-        content,
-        settings,
+      const job: PrintQueueJob = {
+        ...printJob,
         resolve,
         reject,
         retries: 0,
@@ -98,8 +95,8 @@ export class PrintQueue {
           cleanup();
 
           // If we haven't exceeded max retries, move job to end of queue
-          if (job.retries < this.maxRetries) {
-            job.retries++;
+          if (job.attempt < this.maxRetries) {
+            job.attempt++;
             this.queue.push({
               ...job,
               addedAt: Date.now(), // Reset the timestamp
@@ -126,7 +123,7 @@ export class PrintQueue {
           success: boolean;
           error?: string;
         }): void => {
-          if (printId !== job.settings.printId) return;
+          if (printId !== job.printId) return;
           cleanup();
           if (success) {
             resolve({ success: true });
@@ -139,12 +136,11 @@ export class PrintQueue {
 
         // Send the job to the print window via the printWindow
         try {
-          console.log(`Sending job ${job.settings.printId} to print window`);
+          console.log(`Sending job ${job.printId} to print window`);
           printWindowManager
             .sendJobToPrintWindow({
-              content: job.content,
-              settings: job.settings,
-              attempt: job.retries,
+              ...job,
+              attempt: job.attempt,
               maxRetries: this.maxRetries,
             })
             .catch((err) => {
@@ -162,10 +158,10 @@ export class PrintQueue {
       });
 
       if (result.success) {
-        console.log(`Job ${job.settings.printId} completed successfully`);
+        console.log(`Job ${job.printId} completed successfully`);
         job.resolve(result);
       } else if (!result.retrying) {
-        console.log(`Job ${job.settings.printId} failed: ${result.error}`);
+        console.log(`Job ${job.printId} failed: ${result.error}`);
         job.reject(new Error(result.error || 'Print failed'));
       }
     } catch (error) {
@@ -198,7 +194,7 @@ export class PrintQueue {
         ? {
             addedAt: this.queue[0].addedAt,
             retries: this.queue[0].retries,
-            settings: this.queue[0].settings,
+            job: this.queue[0],
           }
         : null,
     };
@@ -211,7 +207,7 @@ export class PrintQueue {
       // Emit completion events for all remaining jobs to clean up notifications
       this.queue.forEach((job) => {
         this.printEvents.emit('INTERNAL-PrintQueueEvent:complete', {
-          printId: job.settings.printId,
+          printId: job.printId,
           success: false,
           error: 'Print queue was cleared',
         });

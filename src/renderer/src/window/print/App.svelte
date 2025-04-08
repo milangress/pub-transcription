@@ -1,6 +1,6 @@
 <script lang="ts">
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
-  import type { PrintJob } from 'src/types/index.ts';
+  import { printJobSchema, type PrintJob, type PrintRequest } from 'src/types/index';
   import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
   import { onMount, tick } from 'svelte';
 
@@ -81,12 +81,12 @@
 
   const status = new Status();
 
-  async function executePrint(content, settings) {
-    currentPrintId = settings.printId;
+  async function executePrint(printRequest: PrintRequest) {
+    currentPrintId = printRequest.printId;
     status.msg = '📝 ReadyToBePrinted:' + currentPrintId;
 
     try {
-      await emitter.invoke('PrintWindow:ReadyToBePrinted', { content, settings });
+      await emitter.invoke('PrintWindow:ReadyToBePrinted', printRequest);
     } catch (error) {
       status.err = error;
     }
@@ -96,65 +96,61 @@
     status.msg = '🖨️ Print window initialized';
 
     // Handle print job setup
-    ipc.on(
-      'PrintWindow:printJob',
-      async (_event, { content, settings, attempt = 1, maxRetries = 1 }: PrintJob) => {
-        try {
-          status.msg = `🖨️ Processing: ${settings.printId} (Attempt ${attempt}/${maxRetries})`;
+    ipc.on('PrintWindow:printJob', async (_event, printJobUnsave: PrintJob) => {
+      try {
+        const printJob = printJobSchema.parse(printJobUnsave);
 
-          if (!settings.printId) throw (status.err = 'Print job received without printId');
-          if (!content) throw (status.err = 'Print job received without content');
+        status.msg = `🖨️ Processing: ${printJob.printId} (Attempt ${printJob.attempt}/${printJob.maxRetries})`;
 
-          // Clear the container
-          printContent = '';
+        // Clear the container
+        printContent = '';
 
-          // Update styles
-          if (settings.inlineStyle) {
-            inlineStyles = settings.inlineStyle;
-          } else {
-            status.warn = '⚠️ No inline styles provided for print job';
-            inlineStyles = '';
-          }
-
-          // Inject SVG filters if they exist
-          if (settings.svgFilters) {
-            status.msg = '🎨 Adding SVG filters';
-            svgFiltersContent = settings.svgFilters;
-          } else {
-            status.warn = '⚠️ No SVG filters provided for print job';
-            svgFiltersContent = '';
-          }
-
-          // Set the content
-          printContent = content;
-
-          // Wait for Svelte to update the DOM
-          await tick();
-
-          // Get child spans for debugging
-          if (printContainer) {
-            children = printContainer.querySelectorAll('span');
-
-            if (children.length === 0) {
-              status.warn = '⚠️ Print content contains no text spans';
-            }
-          }
-
-          status.msg = 'Content loaded, waiting 5 seconds before print...';
-
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-
-          status.msg = 'Printing...';
-
-          console.log('Executing print with settings:', { ...settings, printId: currentPrintId });
-
-          // Execute print with the same settings including printId
-          await executePrint(printContainer.innerHTML, settings);
-        } catch (error) {
-          status.err = error;
+        // Update styles
+        if (printJob.pageContent.inlineStyle) {
+          inlineStyles = printJob.pageContent.inlineStyle;
+        } else {
+          status.warn = '⚠️ No inline styles provided for print job';
+          inlineStyles = '';
         }
-      },
-    );
+
+        // Inject SVG filters if they exist
+        if (printJob.pageContent.svgFilters) {
+          status.msg = '🎨 Adding SVG filters';
+          svgFiltersContent = printJob.pageContent.svgFilters;
+        } else {
+          status.warn = '⚠️ No SVG filters provided for print job';
+          svgFiltersContent = '';
+        }
+
+        // Set the content
+        printContent = printJob.pageContent.html;
+
+        // Wait for Svelte to update the DOM
+        await tick();
+
+        // Get child spans for debugging
+        if (printContainer) {
+          children = printContainer.querySelectorAll('span');
+
+          if (children.length === 0) {
+            status.warn = '⚠️ Print content contains no text spans';
+          }
+        }
+
+        status.msg = 'Content loaded, waiting 5 seconds before print...';
+
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+
+        status.msg = 'Printing...';
+
+        console.log('Executing print with settings:', printJob);
+
+        // Execute print with the same settings including printId
+        await executePrint(printJob);
+      } catch (error) {
+        status.err = error;
+      }
+    });
   });
 </script>
 

@@ -4,11 +4,6 @@ export interface FontFamily {
   name: string;
 }
 
-export interface PrinterSettings {
-  deviceName: string;
-  forcePrint: boolean;
-}
-
 export interface BlockTxtSettings {
   inlineStyle: string;
   controllerSettings: ControllerSetting[];

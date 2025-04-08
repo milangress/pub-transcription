@@ -87,15 +87,15 @@ export class PrintWindowManager {
   public async sendJobToPrintWindow(printJob: PrintJob): Promise<void> {
     const printWindow = await this.awaitWindowReady();
 
-    if (typeof printJob.content !== 'string') {
+    if (typeof printJob.pageContent.html !== 'string') {
       throw new Error('Print content must be a string');
     }
 
-    if (!printJob.settings.printId) {
+    if (!printJob.printId) {
       throw new Error('Print ID is required in settings');
     }
 
-    console.log(`Sending job ${printJob.settings.printId} to print window`);
+    console.log(`Sending job ${printJob.printId} to print window`);
     emitter.send(printWindow.webContents, 'PrintWindow:printJob', printJob);
   }
 
