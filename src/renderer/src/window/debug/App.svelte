@@ -63,13 +63,13 @@
   async function executePrint(printJobUnsave: PrintJob) {
     const printJob = printJobSchema.parse(printJobUnsave);
     currentPrintId = printJob.printId;
-    console.log('📝 Executing print with ID:', currentPrintId);
+    console.log('Executing print with ID:', currentPrintId);
 
     try {
       await emitter.invoke('PrintWindow:ReadyToBePrinted', printJob);
       // Status updates will come from main process
     } catch (error) {
-      console.error('❌ Print error:', error);
+      console.error('Print error:', error);
       const message = error instanceof Error ? error.message : String(error);
       addLogEntry(`Error: ${message}`, null, null, 'error');
       throw error instanceof Error ? error : new Error(String(error)); // Propagate error for queue handling
@@ -77,14 +77,14 @@
   }
 
   onMount(() => {
-    console.log('🖨️ Print window initialized');
+    console.log('Print window initialized');
 
     // Listen for print status updates
     ipc.on('print-status', (_event, data) => {
-      console.log('📥 Print status update:', data);
+      console.log('Print status update:', data);
 
       if (!data?.id) {
-        console.warn('⚠️ Received print status without ID:', data);
+        console.warn('Received print status without ID:', data);
         return;
       }
 
@@ -104,7 +104,7 @@
             const duration = printStartTime
               ? ((Date.now() - printStartTime) / 1000).toFixed(2)
               : '0.00';
-            status = message || `🖨️ Print completed successfully (${duration}s)`;
+            status = message || `Print completed successfully (${duration}s)`;
             addLogEntry(
               message || `Print completed successfully (${duration}s)`,
               null,
@@ -112,7 +112,7 @@
               'server',
             );
           } else {
-            status = message || '❌ Print failed';
+            status = message || 'Print failed';
             addLogEntry(message || 'Print failed', null, null, 'server');
           }
           printStartTime = null;
@@ -129,7 +129,7 @@
           break;
 
         case 'PRINT_ERROR':
-          status = message || '❌ Print error occurred';
+          status = message || 'Print error occurred';
           addLogEntry(message || 'Print error occurred', null, null, 'server');
           printStartTime = null;
           break;
@@ -156,7 +156,7 @@
         printStartTime = Date.now();
 
         console.log(
-          `🖨️ Processing print job with ID: ${currentPrintId} (Attempt ${currentAttempt}/${maxRetries})`,
+          `Processing print job with ID: ${currentPrintId} (Attempt ${currentAttempt}/${maxRetries})`,
         );
 
         status = `Processing print job (Attempt ${currentAttempt}/${maxRetries})`;
@@ -166,7 +166,7 @@
         // Get the container
         const container = document.getElementById('print-container');
         if (!container) {
-          throw new Error('⚠️ Print container not found');
+          throw new Error('Print container not found');
         }
         container.innerHTML = '';
 
@@ -181,13 +181,13 @@
           stylesLoaded = `Yes - ${styleLength} - ${new Date().toLocaleTimeString()}`;
           addLogEntry(`Styles loaded (${styleLength} bytes)`);
         } else {
-          console.warn('⚠️ No inline styles provided for print job');
+          console.warn('No inline styles provided for print job');
           stylesLoaded = 'No';
         }
 
         // Inject SVG filters if they exist
         if (newPrintJob.pageContent.svgFilters) {
-          console.log('🎨 Adding SVG filters');
+          console.log('Adding SVG filters');
           // reuse the same div for all svg filters
           let filtersDiv = document.getElementById('svg-filters');
           if (!filtersDiv) {
@@ -198,7 +198,7 @@
           }
           filtersDiv.innerHTML = newPrintJob.pageContent.svgFilters;
         } else {
-          console.warn('⚠️ No SVG filters provided for print job');
+          console.warn('No SVG filters provided for print job');
         }
 
         // Set the content
@@ -206,7 +206,7 @@
         children = container.querySelectorAll('span');
 
         if (children && children.length === 0) {
-          console.warn('⚠️ Print content contains no text spans');
+          console.warn('Print content contains no text spans');
         }
 
         status = 'Content loaded, waiting 5 seconds before print...';
@@ -223,7 +223,7 @@
         // Execute print with the same settings including printId
         await executePrint(newPrintJob);
       } catch (error) {
-        console.error('❌ Print job error:', error);
+        console.error('Print job error:', error);
         const message = error instanceof Error ? error.message : String(error);
         status = `Error: ${message}`;
         addLogEntry(`Error: ${message}`, null, null, 'error');
@@ -232,7 +232,7 @@
 
     // Handle queue status updates
     ipc.on('queue-status', (_event, status) => {
-      console.log('📊 Queue status update:', status);
+      console.log('Queue status update:', status);
       queueLength = status.queueLength || 0;
       isQueueProcessing = status.isProcessing;
 

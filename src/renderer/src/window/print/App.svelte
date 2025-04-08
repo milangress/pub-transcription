@@ -17,7 +17,7 @@
 
   // Content state
   let printContent = $state('');
-  let inlineStyles = $state('');
+  let inlineCss = $state('');
   let svgFiltersContent = $state('');
 
   class Status {
@@ -65,7 +65,7 @@
     set err(err: Error | string | unknown) {
       // TODO: send error back to main process
       const errorMsg = err instanceof Error ? err.message : String(err);
-      this.#pushLog({ msg: `❌ ${errorMsg}`, error: err instanceof Error ? err : true });
+      this.#pushLog({ msg: `${errorMsg}`, error: err instanceof Error ? err : true });
       this.#sideEffect(this.state);
     }
 
@@ -83,7 +83,7 @@
 
   async function executePrint(printRequest: PrintRequest) {
     currentPrintId = printRequest.printId;
-    status.msg = '📝 ReadyToBePrinted:' + currentPrintId;
+    status.msg = 'ReadyToBePrinted:' + currentPrintId;
 
     try {
       await emitter.invoke('PrintWindow:ReadyToBePrinted', printRequest);
@@ -93,32 +93,32 @@
   }
 
   onMount(() => {
-    status.msg = '🖨️ Print window initialized';
+    status.msg = 'Print window initialized';
 
     // Handle print job setup
     ipc.on('PrintWindow:printJob', async (_event, printJobUnsave: PrintJob) => {
       try {
         const printJob = printJobSchema.parse(printJobUnsave);
 
-        status.msg = `🖨️ Processing: ${printJob.printId} (Attempt ${printJob.attempt}/${printJob.maxRetries})`;
+        status.msg = `Processing: ${printJob.printId} (Attempt ${printJob.attempt}/${printJob.maxRetries})`;
 
         // Clear the container
         printContent = '';
 
         // Update styles
         if (printJob.pageContent.inlineStyle) {
-          inlineStyles = printJob.pageContent.inlineStyle;
+          inlineCss = printJob.pageContent.inlineStyle;
         } else {
-          status.warn = '⚠️ No inline styles provided for print job';
-          inlineStyles = '';
+          status.warn = 'No inline styles provided for print job';
+          inlineCss = '';
         }
 
         // Inject SVG filters if they exist
         if (printJob.pageContent.svgFilters) {
-          status.msg = '🎨 Adding SVG filters';
+          status.msg = 'Adding SVG filters';
           svgFiltersContent = printJob.pageContent.svgFilters;
         } else {
-          status.warn = '⚠️ No SVG filters provided for print job';
+          status.warn = 'No SVG filters provided for print job';
           svgFiltersContent = '';
         }
 
@@ -133,7 +133,7 @@
           children = printContainer.querySelectorAll('span');
 
           if (children.length === 0) {
-            status.warn = '⚠️ Print content contains no text spans';
+            status.warn = 'Print content contains no text spans';
           }
         }
 
@@ -156,9 +156,9 @@
 
 <div id="print-window-wrapper">
   <!-- Add dynamic styles using svelte syntax -->
-  {#if inlineStyles}
+  {#if inlineCss}
     <style>
-{@html inlineStyles}
+    {@html inlineCss}
     </style>
   {/if}
 
@@ -199,14 +199,13 @@
     width: calc(297.3mm * 0.86);
     height: calc(420.2mm * 0.895);
     padding: 2cm;
-    /* this path is corrrect!!! */
     background: url('../../assets/scan.png');
     background-size: 100% 100%;
     outline: 1px solid red;
   }
 
   @media print {
-    :global(*) {
+    :global(body, html) {
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }

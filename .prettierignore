@@ -4,3 +4,7 @@ pnpm-lock.yaml
 LICENSE.md
 tsconfig.json
 tsconfig.*.json
+
+recordings
+resources
+doc
