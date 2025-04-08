@@ -1,4 +1,5 @@
 import { Notification, shell } from 'electron';
+import type { PrintCompletionEvent } from '../../types/index';
 import { printLogger } from '../utils/logger';
 
 /**
@@ -8,6 +9,7 @@ import { printLogger } from '../utils/logger';
  * - Add actions to notifications (like opening PDFs)
  * - Ensures visibility of updated notifications
  * - Tracks active notifications
+ * - Auto-dismisses notifications based on print job events
  */
 export class NotificationManager {
   private activeNotifications = new Map<string, Notification>();
@@ -68,6 +70,26 @@ export class NotificationManager {
       if (notification) {
         notification.close();
         this.activeNotifications.delete(printId);
+      }
+    }
+  }
+
+  /**
+   * Handles a print completion event and updates or dismisses notifications accordingly
+   * @param event - The print completion event
+   * @param autoDismissDelayMs - Delay before auto-dismissing successful notifications (default: 5000ms)
+   */
+  handlePrintCompletion(event: PrintCompletionEvent, autoDismissDelayMs = 5000): void {
+    if (this.hasNotification(event.printId)) {
+      if (!event.success && event.error) {
+        // Don't dismiss on error - notification already updated in PrintWindow:ReadyToBePrinted handler
+        // or should be updated by the caller
+      } else {
+        // For successful jobs, the notification will be dismissed after a delay
+        // to give the user time to see the success message
+        setTimeout(() => {
+          this.dismissNotification(event.printId);
+        }, autoDismissDelayMs);
       }
     }
   }

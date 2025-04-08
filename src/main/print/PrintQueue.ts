@@ -3,6 +3,9 @@ import { EventEmitter } from 'events';
 import type { PrintJob, QueueStatus } from '../../types/index.ts';
 import { printLogger } from '../utils/logger.ts';
 import { printWindowManager } from '../window/PrintWindow.js';
+import { notificationManager } from './NotificationManager.js';
+// The NotificationManager is used directly here to handle print job notifications
+// This allows for centralized notification management without relying on external handlers
 
 interface PrintQueueJob extends PrintJob {
   resolve: (value: unknown) => void;
@@ -136,6 +139,11 @@ export class PrintQueue {
           error?: string;
         }): void => {
           if (printId !== job.printId) return;
+
+          // Handle notification directly
+          const completionEvent = { printId, success, error };
+          notificationManager.handlePrintCompletion(completionEvent);
+
           cleanup();
           if (success) {
             resolve({ success: true });
@@ -219,11 +227,13 @@ export class PrintQueue {
 
       // Emit completion events for all remaining jobs to clean up notifications
       this.queue.forEach((job) => {
-        this.printEvents.emit('INTERNAL-PrintQueueEvent:complete', {
+        const completionEvent = {
           printId: job.printId,
           success: false,
           error: 'Print queue was cleared',
-        });
+        };
+        // Directly handle notification dismissal
+        notificationManager.handlePrintCompletion(completionEvent, 0); // Immediate dismissal
       });
     }
     this.queue = [];

@@ -63,17 +63,18 @@ export function setupIpcHandlers(): void {
         printId: printJob.printId,
       });
     } catch (error) {
-      ipcLogger.error('Print queue error:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const printId = requestUnsave?.printId ?? '000';
+      ipcLogger.error('Print queue error:', errorMessage);
 
       notificationManager.showNotification(printId, 'Print Error', {
-        body: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        body: `Error: ${errorMessage}`,
         silent: false,
       });
 
       emitter.send(event.sender, 'print-queued', {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
         printId,
       });
     }
@@ -211,39 +212,6 @@ export function setupIpcHandlers(): void {
       printEvents.emit('INTERNAL-PrintQueueEvent:complete', completionEvent);
 
       throw error;
-    }
-  });
-
-  // Print status handler
-  ipc.on('print-status', (_event, status) => {
-    if (!status.printId) {
-      ipcLogger.error('❌ Print status received without printId:', status);
-      return;
-    }
-
-    // Ensure we have a print window through the manager
-    printWindowManager.getOrCreatePrintWindow();
-
-    if (status.success) {
-      notifyStatus.printSuccess(status.printId, status.error || '🖨️ Print completed');
-    } else {
-      notifyStatus.printError(status.printId, status.error || 'Print failed');
-    }
-  });
-
-  // Set up print events listener for when print queue jobs are completed
-  printEvents.on('INTERNAL-PrintQueueEvent:complete', (event: PrintCompletionEvent) => {
-    // If we have a notification for this print job, update it based on success/failure
-    if (notificationManager.hasNotification(event.printId)) {
-      if (!event.success && event.error) {
-        // Don't dismiss on error - notification already updated in PrintWindow:ReadyToBePrinted handler
-      } else {
-        // For successful jobs, the notification will be dismissed after a delay
-        // to give the user time to see the success message
-        setTimeout(() => {
-          notificationManager.dismissNotification(event.printId);
-        }, 5000); // Dismiss after 5 seconds
-      }
     }
   });
 }
