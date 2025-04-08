@@ -5,16 +5,16 @@ import { EventEmitter } from 'events';
 import { existsSync, promises as fs } from 'fs';
 import { join } from 'path';
 
-import type { PrintCompletionEvent, SettingsSnapshot } from '../types';
-import { printJobSchema } from '../types/index';
-import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
-import { printQueue } from './PrintQueue';
-import { notificationManager } from './print/NotificationManager';
-import { notifyStatus } from './print/setPrintStatus';
-import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './services/snapshots';
-import { openPdfFolder } from './utils/helper';
-import { ipcLogger } from './utils/logger';
-import { printWindowManager } from './window/PrintWindow';
+import type { PrintCompletionEvent, SettingsSnapshot } from '../../types';
+import { printJobSchema } from '../../types/index';
+import type { IpcEvents, IpcRendererEvent } from '../../types/ipc';
+import { notificationManager } from '../print/NotificationManager';
+import { printQueue } from '../print/PrintQueue';
+import { notifyStatus } from '../print/setPrintStatus';
+import { openPdfFolder } from '../utils/helper';
+import { ipcLogger } from '../utils/logger';
+import { printWindowManager } from '../window/PrintWindow';
+import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './snapshots';
 
 const store = new Store();
 const ipc = new IpcListener<IpcEvents>();
@@ -47,10 +47,7 @@ export function setupIpcHandlers(): void {
     try {
       const printJob = printJobSchema.parse(requestUnsave);
 
-      ipcLogger.info('📝 Print request received:', {
-        contentLength: printJob.pageContent.html.length,
-        PrintId: printJob.printId,
-      });
+      ipcLogger.info('📝 Print request received:', printJob.printId);
 
       // Create notification for queued print job
       notificationManager.showNotification(printJob.printId, 'Print Job Queued', {

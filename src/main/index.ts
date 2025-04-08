@@ -1,8 +1,8 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow } from 'electron';
 
-import { setupIpcHandlers } from './ipcHandlers';
-import { printQueue } from './PrintQueue';
+import { printQueue } from './print/PrintQueue';
+import { setupIpcHandlers } from './services/ipcHandlers';
 import { checkApplicationFolder } from './utils/applicationFolder';
 import { mainWindowManager } from './window/MainWindow';
 import { printWindowManager } from './window/PrintWindow';

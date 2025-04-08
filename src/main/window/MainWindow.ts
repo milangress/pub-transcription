@@ -1,7 +1,7 @@
 import { BrowserWindow, app } from 'electron';
 import { join } from 'path';
 import icon from '../../../resources/favicon.png?asset';
-import { printQueue } from '../PrintQueue';
+import { printQueue } from '../print/PrintQueue';
 import { spawnWhisperStream } from '../services/WhisperStream';
 import { isDev } from '../utils/helper';
 import { windowLogger } from '../utils/logger';

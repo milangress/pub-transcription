@@ -1,8 +1,8 @@
 import { app } from 'electron';
 import { EventEmitter } from 'events';
-import type { PrintJob, QueueStatus } from '../types/index.ts';
-import { printLogger } from './utils/logger';
-import { printWindowManager } from './window/PrintWindow.js';
+import type { PrintJob, QueueStatus } from '../../types/index.ts';
+import { printLogger } from '../utils/logger.ts';
+import { printWindowManager } from '../window/PrintWindow.js';
 
 interface PrintQueueJob extends PrintJob {
   resolve: (value: unknown) => void;

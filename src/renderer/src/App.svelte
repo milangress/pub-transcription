@@ -253,6 +253,9 @@
             yes: printerSettings.yes,
             silent: printerSettings.silent,
           },
+          pdfSave: {
+            yes: false,
+          },
         },
         pageContent: {
           inlineStyle: settings.inlineStyle,

@@ -1,5 +1,5 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import type { PrintStatusMessage } from '../../types';
 import type { IpcRendererEvent } from '../../types/ipc';
 import { printLogger } from '../utils/logger';
@@ -90,6 +90,7 @@ class NotifyStatus {
       path: pdfPath,
     });
     this.sendToAllWindows(status);
+    app.dock?.bounce();
   }
 }
 
