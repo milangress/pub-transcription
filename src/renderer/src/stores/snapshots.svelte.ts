@@ -3,6 +3,7 @@ import type { SettingsSnapshot, SettingsSnapshotListResponse } from 'src/types';
 import type { IpcEvents } from 'src/types/ipc';
 import { v4 as uuidv4 } from 'uuid';
 import { mergeInlineStyles } from '../utils/styleMerger';
+import { remoteSettings } from './remoteSettings.svelte';
 import { settings } from './settings.svelte';
 
 const emitter = new IpcEmitter<IpcEvents>();
@@ -24,9 +25,9 @@ class SnapshotsStore {
         id: uuidv4(),
         name: name || `Snapshot ${new Date().toLocaleString()}`,
         timestamp: Date.now(),
-        editorCss: settings.editorCss,
-        svgFilters: settings.svgFilters,
-        controllerValues: settings.controllerValues,
+        editorCss: remoteSettings.editorCss,
+        svgFilters: remoteSettings.svgFilters,
+        controllerValues: remoteSettings.controllerValues,
       };
 
       // Save the snapshot via IPC

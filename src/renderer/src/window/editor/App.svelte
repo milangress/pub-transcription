@@ -26,6 +26,7 @@
 
   // Update appropriate setting when editor value changes and send to remote
   function handleEditorChange(value: string): void {
+    console.log('handleEditorChange', value);
     editorValue = value;
 
     // Send the update to remote settings in other windows
@@ -36,15 +37,9 @@
       emitter.send('editor:settings-updated', { svgFilters: value });
     }
   }
-
-  // Function to save the current editor value to the main settings store
-  function saveToMainSettings(): void {
-    if (editorLanguage === 'css') {
-      settings.editorCss = editorValue;
-    } else if (editorLanguage === 'html') {
-      settings.svgFilters = editorValue;
-    }
-    settings.markUnsaved();
+  // Save a snapshot of the remote settings inside of the main window
+  function saveSnapshotOfRemoteSettings(): void {
+    console.log('saveSnapshotOfRemoteSettings');
   }
 </script>
 
@@ -61,12 +56,12 @@
   </div>
 
   <div class="actions">
-    <button onclick={() => saveToMainSettings()}>Save to Main Settings</button>
+    <button onclick={() => saveSnapshotOfRemoteSettings()}>Save Snapshot</button>
   </div>
 
   <div class="editor-container">
     <CodeEditor
-      bind:value={settings.editorCss}
+      bind:value={editorValue}
       language={editorLanguage}
       controllerSettings={settings.controllerSettings}
       onChange={handleEditorChange}

@@ -8,6 +8,8 @@ const emitter = new IpcEmitter<IpcEvents>();
 class RemoteSettingsStore {
   editorCss = $state('');
   svgFilters = $state('');
+  controllerSettings = settings.controllerSettings;
+  controllerValues = settings.controllerValues;
   #initialized = $state(false);
 
   constructor() {
