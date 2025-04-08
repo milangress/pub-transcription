@@ -35,10 +35,11 @@ const DEFAULT_PRINT_OPTIONS = {
   },
   pageSize: 'A3' as const,
   printBackground: true,
-  printSelectionOnly: false,
   landscape: false,
   silent: true,
   scaleFactor: 100,
+  generateTaggedPDF: true,
+  generateDocumentOutline: true,
 };
 
 export function setupIpcHandlers(): void {

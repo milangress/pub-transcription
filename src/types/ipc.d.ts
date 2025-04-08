@@ -25,6 +25,7 @@ export type IpcEvents =
       'editor:save-content': [content: string];
       'editor:save-to-file': [{ content: string; filePath?: string }];
       'editor:command': [command: string, payload?: unknown];
+      'window:mode': [mode: 'full' | 'mini'];
       // Command channel events
       'command:execute': [command: string, payload?: unknown];
     }
@@ -78,4 +79,7 @@ export type IpcRendererEvent = {
   // Command channel events
   'command:response': [response: CommandResponse];
   'command:error': [error: string];
+
+  // Window mode events
+  'window:mode': [mode: 'full' | 'mini'];
 };

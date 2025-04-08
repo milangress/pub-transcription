@@ -1,6 +1,11 @@
+import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
 import { BrowserWindow, Menu, MenuItemConstructorOptions, app, dialog, shell } from 'electron';
 import { promises as fs } from 'fs';
+import type { IpcRendererEvent } from '../../types/ipc';
 import { editorWindowManager } from '../window/EditorWindow';
+import { mainWindowManager } from '../window/MainWindow';
+
+const emitter = new IpcEmitter<IpcRendererEvent>();
 
 export function createMenu(): void {
   const isMac = process.platform === 'darwin';
@@ -167,6 +172,27 @@ export function createMenu(): void {
         { role: 'zoomOut' as const },
         { type: 'separator' as const },
         { role: 'togglefullscreen' as const },
+        { type: 'separator' as const },
+        {
+          label: 'Toggle Mini Mode',
+          accelerator: 'CmdOrCtrl+M',
+          click: (): void => {
+            const mainWindow = mainWindowManager.getOrCreateMainWindow();
+            // Get current mode based on window width
+            const isCurrentlyMini = mainWindow.getBounds().width < 900;
+            // Toggle to opposite mode
+            const newMode = isCurrentlyMini ? 'full' : 'mini';
+
+            const height = mainWindow.getBounds().height;
+            if (newMode === 'mini') {
+              const width = Math.round(height / 1.4142);
+              mainWindow.setSize(width, height);
+            } else {
+              mainWindow.setSize(1200, height);
+            }
+            emitter.send(mainWindow.webContents, 'window:mode', newMode);
+          },
+        },
       ],
     },
 

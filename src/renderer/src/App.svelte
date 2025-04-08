@@ -76,6 +76,8 @@
   let isPrinting = $state(false);
   let isHandlingOverflow = $state(false); // Flag to prevent recursive overflow handling
 
+  let mode = $state<'full' | 'mini'>('full');
+
   // Initialize settings when the app starts
   $effect(() => {
     if (!settings.controllerSettings.length) settings.init();
@@ -327,6 +329,11 @@
       console.error(`Failed to open editor: ${error}`);
     }
   }
+
+  // Add IPC listener for mode changes
+  ipc.on('window:mode', (_, newMode: 'full' | 'mini') => {
+    mode = newMode;
+  });
 </script>
 
 <!-- svelte:head meta title -->
@@ -351,7 +358,7 @@
 
 <main>
   {#if currentContentList.length > 0}
-    <div class="print-context">
+    <div class={mode === 'mini' ? 'print-context-mini' : 'print-context'}>
       <page size="A3" id="page">
         <div class="content-context">
           {#each committedContent as item (item.id)}
@@ -390,57 +397,59 @@
     </div>
   {/if}
 
-  <div class="print-non" class:printFailed={!isSuccessfulPrint}>
-    <div class="infobox">
-      <div class="dot" class:greenDot={settings.codeEditorContentSaved}></div>
-      <div class="codeEditorHeader">
-        <h3>CSS Editor</h3>
-        <button onclick={() => openEditor('css')}>Open in Editor Window</button>
+  {#if mode === 'full'}
+    <div class="print-non" class:printFailed={!isSuccessfulPrint}>
+      <div class="infobox">
+        <div class="codeEditorHeader">
+          <div class="dot" class:greenDot={settings.codeEditorContentSaved}></div>
+          <button onclick={() => openEditor('css')}>Open in Editor Window</button>
+        </div>
+        <CodeEditor
+          bind:value={settings.editorCss}
+          language="css"
+          controllerSettings={settings.controllerSettings}
+          {fontFamilys}
+        />
+
+        <hr />
+
+        <ControllerManager bind:controllerSettings={settings.controllerSettings}
+        ></ControllerManager>
+
+        <hr />
+
+        <div class="printControls">
+          <button onclick={printFile}>PRINT</button>
+          <input id="pageNumberInput" bind:value={pageNumber} type="number" />
+          <button onclick={clearAll}>CLEAR ALL</button>
+          <button onclick={() => emitter.invoke('open-pdf-folder')}> OPEN PDFs FOLDER </button>
+          <input bind:value={printerSettings.deviceName} type="text" disabled />
+          <label><input bind:checked={printerSettings.yes} type="checkbox" />Force Print</label>
+        </div>
+
+        <hr />
+
+        <SnapshotManager />
+
+        <hr />
+
+        <div class="codeEditorHeader">
+          <h3>SVG Filters</h3>
+          <button onclick={() => openEditor('html')}> ❇️ </button>
+        </div>
+        <CodeEditor
+          bind:value={settings.svgFilters}
+          language="html"
+          controllerSettings={settings.controllerSettings}
+        />
+        <div style="display: none">
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+          {@html settings.svgFilters}
+        </div>
+        <TransInfoMessagesLog />
       </div>
-      <CodeEditor
-        bind:value={settings.editorCss}
-        language="css"
-        controllerSettings={settings.controllerSettings}
-        {fontFamilys}
-      />
-
-      <hr />
-
-      <ControllerManager bind:controllerSettings={settings.controllerSettings}></ControllerManager>
-
-      <hr />
-
-      <div class="printControls">
-        <button onclick={printFile}>PRINT</button>
-        <input id="pageNumberInput" bind:value={pageNumber} type="number" />
-        <button onclick={clearAll}>CLEAR ALL</button>
-        <button onclick={() => emitter.invoke('open-pdf-folder')}> OPEN PDFs FOLDER </button>
-        <input bind:value={printerSettings.deviceName} type="text" disabled />
-        <label><input bind:checked={printerSettings.yes} type="checkbox" />Force Print</label>
-      </div>
-
-      <hr />
-
-      <SnapshotManager />
-
-      <hr />
-
-      <div class="codeEditorHeader">
-        <h3>SVG Filters</h3>
-        <button onclick={() => openEditor('html')}>Open in Editor Window</button>
-      </div>
-      <CodeEditor
-        bind:value={settings.svgFilters}
-        language="html"
-        controllerSettings={settings.controllerSettings}
-      />
-      <div style="display: none">
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-        {@html settings.svgFilters}
-      </div>
-      <TransInfoMessagesLog />
     </div>
-  </div>
+  {/if}
 
   <PrintStatusBar bind:this={printStatusBar} />
 </main>
@@ -476,6 +485,9 @@
     display: block;
     box-shadow: 0 0 0.5cm rgba(0, 0, 0, 0.5);
   }
+  .print-context-mini {
+    --page-left: 50%;
+  }
 
   page {
     width: calc(297.3mm * 0.86);
@@ -486,11 +498,12 @@
     outline: 1px solid red;
     position: fixed;
     top: 50%;
-    left: 70%;
-    transform: translate(-50%, -50%) scale(0.5) translate3d(0, 0, 0);
+    left: var(--page-left, 70%);
+    transform: translate(-50%, -50%) scale(var(--page-scale, 0.5)) translate3d(0, 0, 0);
     z-index: 500;
     contain: strict;
   }
+
   page:before {
     content: '';
     position: absolute;
@@ -557,7 +570,7 @@
   .codeEditorHeader {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: right;
     margin-bottom: 0.5rem;
   }
 

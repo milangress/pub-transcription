@@ -101,10 +101,10 @@ class RemoteSettingsStore {
             // Only update if our values are different from the main settings
             // to avoid circular updates
             if (this.editorCss !== settings.editorCss) {
-              this.editorCss = $state.snapshot(settings.editorCss);
+              this.editorCss = settings.editorCss;
             }
             if (this.svgFilters !== settings.svgFilters) {
-              this.svgFilters = $state.snapshot(settings.svgFilters);
+              this.svgFilters = settings.svgFilters;
             }
           });
         }

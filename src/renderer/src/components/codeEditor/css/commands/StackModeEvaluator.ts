@@ -4,7 +4,6 @@ import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer';
 import type { IpcEvents } from 'src/types/ipc';
 import { flashEffect, flashLinesEffect } from '../FlashEffect';
 
-const emitter = new IpcEmitter<IpcEvents>();
 /**
  * Find the block boundaries from the current cursor position, excluding selector lines
  */
@@ -90,7 +89,7 @@ const evaluateStackModeBlock: StateCommand = ({ state, dispatch }) => {
   if (!content) return false;
 
   // Create emitter and send the content
-  const emitter = new IpcEmitter();
+  const emitter = new IpcEmitter<IpcEvents>();
   emitter.send('editor:stackmode', { content });
 
   // Apply flash effect to show the block boundaries
@@ -115,7 +114,7 @@ const evaluateStackModeLine: StateCommand = ({ state, dispatch }) => {
   if (!content) return false;
 
   // Create emitter and send the content
-  const emitter = new IpcEmitter();
+  const emitter = new IpcEmitter<IpcEvents>();
   emitter.send('editor:stackmode', { content });
 
   // Apply flash effect to show the line
@@ -136,7 +135,7 @@ const evaluateStackModeLine: StateCommand = ({ state, dispatch }) => {
  */
 const clearStackMode: StateCommand = ({ state, dispatch }) => {
   // Create emitter and send clear command
-  const emitter = new IpcEmitter();
+  const emitter = new IpcEmitter<IpcEvents>();
   emitter.send('editor:stackmode', { clear: true });
 
   // Flash the current line to indicate the clear action
