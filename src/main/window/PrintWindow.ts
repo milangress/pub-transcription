@@ -9,7 +9,7 @@ const emitter = new IpcEmitter<IpcRendererEvent>();
 /**
  * Manages the print window instance, handling creation, recreation, and state
  */
-export class PrintWindowManager {
+export class PrintWindow {
   private printWindow: BrowserWindow | null = null;
   private debuggerAttached = false;
 
@@ -125,4 +125,4 @@ export class PrintWindowManager {
 }
 
 // Create a singleton instance
-export const printWindowManager = new PrintWindowManager();
+export const printWindowManager = new PrintWindow();

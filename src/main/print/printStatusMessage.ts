@@ -1,4 +1,4 @@
-import type { PrintAction, PrintStatus, PrintStatusMessage } from '../types';
+import type { PrintAction, PrintStatus, PrintStatusMessage } from '../../types';
 
 /**
  * Print status action types

@@ -1,105 +1,22 @@
 import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow } from 'electron';
 import { EventEmitter } from 'events';
-import { join } from 'path';
-import icon from '../../resources/favicon.png?asset';
 
-import { AudioRecorder } from './audioRecorder';
 import { setupIpcHandlers } from './ipcHandlers';
 import { PrintQueue } from './PrintQueue';
-import { createStreamProcess } from './streamProcess';
 import { checkApplicationFolder } from './utils/applicationFolder';
-import { simulatedTranscriptController } from './utils/simulateTranscriptForDevTesting';
+import { AudioRecorder } from './utils/audioRecorder';
+import { mainWindowManager } from './window/MainWindow';
 import { printWindowManager } from './window/PrintWindow';
 
 // Create event emitter for print events
 const printEvents = new EventEmitter();
 
 // Global references
-let mainWindow: BrowserWindow | null = null;
-let simulationController: ReturnType<typeof simulatedTranscriptController> | null = null;
 let printQueue: PrintQueue | null = null;
 let audioRecorder: AudioRecorder | null = null;
 
 const isDev = (): boolean => !app.isPackaged;
-
-function createWindow(): void {
-  // Create the browser window.
-  const options = {
-    width: 1200,
-    height: 950,
-    webPreferences: {
-      titleBarStyle: {
-        hiddenInset: true,
-      },
-      nodeIntegration: true,
-      preload: join(__dirname, '../preload/index.js'),
-    },
-    icon,
-    show: false,
-  };
-
-  mainWindow = new BrowserWindow(options);
-
-  if (isDev()) {
-    printWindowManager.getOrCreatePrintWindow();
-    mainWindow.webContents.openDevTools();
-  } else {
-    printWindowManager.getOrCreatePrintWindow();
-  }
-
-  // Load the app
-  if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
-  }
-
-  // Initialize print queue if it doesn't exist
-  if (!printQueue) {
-    printQueue = new PrintQueue(printEvents);
-  }
-
-  // Register IPC handlers
-  setupIpcHandlers();
-
-  // Window event handlers
-  let isWindowShown = false;
-  let isContentLoaded = false;
-
-  function checkAndStartProcesses(): void {
-    if (isWindowShown && isContentLoaded && mainWindow) {
-      startProcesses();
-    }
-  }
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
-    isWindowShown = true;
-    checkAndStartProcesses();
-  });
-
-  mainWindow.webContents.once('did-finish-load', () => {
-    isContentLoaded = true;
-    checkAndStartProcesses();
-  });
-
-  // Handle window closing
-  mainWindow.on('closed', () => {
-    // If there are active print jobs, show the print window
-    if (printQueue?.hasActiveJobs()) {
-      printWindowManager.showPrintWindow();
-    }
-
-    // Clean up stream process
-    if (global.streamProcess) {
-      global.streamProcess.kill();
-      global.streamProcess = null;
-    }
-
-    mainWindow = null;
-  });
-}
 
 // Initialize audio devices
 const initAudioDevices = (): void => {
@@ -109,19 +26,6 @@ const initAudioDevices = (): void => {
     console.log(`index: ${i}, device name: ${devices[i]}`);
   }
 };
-
-// Function to start processes after window is ready
-function startProcesses(): void {
-  if (!mainWindow) return;
-
-  if (process.argv.includes('--simulate')) {
-    console.log('Running in simulation mode');
-    simulationController = simulatedTranscriptController(mainWindow);
-    simulationController.start();
-  } else {
-    createStreamProcess(mainWindow);
-  }
-}
 
 // App initialization
 app.whenReady().then(() => {
@@ -135,7 +39,22 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  createWindow();
+  // Initialize print queue if it doesn't exist
+  if (!printQueue) {
+    printQueue = new PrintQueue(printEvents);
+  }
+
+  // Register IPC handlers
+  setupIpcHandlers();
+
+  // Pass printQueue to the main window manager
+  mainWindowManager.setPrintQueue(printQueue, printEvents);
+
+  // Create the main window
+  mainWindowManager.getOrCreateMainWindow();
+
+  // Create the print window
+  printWindowManager.getOrCreatePrintWindow();
 
   // Check if we should move to Applications folder
   checkApplicationFolder(isDev);
@@ -144,7 +63,7 @@ app.whenReady().then(() => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      mainWindowManager.getOrCreateMainWindow();
     }
   });
 });
@@ -156,10 +75,6 @@ app.on('window-all-closed', () => {
 
 // Cleanup on app quit
 app.on('before-quit', () => {
-  if (simulationController) {
-    simulationController.stop();
-    simulationController = null;
-  }
   if (audioRecorder) {
     audioRecorder.stop();
     audioRecorder = null;
@@ -167,4 +82,7 @@ app.on('before-quit', () => {
   if (printQueue) {
     printQueue.cleanup();
   }
+
+  // Clean up the main window manager
+  mainWindowManager.cleanup();
 });

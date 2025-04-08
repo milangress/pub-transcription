@@ -2,8 +2,8 @@ import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
 import { BrowserWindow } from 'electron';
 import type { PrintStatusMessage } from '../../types';
 import type { IpcRendererEvent } from '../../types/ipc';
-import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from '../printMessages';
 import { notificationManager } from './NotificationManager';
+import { createPrintStatusMessage, PRINT_ACTIONS, PRINT_STATUS } from './printStatusMessage';
 
 class NotifyStatus {
   private emitter: IpcEmitter<IpcRendererEvent>;

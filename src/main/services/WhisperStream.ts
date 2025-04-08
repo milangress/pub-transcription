@@ -1,12 +1,13 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
 import { ChildProcess, spawn } from 'child_process';
-import { app, BrowserWindow, powerSaveBlocker } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import ggmlMetal from '../../resources/lib/ggml-metal.metal?asset&asarUnpack';
 import ggmlStreamBin from '../../resources/lib/stream?asset&asarUnpack';
 import ggmlModelSmallEnQ51Bin from '../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
-import type { IpcRendererEvent } from '../types/ipc';
+import type { IpcRendererEvent } from '../../types/ipc';
+import { startPowerSaveBlocker } from '../utils/startPowerSaveBlocker';
 
 const emitter = new IpcEmitter<IpcRendererEvent>();
 
@@ -50,7 +51,7 @@ const DEFAULT_OPTIONS: StreamOptions = {
  * - Error handling and status updates
  * - Process lifecycle management
  */
-export function createStreamProcess(
+export function spawnWhisperStream(
   mainWindow: BrowserWindow,
   options: Partial<StreamOptions> = {},
   printTranscription: boolean = false,
@@ -158,17 +159,4 @@ export function stopStreamProcess(): void {
     activeStreamProcess.kill();
     activeStreamProcess = null;
   }
-}
-
-function startPowerSaveBlocker(logtoWindow: (message: string) => void): () => void {
-  const id = powerSaveBlocker.start('prevent-display-sleep');
-  if (powerSaveBlocker.isStarted(id)) {
-    logtoWindow('✅ Power save blocker started');
-  } else {
-    logtoWindow('❌ Power save blocker failed to start');
-  }
-  return () => {
-    powerSaveBlocker.stop(id);
-    logtoWindow('❌ Power save blocker stopped');
-  };
 }

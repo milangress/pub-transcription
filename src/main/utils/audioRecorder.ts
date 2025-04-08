@@ -7,15 +7,19 @@ interface AudioFrame extends Int16Array {
 }
 
 /**
- * AudioRecorder handles real-time audio recording and transcription using PvRecorder.
- * Captures audio in frames, converts them to WAV format, and processes them through
+ * @deprecated AudioRecorder is deprecated. WhisperSpream process automaticaly records now during transcription.
+ *
+ * AudioRecorder handled real-time audio recording and transcription using PvRecorder.
+ * It captured audio in frames, converted them to WAV format, and processed them through
  * Whisper for transcription.
  *
- * Features:
+ * Deprecated Features:
  * - Real-time audio frame collection
  * - Automatic WAV file generation
  * - Integration with Whisper transcription
  * - Device management
+ *
+ * Note: The WhisperSpream process now records audio. Please migrate to it for all recording functionality.
  */
 export class AudioRecorder {
   private frames: AudioFrame[];
