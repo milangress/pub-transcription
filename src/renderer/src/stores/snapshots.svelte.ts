@@ -2,6 +2,7 @@ import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer';
 import type { SettingsSnapshot, SettingsSnapshotListResponse } from 'src/types';
 import type { IpcEvents } from 'src/types/ipc';
 import { v4 as uuidv4 } from 'uuid';
+import { mergeInlineStyles } from '../utils/styleMerger';
 import { settings } from './settings.svelte';
 
 const emitter = new IpcEmitter<IpcEvents>();
@@ -91,6 +92,42 @@ class SnapshotsStore {
       return true;
     } catch (error) {
       console.error(`Error applying snapshot with ID ${id}:`, error);
+      return false;
+    }
+  }
+
+  // Merge a settings snapshot with current settings
+  async mergeSnapshot(id: string): Promise<boolean> {
+    try {
+      const snapshot = await emitter.invoke('load-settings-snapshot', id);
+
+      if (!snapshot) {
+        console.error(`Snapshot with ID ${id} not found`);
+        return false;
+      }
+
+      // Merge the inline style
+      if (snapshot.inlineStyle && settings.inlineStyle) {
+        settings.inlineStyle = mergeInlineStyles(settings.inlineStyle, snapshot.inlineStyle);
+      }
+
+      // Update controller values
+      if (snapshot.controllerValues) {
+        Object.entries(snapshot.controllerValues).forEach(([varName, value]) => {
+          settings.updateControllerValue(varName, value);
+        });
+      }
+
+      // Keep current SVG filters
+      // settings.svgFilters remains unchanged
+
+      // Trigger save in the settings store
+      settings.markUnsaved();
+
+      console.log(`Merged snapshot: ${snapshot.name}`);
+      return true;
+    } catch (error) {
+      console.error(`Error merging snapshot with ID ${id}:`, error);
       return false;
     }
   }

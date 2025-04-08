@@ -184,6 +184,28 @@
     }
   }
 
+  async function mergeSnapshot(id: string): Promise<void> {
+    // Store original settings before merging snapshot if not already stored
+    if (!originalSettings) {
+      originalSettings = {
+        inlineStyle: settings.inlineStyle,
+        svgFilters: settings.svgFilters,
+        controllerValues: { ...settings.controllerValues },
+      };
+    }
+
+    try {
+      const success = await snapshots.mergeSnapshot(id);
+      if (success) {
+        console.log('Snapshot merged successfully');
+      } else {
+        console.error('Failed to merge snapshot');
+      }
+    } catch (error) {
+      console.error('Error merging snapshot:', error);
+    }
+  }
+
   async function deleteSnapshot(id: string): Promise<void> {
     // Remove confirm dialog
     try {
@@ -417,7 +439,7 @@
           }))}
 
           <div class="snapshotItem">
-            <button class="snapshotPreview" onclick={() => applySnapshot(snapshot.id)}>
+            <button class="snapshotPreview" onclick={() => mergeSnapshot(snapshot.id)}>
               <BlockTxt
                 content={snapshot.name}
                 settings={{
@@ -428,6 +450,7 @@
               />
             </button>
             <div class="snapshotActions">
+              <button onclick={() => applySnapshot(snapshot.id)}>↑</button>
               <button onclick={() => deleteSnapshot(snapshot.id)}>×</button>
             </div>
           </div>
@@ -592,11 +615,21 @@
     font-size: 1.2rem;
     cursor: pointer;
     color: #888;
+    margin-left: 0.25rem;
   }
 
-  .snapshotActions button:hover {
+  .snapshotActions button:first-child {
+    color: #4a90e2;
+  }
+
+  .snapshotActions button:first-child:hover {
+    color: #2a70c2;
+  }
+
+  .snapshotActions button:last-child:hover {
     color: #f00;
   }
+
   #pageNumberInput {
     width: 5em;
     text-align: center;

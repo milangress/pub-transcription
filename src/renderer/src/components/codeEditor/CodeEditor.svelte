@@ -77,7 +77,7 @@
 
   // Update all extensions when settings change
   $effect(() => {
-    if (view && controllerSettings) {
+    if (view && controllerSettings && language === 'css') {
       const currentSettings = $state.snapshot(controllerSettings);
       // Update controller values extension
       updateControllerValues(currentSettings);
@@ -101,39 +101,57 @@
       filterIds: settings.filterIds,
     };
 
+    // Base extensions that apply to both HTML and CSS
+    const baseExtensions = [
+      basicSetup,
+      languageSupport,
+      closeBrackets(),
+      lintGutter(),
+      createAIExtension(),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          value = update.state.doc.toString();
+          onChange(value);
+          syntaxTreeVizRepresentation = vizualizeParserTreeLinebreaks(
+            syntaxTree(update.state).toString(),
+          );
+        }
+      }),
+    ];
+
+    // CSS-specific extensions
+    const cssExtensions =
+      language === 'css'
+        ? [
+            compiledControllerValues(controllerSettings),
+            controllerValueSliders(),
+            propertyHighlighter(),
+            propertyEvaluator(),
+            sassLanguage.data.of({
+              autocomplete: createCompletionSource(completionOptions),
+            }),
+            keymap.of([
+              ...defaultKeymap,
+              ...completionKeymap,
+              ...livecodingKeymap,
+              { key: 'Mod-/', run: toggleLineComment },
+              { key: 'Shift-Alt-a', run: toggleComment },
+            ]),
+            Prec.highest(keymap.of(livecodingKeymap)),
+          ]
+        : [
+            // HTML-specific keymaps without CSS-specific extensions
+            keymap.of([
+              ...defaultKeymap,
+              ...completionKeymap,
+              { key: 'Mod-/', run: toggleLineComment },
+              { key: 'Shift-Alt-a', run: toggleComment },
+            ]),
+          ];
+
     const state = EditorState.create({
       doc: value,
-      extensions: [
-        basicSetup,
-        languageSupport,
-        closeBrackets(),
-        lintGutter(),
-        compiledControllerValues(controllerSettings),
-        controllerValueSliders(),
-        propertyHighlighter(),
-        propertyEvaluator(),
-        createAIExtension(),
-        sassLanguage.data.of({
-          autocomplete: createCompletionSource(completionOptions),
-        }),
-        keymap.of([
-          ...defaultKeymap,
-          ...completionKeymap,
-          ...livecodingKeymap,
-          { key: 'Mod-/', run: toggleLineComment },
-          { key: 'Shift-Alt-a', run: toggleComment },
-        ]),
-        Prec.highest(keymap.of(livecodingKeymap)),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            value = update.state.doc.toString();
-            onChange(value);
-            syntaxTreeVizRepresentation = vizualizeParserTreeLinebreaks(
-              syntaxTree(update.state).toString(),
-            );
-          }
-        }),
-      ],
+      extensions: [...baseExtensions, ...cssExtensions],
     });
 
     view = new EditorView({
