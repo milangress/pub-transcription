@@ -209,32 +209,34 @@
         return;
       }
 
-      // Remove any current elements before printing
-      const currentElements = pageElement.querySelectorAll('.current');
-      currentElements.forEach((element) => {
-        element.remove();
-        console.log('removed current element', element.textContent?.trim());
-      });
+      // Remove current elements before printing more efficiently
+      pageElement.querySelectorAll('.current').forEach((element) => element.remove());
 
       const pageContent = pageElement.innerHTML;
-      if (!pageContent || typeof pageContent !== 'string') {
+      if (!pageContent) {
         console.error('❌ Invalid page content');
         isSuccessfulPrint = false;
         return;
       }
 
       // Create a print request in the status bar
-      const printId = printStatusBar.addPrintRequest().toString(); // Convert to string
-      console.log(`📝 Created print request with ID: ${printId}`);
+      const printId = printStatusBar.addPrintRequest()?.toString();
+      if (!printId) {
+        console.error('❌ Failed to create print ID');
+        isSuccessfulPrint = false;
+        return;
+      }
 
-      console.log('Printing text: ', pageElement.textContent?.trim());
-      if (!printId) return;
-
+      // Create request with minimal references
       const printRequest: PrintRequest = {
         printId,
-        pageNumber: $state.snapshot(pageNumber),
+        pageNumber: pageNumber,
         do: {
-          print: $state.snapshot(printerSettings),
+          print: {
+            deviceName: printerSettings.deviceName,
+            yes: printerSettings.yes,
+            silent: printerSettings.silent,
+          },
         },
         pageContent: {
           inlineStyle: settings.inlineStyle,
@@ -243,6 +245,7 @@
         },
       };
 
+      // Send request and clear references
       emitter.send('print', printRequest);
       committedContent = [];
 
