@@ -255,7 +255,7 @@
             silent: printerSettings.silent,
           },
           pdfSave: {
-            yes: false,
+            yes: true,
           },
         },
         pageContent: {
@@ -288,6 +288,15 @@
 
   WebMidi.addListener('disconnected', (e) => {
     console.log('WebMidi device disconnected:', e);
+  });
+
+  // Handle editor commands
+  ipc.on('editor:command', async (_, command, payload) => {
+    console.log('Received editor command:', command, payload);
+
+    if (command === 'save-snapshot') {
+      await snapshots.saveSnapshot();
+    }
   });
 
   function clearAll(): void {

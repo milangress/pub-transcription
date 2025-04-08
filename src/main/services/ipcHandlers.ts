@@ -121,6 +121,21 @@ export function setupIpcHandlers(): void {
     });
   });
 
+  // Handle editor commands
+  ipc.on('editor:command', (_event, command, payload) => {
+    ipcLogger.info('Editor command received:', command);
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+      if (window.webContents.isDestroyed()) return;
+      try {
+        // Forward the command to all windows
+        window.webContents.send('editor:command', command, payload);
+      } catch (err) {
+        ipcLogger.error('Error sending editor command to window:', err);
+      }
+    });
+  });
+
   // PDF folder handler
   ipc.handle('open-pdf-folder', async () => {
     return openPdfFolder();

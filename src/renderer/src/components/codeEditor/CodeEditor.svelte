@@ -31,12 +31,14 @@
     controllerSettings = [],
     fontFamilys = [],
     onChange = () => {},
+    pureStyle = false,
   } = $props<{
     value: string;
     language: 'css' | 'html';
     controllerSettings: ControllerSetting[];
     fontFamilys?: FontFamily[];
     onChange?: (value: string) => void;
+    pureStyle?: boolean;
   }>();
 
   let element = $state<HTMLDivElement | undefined>();
@@ -162,10 +164,12 @@
 </script>
 
 <div bind:this={element} class="editor-wrapper"></div>
-<details class="parser-tree">
-  <summary>Parser Tree</summary>
-  <pre>{syntaxTreeVizRepresentation}</pre>
-</details>
+{#if !pureStyle}
+  <details class="parser-tree">
+    <summary>Parser Tree</summary>
+    <pre>{syntaxTreeVizRepresentation}</pre>
+  </details>
+{/if}
 
 <style>
   .editor-wrapper {

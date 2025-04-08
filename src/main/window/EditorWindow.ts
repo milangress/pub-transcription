@@ -2,7 +2,7 @@ import { BrowserWindow, WebContents, app } from 'electron';
 import os from 'os';
 import { join } from 'path';
 import icon from '../../../resources/favicon.png?asset';
-import { isDev } from '../utils/helper';
+import { mainWindowManager } from './MainWindow';
 
 export class EditorWindow {
   private editorWindows: BrowserWindow[] = [];
@@ -10,12 +10,14 @@ export class EditorWindow {
   public createEditorWindow(
     options: { initialContent?: string; language?: 'css' | 'html' } = {},
   ): BrowserWindow {
+    const mainWindow = mainWindowManager.getOrCreateMainWindow();
     const window = new BrowserWindow({
       width: 800,
       height: 600,
       // titleBarStyle: 'hidden',
       // transparent: true,
       // frame: false,
+      parent: mainWindow,
       webPreferences: {
         nodeIntegration: true,
         preload: join(__dirname, '../preload/index.js'),
@@ -23,10 +25,6 @@ export class EditorWindow {
       icon,
       show: false,
     });
-
-    if (isDev()) {
-      window.webContents.openDevTools();
-    }
 
     // Set default represented filename to home directory
     window.setRepresentedFilename(os.homedir());

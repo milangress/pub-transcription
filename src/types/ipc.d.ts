@@ -7,6 +7,13 @@ import type {
   SettingsSnapshotListResponse,
 } from './index';
 
+// Command types for general IPC communication
+export type CommandResponse<T = unknown> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
+
 // Main process ipc events (from renderer to main)
 export type IpcEvents =
   | {
@@ -16,6 +23,9 @@ export type IpcEvents =
       'editor:settings-updated': [settings: { editorCss?: string; svgFilters?: string }];
       'editor:save-content': [content: string];
       'editor:save-to-file': [{ content: string; filePath?: string }];
+      'editor:command': [command: string, payload?: unknown];
+      // Command channel events
+      'command:execute': [command: string, payload?: unknown];
     }
   | {
       // handler event map
@@ -35,6 +45,8 @@ export type IpcEvents =
       'editor:save-dialog': () => Promise<string | null>;
       'editor:set-represented-file': (filePath: string) => void;
       'editor:set-document-edited': (edited: boolean) => void;
+      // Command channel handlers
+      'command:execute': <T>(command: string, payload?: unknown) => Promise<CommandResponse<T>>;
     };
 
 // Renderer ipc events (from main to renderer)
@@ -52,9 +64,16 @@ export type IpcRendererEvent = {
   // Editor related events
   'editor:init': [options: { content: string; language: 'css' | 'html' }];
   'editor:setLanguage': [language: 'css' | 'html'];
-  'settings-sync': [settings: { editorCss?: string; svgFilters?: string }];
+  'settings-sync': [
+    settings: { editorCss?: string; svgFilters?: string; createSnapshot?: boolean },
+  ];
   'editor:save-complete': [filePath: string | null];
   'editor:save': [];
   'editor:save-as': [];
   'editor:opened-file': [filePath: string];
+  'editor:command': [command: string, payload?: unknown];
+
+  // Command channel events
+  'command:response': [response: CommandResponse];
+  'command:error': [error: string];
 };

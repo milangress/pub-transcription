@@ -187,9 +187,11 @@
     }
   }
 
-  // Save a snapshot of the remote settings inside of the main window with ipc.
   function saveSnapshotOfRemoteSettings(): void {
-    console.log('saveSnapshotOfRemoteSettings');
+    emitter.send('editor:command', 'save-snapshot', {
+      editorCss: editorValue,
+      svgFilters: settings.svgFilters,
+    });
   }
 </script>
 
@@ -216,6 +218,7 @@
       language={editorLanguage}
       controllerSettings={settings.controllerSettings}
       onChange={handleEditorChange}
+      pureStyle={true}
     />
   </div>
 </div>
