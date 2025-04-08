@@ -214,8 +214,6 @@ export function setupIpcHandlers(): void {
 
         notifyStatus.pdfSuccess(request.settings.printId, pdfPath);
 
-        // Create or update notification about completed job
-        // This notification combines both print and PDF status if forcePrint was enabled
         const notificationTitle = request.settings.forcePrint
           ? 'Print Job & PDF Completed'
           : 'PDF Generated Successfully';
