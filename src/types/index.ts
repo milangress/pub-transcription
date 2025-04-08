@@ -1,87 +1,107 @@
+import { z } from 'zod';
+
 /**
  * Print action types
  */
-export type PrintAction = 'PRINT_START' | 'PRINT_COMPLETE' | 'PDF_SAVE' | 'PRINT_ERROR';
+export const printActionSchema = z.enum([
+  'PRINT_START',
+  'PRINT_COMPLETE',
+  'PDF_SAVE',
+  'PRINT_ERROR',
+]);
+export type PrintAction = z.infer<typeof printActionSchema>;
 
 /**
  * Print status types
  */
-export type PrintStatus = 'SUCCESS' | 'ERROR' | 'INFO';
+export const printStatusSchema = z.enum(['SUCCESS', 'ERROR', 'INFO']);
+export type PrintStatus = z.infer<typeof printStatusSchema>;
 
 /**
- * Base print settings interface
+ * Base print settings schema
  */
-export interface PrintSettings {
-  printId: string;
-  pageNumber: number;
-  deviceName?: string;
-  forcePrint: boolean;
-  silent?: boolean;
-  inlineStyle: string;
-  svgFilters: string;
-}
+export const printSettingsSchema = z.object({
+  printId: z.string(),
+  pageNumber: z.number(),
+  deviceName: z.string().optional(),
+  forcePrint: z.boolean(),
+  silent: z.boolean().optional(),
+  inlineStyle: z.string(),
+  svgFilters: z.string(),
+});
+export type PrintSettings = z.infer<typeof printSettingsSchema>;
 
 /**
- * Print status message interface
+ * Print status message schema
  */
-export interface PrintStatusMessage {
-  id: string;
-  timestamp: number;
-  action: PrintAction;
-  status: PrintStatus;
-  message?: string;
-  error?: string;
-  path?: string;
-  details?: Record<string, unknown>;
-}
+export const printStatusMessageSchema = z.object({
+  id: z.string(),
+  timestamp: z.number(),
+  action: printActionSchema,
+  status: printStatusSchema,
+  message: z.string().optional(),
+  error: z.string().optional(),
+  path: z.string().optional(),
+  details: z.record(z.unknown()).optional(),
+});
+export type PrintStatusMessage = z.infer<typeof printStatusMessageSchema>;
 
 /**
- * Print request payload interface
+ * Print request payload schema
  */
-export interface PrintRequest {
-  content: string;
-  settings: PrintSettings;
-}
-
-export interface PrintJob extends PrintRequest {
-  attempt: number;
-  maxRetries: number;
-}
+export const printRequestSchema = z.object({
+  content: z.string(),
+  settings: printSettingsSchema,
+});
+export type PrintRequest = z.infer<typeof printRequestSchema>;
 
 /**
- * Queue status update interface
+ * Print job schema
  */
-export interface QueueStatus {
-  queueLength: number;
-  isProcessing: boolean;
-}
+export const printJobSchema = printRequestSchema.extend({
+  attempt: z.number(),
+  maxRetries: z.number(),
+});
+export type PrintJob = z.infer<typeof printJobSchema>;
 
 /**
- * Print job completion event interface
+ * Queue status update schema
  */
-export interface PrintCompletionEvent {
-  printId: string;
-  success: boolean;
-  error?: string;
-}
+export const queueStatusSchema = z.object({
+  queueLength: z.number(),
+  isProcessing: z.boolean(),
+});
+export type QueueStatus = z.infer<typeof queueStatusSchema>;
 
 /**
- * Settings snapshot interface
+ * Print job completion event schema
  */
-export interface SettingsSnapshot {
-  id: string;
-  name: string;
-  timestamp: number;
-  inlineStyle: string;
-  svgFilters: string;
-  controllerValues: Record<string, number>;
-}
+export const printCompletionEventSchema = z.object({
+  printId: z.string(),
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type PrintCompletionEvent = z.infer<typeof printCompletionEventSchema>;
 
 /**
- * Settings snapshot list response interface
+ * Settings snapshot schema
  */
-export interface SettingsSnapshotListResponse {
-  snapshots: SettingsSnapshot[];
-  success: boolean;
-  error?: string;
-}
+export const settingsSnapshotSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  timestamp: z.number(),
+  inlineStyle: z.string(),
+  svgFilters: z.string(),
+  controllerValues: z.record(z.number()),
+});
+export type SettingsSnapshot = z.infer<typeof settingsSnapshotSchema>;
+
+/**
+ * Settings snapshot list response schema
+ */
+export const settingsSnapshotListResponseSchema = z.object({
+  snapshots: z.array(settingsSnapshotSchema),
+  success: z.boolean(),
+  error: z.string().optional(),
+});
+export type SettingsSnapshotListResponse = z.infer<typeof settingsSnapshotListResponseSchema>;

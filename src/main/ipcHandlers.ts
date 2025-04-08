@@ -4,7 +4,6 @@ import Store from 'electron-store';
 import { EventEmitter } from 'events';
 import { existsSync, promises as fs } from 'fs';
 import { join } from 'path';
-import { z } from 'zod';
 
 import type { PrintCompletionEvent, SettingsSnapshot } from '../types';
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
@@ -20,12 +19,6 @@ const ipc = new IpcListener<IpcEvents>();
 const emitter = new IpcEmitter<IpcRendererEvent>();
 const printEvents = new EventEmitter();
 
-const printRequestSchema = z.object({
-  content: z.string(),
-  settings: z.object({
-    printId: z.string(),
-  }),
-});
 // Default print options
 const DEFAULT_PRINT_OPTIONS = {
   margins: {
@@ -45,15 +38,9 @@ const DEFAULT_PRINT_OPTIONS = {
 
 export function setupIpcHandlers(): void {
   // Print request handler
-  ipc.on('print', async (event, request) => {
-    const parsedRequest = printRequestSchema.parse(request);
+  ipc.on('print', async (event, requestUnsaved) => {
     try {
-      if (!parsedRequest.content || typeof parsedRequest.content !== 'string') {
-        throw new Error('Invalid content format');
-      }
-      if (!request.settings || !request.settings.printId) {
-        throw new Error('Print settings or ID missing');
-      }
+      const request = printRequestSchema.parse(requestUnsaved);
 
       console.log('📝 Print request received:', {
         contentLength: request.content.length,
