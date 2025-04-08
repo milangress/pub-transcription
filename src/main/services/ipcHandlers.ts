@@ -111,12 +111,26 @@ export function setupIpcHandlers(): void {
     ipcLogger.info('Settings updated from editor, syncing to other windows');
     // Broadcast to all windows
     BrowserWindow.getAllWindows().forEach((window) => {
+      emitter.send(window.webContents, 'settings-sync', settings);
       if (window.webContents.isDestroyed()) return;
       try {
-        // Use webContents.send directly since emitter.sendTo doesn't exist
-        window.webContents.send('settings-sync', settings);
+        emitter.send(window.webContents, 'settings-sync', settings);
       } catch (err) {
         ipcLogger.error('Error sending settings sync to window:', err);
+      }
+    });
+  });
+
+  // Handle settings sync between windows
+  ipc.on('editor:stackmode', (_event, mode) => {
+    ipcLogger.info('Stackmode updated from editor, syncing to other windows');
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+      if (window.webContents.isDestroyed()) return;
+      try {
+        emitter.send(window.webContents, 'editor:stackmode', mode);
+      } catch (err) {
+        ipcLogger.error('Error sending stackmode sync to window:', err);
       }
     });
   });
@@ -129,7 +143,7 @@ export function setupIpcHandlers(): void {
       if (window.webContents.isDestroyed()) return;
       try {
         // Forward the command to all windows
-        window.webContents.send('editor:command', command, payload);
+        emitter.send(window.webContents, 'editor:command', command, payload);
       } catch (err) {
         ipcLogger.error('Error sending editor command to window:', err);
       }

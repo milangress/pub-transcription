@@ -12,6 +12,9 @@
   import { onMount } from 'svelte';
   import { settings } from '../../stores/settings.svelte.js';
   import { createAIExtension } from './AIExtension';
+  import { livecodingKeymap } from './css/commands/LivecodingKeymapExtra.js';
+  import { propertyEvaluator } from './css/commands/PropertyEvaluator.js';
+  import { stackModeEvaluator } from './css/commands/StackModeEvaluator.js';
   import { createCompletionSource, updateCompletionOptions } from './css/Completions.js';
   import {
     controllerValueSliders,
@@ -21,8 +24,6 @@
     compiledControllerValues,
     updateControllerValues,
   } from './css/ControllerValuesLineAnnotation.js';
-  import { livecodingKeymap } from './css/LivecodingKeymapExtra.js';
-  import { propertyEvaluator } from './css/PropertyEvaluator.js';
   import { propertyHighlighter } from './css/PropertyHighlighter.js';
 
   let {
@@ -129,6 +130,7 @@
             controllerValueSliders(),
             propertyHighlighter(),
             propertyEvaluator(),
+            stackModeEvaluator(),
             sassLanguage.data.of({
               autocomplete: createCompletionSource(completionOptions),
             }),

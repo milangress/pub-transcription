@@ -21,6 +21,7 @@ export type IpcEvents =
       print: [request: PrintRequest];
       'print-status': [status: { printId: string; success: boolean; error?: string }];
       'editor:settings-updated': [settings: { editorCss?: string; svgFilters?: string }];
+      'editor:stackmode': [mode: { content?: string; clear?: boolean }];
       'editor:save-content': [content: string];
       'editor:save-to-file': [{ content: string; filePath?: string }];
       'editor:command': [command: string, payload?: unknown];
@@ -72,6 +73,7 @@ export type IpcRendererEvent = {
   'editor:save-as': [];
   'editor:opened-file': [filePath: string];
   'editor:command': [command: string, payload?: unknown];
+  'editor:stackmode': [mode: { content?: string; clear?: boolean }];
 
   // Command channel events
   'command:response': [response: CommandResponse];
