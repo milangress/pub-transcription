@@ -1,8 +1,8 @@
 <script lang="ts">
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
-  import { printJobSchema, type PrintJob } from 'src/types/index';
-  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
   import { onMount } from 'svelte';
+  import { printJobSchema, type PrintJob } from '../../../../types';
+  import type { IpcEvents, IpcRendererEvent } from '../../../../types/ipc';
   import LogContainer from './components/LogContainer.svelte';
   import PageWrapper from './components/PageSimulatorWrapper.svelte';
   const ipc = new IpcListener<IpcRendererEvent>();

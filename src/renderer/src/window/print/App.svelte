@@ -1,8 +1,8 @@
 <script lang="ts">
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
-  import { printJobSchema, type PrintJob, type PrintRequest } from 'src/types/index';
-  import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
   import { onMount, tick } from 'svelte';
+  import { printJobSchema, type PrintJob, type PrintRequest } from '../../../../types';
+  import type { IpcEvents, IpcRendererEvent } from '../../../../types/ipc.js';
 
   const ipc = new IpcListener<IpcRendererEvent>();
   const emitter = new IpcEmitter<IpcEvents>();
@@ -17,8 +17,9 @@
 
   // Content state
   let printContent = $state('');
-  let inlineCss = $state('');
   let svgFiltersContent = $state('');
+  // Reference to the dynamically injected style element
+  let styleElement: HTMLStyleElement | null = $state(null);
 
   class Status {
     #logs: { msg: string; error: boolean | Error; warning: boolean }[] = $state([
@@ -107,10 +108,19 @@
 
         // Update styles
         if (printJob.pageContent.inlineStyle) {
-          inlineCss = printJob.pageContent.inlineStyle;
+          // Remove previous style element if it exists
+          if (styleElement) {
+            document.head.removeChild(styleElement);
+          }
+
+          // Create and inject new style element
+          styleElement = document.createElement('style');
+          styleElement.textContent = printJob.pageContent.inlineStyle;
+          document.head.appendChild(styleElement);
+
+          status.msg = `Styles loaded (${printJob.pageContent.inlineStyle.length} bytes)`;
         } else {
           status.warn = 'No inline styles provided for print job';
-          inlineCss = '';
         }
 
         // Inject SVG filters if they exist
@@ -155,13 +165,6 @@
 </script>
 
 <div id="print-window-wrapper">
-  <!-- Add dynamic styles using svelte syntax -->
-  {#if inlineCss}
-    <style>
-    {@html inlineCss}
-    </style>
-  {/if}
-
   <!-- SVG filters container-->
   {#if svgFiltersContent}
     <div id="svg-filters" style="display: none">
@@ -173,7 +176,7 @@
   <div class="page-context">
     <page size="A3">
       <div bind:this={printContainer} id="print-container">
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+        <!-- eslint-disable-next-line svelte/no-at-html-tags-->
         {@html printContent}
       </div>
     </page>
@@ -211,7 +214,6 @@
     }
     page[size='A3'] {
       background: white;
-      transform: none !important;
       outline: none;
     }
     .page-context {

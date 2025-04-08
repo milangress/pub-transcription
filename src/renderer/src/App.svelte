@@ -6,7 +6,7 @@
   import ControllerManager from '@components/midi/ControllerManager.svelte';
   import BlockTxt from '@components/pageElement/BlockTxt.svelte';
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte';
-  import type { BlockTxtSettings, FontFamily, TxtObject } from 'src/renderer/src/types';
+  import type { BlockTxtSettings, FontFamily, TxtObject } from '../src/types';
 
   import type { PrintRequest, PrintTask } from 'src/types';
 

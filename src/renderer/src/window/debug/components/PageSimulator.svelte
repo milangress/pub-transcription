@@ -119,7 +119,7 @@
   }
 
   @media print {
-    :global(*) {
+    :global(body, html) {
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
@@ -134,9 +134,6 @@
       transform: none !important;
     }
     .page-container {
-      transform: none !important;
-    }
-    page[size='A3'] {
       transform: none !important;
     }
   }

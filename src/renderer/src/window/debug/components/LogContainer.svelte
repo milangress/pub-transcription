@@ -1,6 +1,6 @@
 <script lang="ts">
   import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer';
-  import type { IpcEvents } from 'src/types/ipc';
+  import type { IpcEvents } from 'src/types/ipc.ts';
   const emitter = new IpcEmitter<IpcEvents>();
 
   import { onMount, untrack } from 'svelte';
