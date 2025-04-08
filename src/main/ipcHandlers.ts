@@ -11,7 +11,7 @@ import { PrintQueue } from './PrintQueue';
 import { notificationManager } from './print/NotificationManager';
 import { notifyStatus } from './print/setPrintStatus';
 import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager';
-import { printWindowManager } from './windows/PrintWindow';
+import { printWindowManager } from './window/PrintWindow';
 
 const store = new Store();
 const ipc = new IpcListener<IpcEvents>();
