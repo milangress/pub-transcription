@@ -5,27 +5,15 @@ import { EventEmitter } from 'events';
 import { setupIpcHandlers } from './ipcHandlers';
 import { PrintQueue } from './PrintQueue';
 import { checkApplicationFolder } from './utils/applicationFolder';
-import { AudioRecorder } from './utils/audioRecorder';
 import { mainWindowManager } from './window/MainWindow';
 import { printWindowManager } from './window/PrintWindow';
-
 // Create event emitter for print events
 const printEvents = new EventEmitter();
 
 // Global references
 let printQueue: PrintQueue | null = null;
-let audioRecorder: AudioRecorder | null = null;
 
 const isDev = (): boolean => !app.isPackaged;
-
-// Initialize audio devices
-const initAudioDevices = (): void => {
-  audioRecorder = new AudioRecorder();
-  const devices = audioRecorder.getAvailableDevices();
-  for (let i = 0; i < devices.length; i++) {
-    console.log(`index: ${i}, device name: ${devices[i]}`);
-  }
-};
 
 // App initialization
 app.whenReady().then(() => {
@@ -48,7 +36,7 @@ app.whenReady().then(() => {
   setupIpcHandlers();
 
   // Pass printQueue to the main window manager
-  mainWindowManager.setPrintQueue(printQueue, printEvents);
+  mainWindowManager.setPrintQueue(printQueue);
 
   // Create the main window
   mainWindowManager.getOrCreateMainWindow();
@@ -58,8 +46,6 @@ app.whenReady().then(() => {
 
   // Check if we should move to Applications folder
   checkApplicationFolder(isDev);
-
-  initAudioDevices();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -75,10 +61,6 @@ app.on('window-all-closed', () => {
 
 // Cleanup on app quit
 app.on('before-quit', () => {
-  if (audioRecorder) {
-    audioRecorder.stop();
-    audioRecorder = null;
-  }
   if (printQueue) {
     printQueue.cleanup();
   }

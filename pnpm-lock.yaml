@@ -61,7 +61,7 @@ importers:
         version: 8.2.0
       openai:
         specifier: ^4.91.1
-        version: 4.91.1(encoding@0.1.13)
+        version: 4.91.1(encoding@0.1.13)(zod@3.24.2)
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -71,6 +71,9 @@ importers:
       webmidi:
         specifier: ^3.1.12
         version: 3.1.12
+      zod:
+        specifier: ^3.24.2
+        version: 3.24.2
     devDependencies:
       '@electron-toolkit/eslint-config-prettier':
         specifier: ^3.0.0
@@ -2786,6 +2789,9 @@ packages:
     resolution: {integrity: sha512-9qv4rlDiopXg4E69k+vMHjNN63YFMe9sZMrdlvKnCjlCRWeCBswPPMPUfx+ipsAWq1LXHe70RcbaHdJJpS6hyQ==}
     engines: {node: '>= 10'}
 
+  zod@3.24.2:
+    resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
+
 snapshots:
 
   7zip-bin@5.2.0: {}
@@ -5044,7 +5050,7 @@ snapshots:
     dependencies:
       mimic-fn: 2.1.0
 
-  openai@4.91.1(encoding@0.1.13):
+  openai@4.91.1(encoding@0.1.13)(zod@3.24.2):
     dependencies:
       '@types/node': 18.19.86
       '@types/node-fetch': 2.6.12
@@ -5053,6 +5059,8 @@ snapshots:
       form-data-encoder: 1.7.2
       formdata-node: 4.4.1
       node-fetch: 2.7.0(encoding@0.1.13)
+    optionalDependencies:
+      zod: 3.24.2
     transitivePeerDependencies:
       - encoding
 
@@ -5667,3 +5675,5 @@ snapshots:
       archiver-utils: 3.0.4
       compress-commons: 4.1.2
       readable-stream: 3.6.2
+
+  zod@3.24.2: {}

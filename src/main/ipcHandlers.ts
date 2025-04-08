@@ -1,16 +1,18 @@
 import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/main';
-import { app, shell } from 'electron';
+import { app } from 'electron';
 import Store from 'electron-store';
 import { EventEmitter } from 'events';
 import { existsSync, promises as fs } from 'fs';
 import { join } from 'path';
+import { z } from 'zod';
 
 import type { PrintCompletionEvent, SettingsSnapshot } from '../types';
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
-import { PrintQueue } from './PrintQueue';
+import { printQueue } from './PrintQueue';
 import { notificationManager } from './print/NotificationManager';
 import { notifyStatus } from './print/setPrintStatus';
-import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager';
+import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './services/snapshots';
+import { openPdfFolder } from './utils/helper';
 import { printWindowManager } from './window/PrintWindow';
 
 const store = new Store();
@@ -18,8 +20,12 @@ const ipc = new IpcListener<IpcEvents>();
 const emitter = new IpcEmitter<IpcRendererEvent>();
 const printEvents = new EventEmitter();
 
-let printQueue: PrintQueue | null = null;
-
+const printRequestSchema = z.object({
+  content: z.string(),
+  settings: z.object({
+    printId: z.string(),
+  }),
+});
 // Default print options
 const DEFAULT_PRINT_OPTIONS = {
   margins: {
@@ -40,12 +46,9 @@ const DEFAULT_PRINT_OPTIONS = {
 export function setupIpcHandlers(): void {
   // Print request handler
   ipc.on('print', async (event, request) => {
+    const parsedRequest = printRequestSchema.parse(request);
     try {
-      if (!printQueue) {
-        printQueue = new PrintQueue(printEvents);
-      }
-
-      if (!request.content || typeof request.content !== 'string') {
+      if (!parsedRequest.content || typeof parsedRequest.content !== 'string') {
         throw new Error('Invalid content format');
       }
       if (!request.settings || !request.settings.printId) {
@@ -100,53 +103,24 @@ export function setupIpcHandlers(): void {
 
   // Settings snapshot handlers
   ipc.handle('save-settings-snapshot', async (_event, snapshot: SettingsSnapshot) => {
-    try {
-      return await saveSnapshot(snapshot);
-    } catch (error) {
-      console.error('Error in save-settings-snapshot handler:', error);
-      throw error;
-    }
+    return await saveSnapshot(snapshot);
   });
 
   ipc.handle('get-settings-snapshots', async () => {
-    try {
-      return await getSnapshots();
-    } catch (error) {
-      console.error('Error in get-settings-snapshots handler:', error);
-      return {
-        snapshots: [],
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
+    return await getSnapshots();
   });
 
   ipc.handle('load-settings-snapshot', async (_event, id: string) => {
-    try {
-      return await loadSnapshot(id);
-    } catch (error) {
-      console.error(`Error in load-settings-snapshot handler for ID ${id}:`, error);
-      throw error;
-    }
+    return await loadSnapshot(id);
   });
 
   ipc.handle('delete-settings-snapshot', async (_event, id: string) => {
-    try {
-      return await deleteSnapshot(id);
-    } catch (error) {
-      console.error(`Error in delete-settings-snapshot handler for ID ${id}:`, error);
-      return false;
-    }
+    return await deleteSnapshot(id);
   });
 
   // PDF folder handler
   ipc.handle('open-pdf-folder', async () => {
-    const pdfDir = join(app.getPath('userData'), 'pdfs');
-    if (!existsSync(pdfDir)) {
-      await fs.mkdir(pdfDir, { recursive: true });
-    }
-    await shell.openPath(pdfDir);
-    return true;
+    return openPdfFolder();
   });
 
   // Print execution handler

@@ -3,9 +3,9 @@ import { ChildProcess, spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
-import ggmlMetal from '../../resources/lib/ggml-metal.metal?asset&asarUnpack';
-import ggmlStreamBin from '../../resources/lib/stream?asset&asarUnpack';
-import ggmlModelSmallEnQ51Bin from '../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
+import ggmlMetal from '../../../resources/lib/ggml-metal.metal?asset&asarUnpack';
+import ggmlStreamBin from '../../../resources/lib/stream?asset&asarUnpack';
+import ggmlModelSmallEnQ51Bin from '../../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
 import type { IpcRendererEvent } from '../../types/ipc';
 import { startPowerSaveBlocker } from '../utils/startPowerSaveBlocker';
 

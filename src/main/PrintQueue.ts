@@ -49,8 +49,8 @@ export class PrintQueue {
   private readonly timeout = 5 * 60 * 1000; // 5 minutes timeout
   private readonly printEvents: EventEmitter;
 
-  constructor(printEvents: EventEmitter) {
-    this.printEvents = printEvents;
+  constructor() {
+    this.printEvents = new EventEmitter();
     this.updateQueueStatus();
   }
 
@@ -92,7 +92,7 @@ export class PrintQueue {
     const job = this.queue[0];
 
     try {
-      // Process the job using the PrintWindowManager
+      // Process the job using the printWindow
       const result = await new Promise<PrintJobResult>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
           cleanup();
@@ -137,7 +137,7 @@ export class PrintQueue {
 
         this.printEvents.on('INTERNAL-PrintQueueEvent:complete', handleComplete);
 
-        // Send the job to the print window via the PrintWindowManager
+        // Send the job to the print window via the printWindow
         try {
           console.log(`Sending job ${job.settings.printId} to print window`);
           printWindowManager
@@ -231,3 +231,5 @@ export class PrintQueue {
     return this.queue.length > 0 || this.isProcessing;
   }
 }
+
+export const printQueue = new PrintQueue();

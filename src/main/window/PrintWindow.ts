@@ -3,13 +3,14 @@ import { BrowserWindow, app } from 'electron';
 import { join } from 'path';
 import type { PrintJob } from '../../types';
 import type { IpcRendererEvent } from '../../types/ipc';
+import { isDev } from '../utils/helper';
 
 const emitter = new IpcEmitter<IpcRendererEvent>();
 
 /**
  * Manages the print window instance, handling creation, recreation, and state
  */
-export class PrintWindow {
+export class PrintWindowManager {
   private printWindow: BrowserWindow | null = null;
   private debuggerAttached = false;
 
@@ -24,7 +25,7 @@ export class PrintWindow {
     const options = {
       width: 450,
       height: 650,
-      show: this.isDev() || app.isPackaged,
+      show: isDev() || app.isPackaged,
       webPreferences: {
         scrollBounce: false,
         nodeIntegration: true,
@@ -77,8 +78,7 @@ export class PrintWindow {
         }, 100);
       });
     }
-
-    return window;
+    return this.enforcePrintWindow();
   }
 
   /**
@@ -91,7 +91,7 @@ export class PrintWindow {
       throw new Error('Print content must be a string');
     }
 
-    if (!printJob.settings?.printId) {
+    if (!printJob.settings.printId) {
       throw new Error('Print ID is required in settings');
     }
 
@@ -116,13 +116,13 @@ export class PrintWindow {
     }
   }
 
-  /**
-   * Checks if we're in development mode
-   */
-  private isDev(): boolean {
-    return !app.isPackaged;
+  private enforcePrintWindow(): BrowserWindow {
+    if (this.printWindow && !this.printWindow.isDestroyed()) {
+      return this.printWindow;
+    }
+    throw new Error('Print window is not available');
   }
 }
 
 // Create a singleton instance
-export const printWindowManager = new PrintWindow();
+export const printWindowManager = new PrintWindowManager();

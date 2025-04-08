@@ -1,5 +1,4 @@
 import { BrowserWindow, app } from 'electron';
-import { EventEmitter } from 'events';
 import { join } from 'path';
 import icon from '../../../resources/favicon.png?asset';
 import { PrintQueue } from '../PrintQueue';
@@ -7,21 +6,20 @@ import { spawnWhisperStream } from '../services/WhisperStream';
 import { isDev } from '../utils/helper';
 import { simulatedTranscriptController } from '../utils/simulateTranscriptForDevTesting';
 import { printWindowManager } from './PrintWindow';
+
 /**
  * Manages the main window instance, handling creation, recreation, and state
  */
 export class MainWindow {
   private mainWindow: BrowserWindow | null = null;
   private printQueue: PrintQueue | null = null;
-  private printEvents: EventEmitter | null = null;
   private simulationController: ReturnType<typeof simulatedTranscriptController> | null = null;
 
   /**
    * Set the printQueue and events reference
    */
-  public setPrintQueue(printQueue: PrintQueue, printEvents: EventEmitter): void {
+  public setPrintQueue(printQueue: PrintQueue): void {
     this.printQueue = printQueue;
-    this.printEvents = printEvents;
   }
 
   /**
