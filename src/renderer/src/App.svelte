@@ -276,7 +276,14 @@
 <!-- svelte:head meta title -->
 <svelte:head>
   <title>a-trans(crip)tion-live-coding-VJ-PDF-printing-tool</title>
+  <style>
+{settings.inlineStyle}
+  </style>
 </svelte:head>
+
+<div class="text-preview-container">
+  <BlockTxt content="Text Preview" {settings} />
+</div>
 
 <main>
   {#if currentContentList.length > 0}
@@ -313,10 +320,6 @@
         controllerSettings={settings.controllerSettings}
         {fontFamilys}
       />
-
-      <hr />
-
-      <BlockTxt content="Text Preview" {settings} />
 
       <hr />
 
@@ -360,6 +363,16 @@
     margin: 0;
     padding: 0;
   }
+
+  .text-preview-container {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    font-size: 24px;
+    pointer-events: none;
+  }
+
   main {
     text-align: left;
     font-family: 'Garamondt-Regular', 'American Typewriter', monospace;

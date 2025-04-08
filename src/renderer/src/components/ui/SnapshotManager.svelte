@@ -103,6 +103,10 @@
   }
 </script>
 
+<div class="snapshotHeader">
+  <BlockTxt content="Snapshots" {settings} />
+</div>
+
 <div class="snapshotControls">
   <button onclick={() => saveSnapshot()}>Save Snapshot</button>
   {#if originalSettings}
@@ -140,6 +144,11 @@
 </div>
 
 <style>
+  .snapshotHeader {
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
   .snapshotControls {
     display: flex;
     align-items: baseline;
