@@ -39,9 +39,9 @@ const DEFAULT_PRINT_OPTIONS = {
 
 export function setupIpcHandlers(): void {
   // Print request handler
-  ipc.on('print', async (event, requestUnsaved) => {
+  ipc.on('print', async (event, requestUnsave) => {
     try {
-      const printJob = printJobSchema.parse(requestUnsaved);
+      const printJob = printJobSchema.parse(requestUnsave);
 
       console.log('📝 Print request received:', {
         contentLength: printJob.pageContent.html.length,
@@ -63,17 +63,17 @@ export function setupIpcHandlers(): void {
       });
     } catch (error) {
       console.error('Print queue error:', error);
+      const printId = requestUnsave?.printId ?? '000';
 
-        notificationManager.showNotification( '000', 'Print Error', {
-          body: `Error: ${error instanceof Error ? error.message : String(error)}`,
-          silent: false,
-        });
-      }
+      notificationManager.showNotification(printId, 'Print Error', {
+        body: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        silent: false,
+      });
 
       emitter.send(event.sender, 'print-queued', {
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        printId: printJob.printId,
+        printId,
       });
     }
   });
@@ -117,13 +117,13 @@ export function setupIpcHandlers(): void {
       const printWindow = printWindowManager.getOrCreatePrintWindow();
 
       console.log('📝 Execute print request:', {
-        contentLength: request.pageContent.html.length,
-        printId: request.printId,
+        contentLength: printJob.pageContent.html.length,
+        printId: printJob.printId,
       });
 
       const printOptions = {
         ...DEFAULT_PRINT_OPTIONS,
-        silent: request.do.print.silent ?? DEFAULT_PRINT_OPTIONS.silent,
+        silent: printJob.do.print.silent ?? DEFAULT_PRINT_OPTIONS.silent,
       };
 
       const pdfOptions = {
@@ -153,52 +153,57 @@ export function setupIpcHandlers(): void {
         });
       }
 
-      // Handle PDF saving
-      const dateString = new Date().toISOString().replace(/:/g, '-');
-      const pdfDir = join(app.getPath('userData'), 'pdfs');
+      // Default to handle PDF saving
+      if (printJob.do.pdfSave?.yes !== false) {
+        const dateString = new Date().toISOString().replace(/:/g, '-');
+        const pdfDir = join(app.getPath('userData'), 'pdfs');
 
-      if (!existsSync(pdfDir)) {
-        await fs.mkdir(pdfDir, { recursive: true });
+        if (!existsSync(pdfDir)) {
+          await fs.mkdir(pdfDir, { recursive: true });
+        }
+
+        const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`);
+        console.log('Printing to PDF...', pdfPath, pdfOptions);
+        const pdfData = await printWindow.webContents.printToPDF(pdfOptions);
+
+        if (pdfData) {
+          await fs.writeFile(pdfPath, pdfData);
+          console.log(`Wrote PDF successfully to ${pdfPath}`);
+
+          notifyStatus.pdfSuccess(printJob.printId, pdfPath);
+
+          const notificationTitle = printJob.do.print.yes
+            ? 'Print Job & PDF Completed'
+            : 'PDF Generated Successfully';
+
+          const notificationBody = printJob.do.print.yes
+            ? `Print completed and PDF saved. Click to open.`
+            : `PDF saved successfully. Click to open.`;
+
+          notificationManager.showNotification(printJob.printId, notificationTitle, {
+            body: notificationBody,
+            silent: true,
+            path: pdfPath,
+          });
+        }
       }
 
-      const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`);
-      console.log('Printing to PDF...', pdfPath, pdfOptions);
-      const pdfData = await printWindow.webContents.printToPDF(pdfOptions);
-
-      if (pdfData) {
-        await fs.writeFile(pdfPath, pdfData);
-        console.log(`Wrote PDF successfully to ${pdfPath}`);
-
-        notifyStatus.pdfSuccess(printJob.printId, pdfPath);
-
-        const notificationTitle = printJob.do.print.yes
-          ? 'Print Job & PDF Completed'
-          : 'PDF Generated Successfully';
-
-        const notificationBody = printJob.do.print.yes
-          ? `Print completed and PDF saved. Click to open.`
-          : `PDF saved successfully. Click to open.`;
-
-        notificationManager.showNotification(printJob.printId, notificationTitle, {
-          body: notificationBody,
-          silent: true,
-          path: pdfPath,
-        });
-
-        printEvents.emit('INTERNAL-PrintQueueEvent:complete', {
-          printId: printJob.printId,
-          success: true,
-        } as PrintCompletionEvent);
-      }
+      // Emit completion event regardless
+      printEvents.emit('INTERNAL-PrintQueueEvent:complete', {
+        printId: printJob.printId,
+        success: true,
+      } as PrintCompletionEvent);
 
       return true;
     } catch (error) {
       console.error('Print/PDF error:', error);
-      notifyStatus.printError(printJob.printId, error);
+      const printId = request?.printId || '000';
+
+      notifyStatus.printError(printId, error);
 
       // Emit error event for PrintQueue
       const completionEvent: PrintCompletionEvent = {
-        printId: printJob.printId,
+        printId,
         success: false,
         error: error instanceof Error ? error.message : String(error),
       };
