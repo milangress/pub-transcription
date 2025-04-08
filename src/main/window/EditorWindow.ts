@@ -1,4 +1,5 @@
-import { BrowserWindow, app } from 'electron';
+import { BrowserWindow, WebContents, app } from 'electron';
+import os from 'os';
 import { join } from 'path';
 import icon from '../../../resources/favicon.png?asset';
 import { isDev } from '../utils/helper';
@@ -12,6 +13,9 @@ export class EditorWindow {
     const window = new BrowserWindow({
       width: 800,
       height: 600,
+      // titleBarStyle: 'hidden',
+      // transparent: true,
+      // frame: false,
       webPreferences: {
         nodeIntegration: true,
         preload: join(__dirname, '../preload/index.js'),
@@ -23,6 +27,9 @@ export class EditorWindow {
     if (isDev()) {
       window.webContents.openDevTools();
     }
+
+    // Set default represented filename to home directory
+    window.setRepresentedFilename(os.homedir());
 
     // Load the editor window
     if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
@@ -54,6 +61,14 @@ export class EditorWindow {
 
     this.editorWindows.push(window);
     return window;
+  }
+
+  public getEditorWindowFromWebContents(webContents: WebContents): BrowserWindow | null {
+    return (
+      this.editorWindows.find(
+        (win) => !win.isDestroyed() && win.webContents.id === webContents.id,
+      ) || null
+    );
   }
 
   public getEditorWindows(): BrowserWindow[] {

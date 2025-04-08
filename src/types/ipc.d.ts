@@ -14,6 +14,8 @@ export type IpcEvents =
       print: [request: PrintRequest];
       'print-status': [status: { printId: string; success: boolean; error?: string }];
       'editor:settings-updated': [settings: { editorCss?: string; svgFilters?: string }];
+      'editor:save-content': [content: string];
+      'editor:save-to-file': [{ content: string; filePath?: string }];
     }
   | {
       // handler event map
@@ -30,6 +32,9 @@ export type IpcEvents =
         content: string;
         language: 'css' | 'html';
       }) => Promise<number>;
+      'editor:save-dialog': () => Promise<string | null>;
+      'editor:set-represented-file': (filePath: string) => void;
+      'editor:set-document-edited': (edited: boolean) => void;
     };
 
 // Renderer ipc events (from main to renderer)
@@ -48,4 +53,8 @@ export type IpcRendererEvent = {
   'editor:init': [options: { content: string; language: 'css' | 'html' }];
   'editor:setLanguage': [language: 'css' | 'html'];
   'settings-sync': [settings: { editorCss?: string; svgFilters?: string }];
+  'editor:save-complete': [filePath: string | null];
+  'editor:save': [];
+  'editor:save-as': [];
+  'editor:opened-file': [filePath: string];
 };

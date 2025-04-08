@@ -45,16 +45,48 @@ export function createMenu(): void {
               properties: ['openFile'],
               filters: [
                 { name: 'CSS Files', extensions: ['css'] },
+                { name: 'HTML Files', extensions: ['html'] },
                 { name: 'All Files', extensions: ['*'] },
               ],
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
-              const content = await fs.readFile(result.filePaths[0], 'utf8');
-              editorWindowManager.createEditorWindow({
+              const filePath = result.filePaths[0];
+              const content = await fs.readFile(filePath, 'utf8');
+              const window = editorWindowManager.createEditorWindow({
                 initialContent: content,
                 language: 'css',
               });
+
+              // Set the represented filename
+              window.setRepresentedFilename(filePath);
+              window.setTitle(filePath.split('/').pop() || filePath);
+
+              // Send the file path to the renderer
+              window.once('ready-to-show', () => {
+                window.webContents.send('editor:opened-file', filePath);
+              });
+            }
+          },
+        },
+        { type: 'separator' as const },
+        {
+          label: 'Save',
+          accelerator: 'CmdOrCtrl+S',
+          click: (): void => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('editor:save');
+            }
+          },
+        },
+        {
+          label: 'Save As...',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: async (): Promise<void> => {
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send('editor:save-as');
             }
           },
         },
