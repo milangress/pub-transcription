@@ -13,6 +13,7 @@ export type IpcEvents =
       // listener event map
       print: [request: PrintRequest];
       'print-status': [status: { printId: string; success: boolean; error?: string }];
+      'editor:settings-updated': [settings: { editorCss?: string; svgFilters?: string }];
     }
   | {
       // handler event map
@@ -46,4 +47,5 @@ export type IpcRendererEvent = {
   // Editor related events
   'editor:init': [options: { content: string; language: 'css' | 'html' }];
   'editor:setLanguage': [language: 'css' | 'html'];
+  'settings-sync': [settings: { editorCss?: string; svgFilters?: string }];
 };

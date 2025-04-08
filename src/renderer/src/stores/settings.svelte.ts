@@ -17,9 +17,9 @@ const defaultSettings: Settings = {
 };
 
 class SettingsStore {
-  controllerSettings = $state<ControllerSetting[]>([]);
-  editorCss = $state('');
-  svgFilters = $state('');
+  #controllerSettings = $state<ControllerSetting[]>([]);
+  #editorCss = $state('');
+  #svgFilters = $state('');
   #initialized = $state(false);
   #codeEditorContentSaved = $state(true);
   #lastSavedInlineStyle = $state('');
@@ -27,11 +27,34 @@ class SettingsStore {
 
   constructor() {
     // Initialize with default values
-    this.controllerSettings = defaultSettings.controllerSettings;
-    this.editorCss = defaultSettings.editorCss;
-    this.svgFilters = defaultSettings.svgFilters;
+    this.#controllerSettings = defaultSettings.controllerSettings;
+    this.#editorCss = defaultSettings.editorCss;
+    this.#svgFilters = defaultSettings.svgFilters;
   }
 
+  set controllerSettings(value: ControllerSetting[]) {
+    this.#controllerSettings = value;
+  }
+
+  get controllerSettings(): ControllerSetting[] {
+    return this.#controllerSettings;
+  }
+
+  set editorCss(value: string) {
+    this.#editorCss = value;
+  }
+
+  get editorCss(): string {
+    return this.#editorCss;
+  }
+
+  set svgFilters(value: string) {
+    this.#svgFilters = value;
+  }
+
+  get svgFilters(): string {
+    return this.#svgFilters;
+  }
   // Debounce helper
   #debounce<Args extends unknown[], R>(
     func: (...args: Args) => R,
@@ -75,9 +98,9 @@ class SettingsStore {
     console.log('Saving settings to electron store');
 
     // Check inline style content
-    const isInlineStyleValid = this.#isValidContent(this.editorCss, this.#lastSavedInlineStyle);
+    const isInlineStyleValid = this.#isValidContent(this.#editorCss, this.#lastSavedInlineStyle);
     // Check SVG filters content
-    const isSvgFiltersValid = this.#isValidContent(this.svgFilters, this.#lastSavedSvgFilters);
+    const isSvgFiltersValid = this.#isValidContent(this.#svgFilters, this.#lastSavedSvgFilters);
 
     if (!isInlineStyleValid || !isSvgFiltersValid) {
       console.warn('Safety check prevented saving potentially deleted content');
@@ -87,23 +110,29 @@ class SettingsStore {
     }
 
     // Save valid content
-    await emitter.invoke('setStoreValue', 'editorCss', this.editorCss);
-    await emitter.invoke('setStoreValue', 'svgFilters', this.svgFilters);
+    await emitter.invoke('setStoreValue', 'editorCss', this.#editorCss);
+    await emitter.invoke('setStoreValue', 'svgFilters', this.#svgFilters);
+
+    // Notify other windows about the settings change
+    emitter.send('editor:settings-updated', {
+      editorCss: this.#editorCss,
+      svgFilters: this.#svgFilters,
+    });
 
     // Update last saved values
-    this.#lastSavedInlineStyle = this.editorCss;
-    this.#lastSavedSvgFilters = this.svgFilters;
+    this.#lastSavedInlineStyle = this.#editorCss;
+    this.#lastSavedSvgFilters = this.#svgFilters;
     this.#codeEditorContentSaved = true;
   }, 1000);
 
   // Reload content from last saved state
   reloadFromSaved(): void {
     if (this.#lastSavedInlineStyle) {
-      this.editorCss = this.#lastSavedInlineStyle;
+      this.#editorCss = this.#lastSavedInlineStyle;
     }
 
     if (this.#lastSavedSvgFilters) {
-      this.svgFilters = this.#lastSavedSvgFilters;
+      this.#svgFilters = this.#lastSavedSvgFilters;
     }
 
     this.#codeEditorContentSaved = true;
@@ -112,7 +141,7 @@ class SettingsStore {
 
   // Update a specific controller value
   updateControllerValue(varName: string, newValue: number): void {
-    const controller = this.controllerSettings.find((c) => c.var === varName);
+    const controller = this.#controllerSettings.find((c) => c.var === varName);
     if (controller) {
       // Round to 2 decimal places and remove trailing zeros
       controller.value = parseFloat(newValue.toFixed(2));
@@ -121,7 +150,7 @@ class SettingsStore {
 
   // Reset a controller to its default value
   resetController(varName: string): void {
-    const controller = this.controllerSettings.find((c) => c.var === varName);
+    const controller = this.#controllerSettings.find((c) => c.var === varName);
     if (controller) {
       controller.value = controller.default;
     }
@@ -139,13 +168,13 @@ class SettingsStore {
       // Initialize with defaults and saved values
       const controllers = (inputJson.controllers || []) as ControllerSetting[];
 
-      this.controllerSettings = controllers;
-      this.editorCss = savedInlineStyle || defaultInlineStyle;
-      this.svgFilters = savedSvgFilters || defaultSvgFilters;
+      this.#controllerSettings = controllers;
+      this.#editorCss = savedInlineStyle || defaultInlineStyle;
+      this.#svgFilters = savedSvgFilters || defaultSvgFilters;
 
       // Store the initial saved values
-      this.#lastSavedInlineStyle = this.editorCss;
-      this.#lastSavedSvgFilters = this.svgFilters;
+      this.#lastSavedInlineStyle = this.#editorCss;
+      this.#lastSavedSvgFilters = this.#svgFilters;
 
       console.log('init settings', this);
 
@@ -164,7 +193,7 @@ class SettingsStore {
 
     const mySynth = webMidi.inputs[0];
 
-    this.controllerSettings.forEach((controller) => {
+    this.#controllerSettings.forEach((controller) => {
       console.log('controller', controller);
       window.setTimeout(() => {
         console.log('set synth');
@@ -192,11 +221,11 @@ class SettingsStore {
   }
 
   get controllerValues(): Record<string, number> {
-    return Object.fromEntries(this.controllerSettings.map((ctrl) => [ctrl.var, ctrl.value]));
+    return Object.fromEntries(this.#controllerSettings.map((ctrl) => [ctrl.var, ctrl.value]));
   }
 
   get filterIds(): string[] {
-    return extractFilterIds(this.svgFilters);
+    return extractFilterIds(this.#svgFilters);
   }
 }
 

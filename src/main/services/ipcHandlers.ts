@@ -1,5 +1,5 @@
 import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/main';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import Store from 'electron-store';
 import { EventEmitter } from 'events';
 import { existsSync, promises as fs } from 'fs';
@@ -104,6 +104,21 @@ export function setupIpcHandlers(): void {
 
   ipc.handle('delete-settings-snapshot', async (_event, id: string) => {
     return await deleteSnapshot(id);
+  });
+
+  // Handle settings sync between windows
+  ipc.on('editor:settings-updated', (_event, settings) => {
+    ipcLogger.info('Settings updated from editor, syncing to other windows');
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+      if (window.webContents.isDestroyed()) return;
+      try {
+        // Use webContents.send directly since emitter.sendTo doesn't exist
+        window.webContents.send('settings-sync', settings);
+      } catch (err) {
+        ipcLogger.error('Error sending settings sync to window:', err);
+      }
+    });
   });
 
   // PDF folder handler

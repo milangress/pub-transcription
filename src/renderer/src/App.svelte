@@ -1,5 +1,6 @@
 <script lang="ts">
   import PrintStatusBar from '@/components/status/PrintStatusBar.svelte';
+  import { remoteSettings } from '@/stores/remoteSettings.svelte.ts';
   import { settings } from '@/stores/settings.svelte.js';
   import { snapshots } from '@/stores/snapshots.svelte.js';
   import CodeEditor from '@components/codeEditor/CodeEditor.svelte';
@@ -120,9 +121,9 @@
   function formatTTSasTxtObject(tts: string): TxtObject {
     const removeNEWKeyword = String(tts).replace('NEW', '').trim();
     const txtSettings: BlockTxtSettings = {
-      editorCss: settings.editorCss,
+      editorCss: remoteSettings.editorCss,
       controllerSettings: settings.controllerSettings,
-      svgFilters: settings.svgFilters,
+      svgFilters: remoteSettings.svgFilters,
     };
     return {
       type: BlockTxt as unknown as typeof SvelteComponent,
@@ -139,7 +140,7 @@
     }
   });
 
-  // Update the style tag in the header when editorCss changes
+  // Update the style tag in the header when editorCss changes from remote
   $effect(() => {
     if (typeof document !== 'undefined') {
       // Get the existing style tag or create a new one if needed
@@ -150,8 +151,8 @@
         document.head.appendChild(styleTag);
       }
 
-      // Update the content of the style tag
-      styleTag.textContent = settings.editorCss || '';
+      // Update the content of the style tag with remote settings
+      styleTag.textContent = remoteSettings.editorCss || '';
     }
   });
 
@@ -258,8 +259,8 @@
           },
         },
         pageContent: {
-          editorCss: settings.editorCss,
-          svgFilters: settings.svgFilters,
+          editorCss: remoteSettings.editorCss,
+          svgFilters: remoteSettings.svgFilters,
           html: pageContent,
         },
       };
@@ -293,6 +294,30 @@
     console.log('🗑️ Clearing all content');
     committedContent = [];
   }
+
+  // Function to open editor window for either CSS or SVG filters
+  async function openEditor(language: 'css' | 'html'): Promise<void> {
+    try {
+      const content = language === 'css' ? settings.editorCss : settings.svgFilters;
+
+      // First update our remote settings with the current settings
+      if (language === 'css') {
+        remoteSettings.update({ editorCss: content }, false);
+      } else {
+        remoteSettings.update({ svgFilters: content }, false);
+      }
+
+      // Then open the editor window with the content
+      await emitter.invoke('editor:openFile', {
+        content,
+        language,
+      });
+
+      console.log(`Opened ${language} editor window`);
+    } catch (error) {
+      console.error(`Failed to open editor: ${error}`);
+    }
+  }
 </script>
 
 <!-- svelte:head meta title -->
@@ -305,7 +330,14 @@
 </svelte:head>
 
 <div class="text-preview-container">
-  <BlockTxt content="Text Preview" {settings} />
+  <BlockTxt
+    content="Text Preview"
+    settings={{
+      editorCss: remoteSettings.editorCss,
+      controllerSettings: settings.controllerSettings,
+      svgFilters: remoteSettings.svgFilters,
+    }}
+  />
 </div>
 
 <main>
@@ -321,13 +353,28 @@
             />
           {/each}
           {#if !isPrinting && currentSentence?.type}
-            <currentSentence.type content={currentSentence.content} {settings} isCurrent />
+            <currentSentence.type
+              content={currentSentence.content}
+              settings={{
+                editorCss: remoteSettings.editorCss,
+                controllerSettings: settings.controllerSettings,
+                svgFilters: remoteSettings.svgFilters,
+              }}
+              isCurrent
+            />
           {/if}
           <div
             class="page-number #num"
             style="position: absolute; bottom: 1em; right: 1em;font-size: 2rem;"
           >
-            <BlockTxt content={`${pageNumber}`} {settings} />
+            <BlockTxt
+              content={`${pageNumber}`}
+              settings={{
+                editorCss: remoteSettings.editorCss,
+                controllerSettings: settings.controllerSettings,
+                svgFilters: remoteSettings.svgFilters,
+              }}
+            />
           </div>
         </div>
       </page>
@@ -337,6 +384,10 @@
   <div class="print-non" class:printFailed={!isSuccessfulPrint}>
     <div class="infobox">
       <div class="dot" class:greenDot={settings.codeEditorContentSaved}></div>
+      <div class="codeEditorHeader">
+        <h3>CSS Editor</h3>
+        <button onclick={() => openEditor('css')}>Open in Editor Window</button>
+      </div>
       <CodeEditor
         bind:value={settings.editorCss}
         language="css"
@@ -365,6 +416,10 @@
 
       <hr />
 
+      <div class="codeEditorHeader">
+        <h3>SVG Filters</h3>
+        <button onclick={() => openEditor('html')}>Open in Editor Window</button>
+      </div>
       <CodeEditor
         bind:value={settings.svgFilters}
         language="html"
@@ -488,6 +543,17 @@
   #pageNumberInput {
     width: 5em;
     text-align: center;
+  }
+
+  .codeEditorHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .codeEditorHeader h3 {
+    margin: 0;
   }
 
   @media print {
