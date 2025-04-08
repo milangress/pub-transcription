@@ -8,8 +8,8 @@ import { join } from 'path';
 import type { PrintCompletionEvent, SettingsSnapshot } from '../types';
 import type { IpcEvents, IpcRendererEvent } from '../types/ipc';
 import { PrintQueue } from './PrintQueue';
-import { notificationManager } from './render/NotificationManager';
-import { notifyStatus } from './render/setPrintStatus';
+import { notificationManager } from './print/NotificationManager';
+import { notifyStatus } from './print/setPrintStatus';
 import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './utils/snapshotManager';
 import { printWindowManager } from './windows/PrintWindow';
 
