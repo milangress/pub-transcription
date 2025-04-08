@@ -39,9 +39,9 @@ export class PrintWindowManager {
     this.printWindow = new BrowserWindow(options);
 
     if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
-      this.printWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/debug.html`);
+      this.printWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/editor.html`);
     } else {
-      this.printWindow.loadFile(join(__dirname, '../renderer/debug.html'));
+      this.printWindow.loadFile(join(__dirname, '../renderer/editor.html'));
     }
 
     // Initialize debugger state for new window

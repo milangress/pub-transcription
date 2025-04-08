@@ -24,6 +24,7 @@ export default defineConfig({
           index: resolve(__dirname, 'src/renderer/index.html'),
           print: resolve(__dirname, 'src/renderer/print.html'),
           debug: resolve(__dirname, 'src/renderer/debug.html'),
+          editor: resolve(__dirname, 'src/renderer/editor.html'),
         },
       },
     },

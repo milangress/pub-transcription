@@ -1,7 +1,7 @@
 <script lang="ts">
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
   import { onMount, tick } from 'svelte';
-  import { printJobSchema, type PrintJob, type PrintRequest } from '../../../../types';
+  import { printJobSchema, type PrintJob, type PrintRequest } from '../../../../types/index.js';
   import type { IpcEvents, IpcRendererEvent } from '../../../../types/ipc.js';
 
   const ipc = new IpcListener<IpcRendererEvent>();
