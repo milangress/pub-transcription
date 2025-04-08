@@ -83,7 +83,6 @@
       updateControllerValues(currentSettings);
       updateControllerSliderValues(view, currentSettings);
       // Update completions with latest settings
-      console.log('fontFamilys', fontFamilys);
       updateCompletionOptions({
         fontFamilies: fontFamilys,
         controllerSettings: currentSettings,

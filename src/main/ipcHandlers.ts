@@ -19,7 +19,10 @@ import { printWindowManager } from './window/PrintWindow';
 const store = new Store();
 const ipc = new IpcListener<IpcEvents>();
 const emitter = new IpcEmitter<IpcRendererEvent>();
-const printEvents = new EventEmitter();
+export const printEvents = new EventEmitter();
+
+// Share the EventEmitter with the print queue
+printQueue.setPrintEvents(printEvents);
 
 // Default print options
 const DEFAULT_PRINT_OPTIONS = {
@@ -164,7 +167,7 @@ export function setupIpcHandlers(): void {
         }
 
         const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`);
-        ipcLogger.info('Printing to PDF...', pdfPath, pdfOptions);
+        ipcLogger.debug('Printing to PDF...', pdfPath, pdfOptions);
         const pdfData = await printWindow.webContents.printToPDF(pdfOptions);
 
         if (pdfData) {

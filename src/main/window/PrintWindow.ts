@@ -89,7 +89,7 @@ export class PrintWindowManager {
     const printWindow = await this.awaitWindowReady();
     const cleanPrintJob = printJobSchema.parse(printJob);
 
-    windowLogger.info(`Sending job ${cleanPrintJob.printId} to print window`, cleanPrintJob);
+    windowLogger.info(`Sending job ${cleanPrintJob.printId} to print window`);
     emitter.send(printWindow.webContents, 'PrintWindow:printJob', cleanPrintJob);
   }
 

@@ -45,12 +45,21 @@ export class PrintQueue {
   private queue: PrintQueueJob[] = [];
   private isProcessing = false;
   private readonly maxRetries = 3;
-  private readonly timeout = 5 * 60 * 1000; // 5 minutes timeout
-  private readonly printEvents: EventEmitter;
+  private readonly timeout = 1 * 60 * 1000; // 1 minute timeout
+  private printEvents: EventEmitter;
 
-  constructor() {
-    this.printEvents = new EventEmitter();
+  constructor(eventEmitter?: EventEmitter) {
+    this.printEvents = eventEmitter || new EventEmitter();
     this.updateQueueStatus();
+  }
+
+  // This function allows setting or replacing the event emitter after creation
+  setPrintEvents(eventEmitter: EventEmitter): void {
+    this.printEvents = eventEmitter;
+  }
+
+  getPrintEvents(): EventEmitter {
+    return this.printEvents;
   }
 
   async add(printJob: PrintJob): Promise<PrintQueueResult> {

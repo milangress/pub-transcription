@@ -19,9 +19,8 @@ class NotifyStatus {
   private sendToAllWindows(status: PrintStatusMessage): void {
     const allWindows = BrowserWindow.getAllWindows();
     const windows = [...allWindows].filter(Boolean);
-
+    printLogger.info('Sending to windows', 'print-status', status.message);
     windows.forEach((window) => {
-      printLogger.info('Sending to window', 'print-status', status.message);
       if (window && !window.isDestroyed()) {
         this.emitter.send(window.webContents, 'print-status', status);
       } else {

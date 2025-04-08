@@ -51,7 +51,6 @@
       console.warn('⚠️ Attempted to update status without printId');
       return;
     }
-    console.log(`🔄 Updating status for ${printId} to ${newStatus}${text ? ` (${text})` : ''}`);
     printStatuses.set(printId, { emoji: newStatus, text });
     printStatuses = new Map(printStatuses); // Create new Map to trigger reactivity
   }

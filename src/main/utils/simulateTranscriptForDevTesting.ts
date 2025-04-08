@@ -120,7 +120,7 @@ export function simulatedTranscriptController(
       const message = getRandomMessage();
 
       // Every 3-5 messages, send a NEW message
-      if (Math.random() < 0.25) {
+      if (Math.random() < 0.4) {
         emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', `${message}NEW`);
       } else {
         emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', message);

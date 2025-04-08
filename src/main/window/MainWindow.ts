@@ -1,7 +1,7 @@
 import { BrowserWindow, app } from 'electron';
 import { join } from 'path';
 import icon from '../../../resources/favicon.png?asset';
-import { PrintQueue } from '../PrintQueue';
+import { printQueue } from '../PrintQueue';
 import { spawnWhisperStream } from '../services/WhisperStream';
 import { isDev } from '../utils/helper';
 import { windowLogger } from '../utils/logger';
@@ -13,15 +13,7 @@ import { printWindowManager } from './PrintWindow';
  */
 export class MainWindow {
   private mainWindow: BrowserWindow | null = null;
-  private printQueue: PrintQueue | null = null;
   private simulationController: ReturnType<typeof simulatedTranscriptController> | null = null;
-
-  /**
-   * Set the printQueue and events reference
-   */
-  public setPrintQueue(printQueue: PrintQueue): void {
-    this.printQueue = printQueue;
-  }
 
   /**
    * Creates a main window if one doesn't exist or returns the existing one
@@ -82,7 +74,7 @@ export class MainWindow {
     // Handle window closing
     this.mainWindow.on('closed', () => {
       // If there are active print jobs, show the print window
-      if (this.printQueue?.hasActiveJobs()) {
+      if (printQueue.hasActiveJobs()) {
         printWindowManager.showPrintWindow();
       }
 

@@ -2,12 +2,10 @@ import { electronApp, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow } from 'electron';
 
 import { setupIpcHandlers } from './ipcHandlers';
-import { PrintQueue } from './PrintQueue';
+import { printQueue } from './PrintQueue';
 import { checkApplicationFolder } from './utils/applicationFolder';
 import { mainWindowManager } from './window/MainWindow';
 import { printWindowManager } from './window/PrintWindow';
-// Global references
-let printQueue: PrintQueue | null = null;
 
 const isDev = (): boolean => !app.isPackaged;
 
@@ -23,16 +21,8 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  // Initialize print queue if it doesn't exist
-  if (!printQueue) {
-    printQueue = new PrintQueue();
-  }
-
   // Register IPC handlers
   setupIpcHandlers();
-
-  // Pass printQueue to the main window manager
-  mainWindowManager.setPrintQueue(printQueue);
 
   // Create the main window
   mainWindowManager.getOrCreateMainWindow();
@@ -57,9 +47,7 @@ app.on('window-all-closed', () => {
 
 // Cleanup on app quit
 app.on('before-quit', () => {
-  if (printQueue) {
-    printQueue.cleanup();
-  }
+  printQueue.cleanup();
 
   // Clean up the main window manager
   mainWindowManager.cleanup();
