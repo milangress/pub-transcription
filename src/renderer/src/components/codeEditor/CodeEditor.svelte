@@ -14,13 +14,13 @@
   import { createAIExtension } from './AIExtension';
   import { createCompletionSource, updateCompletionOptions } from './css/Completions.js';
   import {
-    compiledControllerValues,
-    updateControllerValues,
-  } from './css/ControllerValuesExtension.js';
-  import {
     controllerValueSliders,
     updateControllerSliderValues,
   } from './css/ControllerValueSliderWidget.js';
+  import {
+    compiledControllerValues,
+    updateControllerValues,
+  } from './css/ControllerValuesLineAnnotation.js';
   import { livecodingKeymap } from './css/LivecodingKeymapExtra.js';
   import { propertyEvaluator } from './css/PropertyEvaluator.js';
   import { propertyHighlighter } from './css/PropertyHighlighter.js';
