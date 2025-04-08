@@ -6,7 +6,7 @@
     content = 'Hello World',
     isCurrent = false,
     settings = {
-      inlineStyle: '',
+      editorCss: '',
       controllerSettings: [],
     },
     onOverflow = () => {},
@@ -66,7 +66,7 @@
 
   let isCurrentClass = $derived(isCurrent ? 'current' : '');
   let compiledStyle = $derived(
-    transformSassToCSS(settings?.inlineStyle, settings?.controllerSettings),
+    transformSassToCSS(settings?.editorCss, settings?.controllerSettings),
   );
 </script>
 

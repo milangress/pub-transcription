@@ -120,7 +120,7 @@
   function formatTTSasTxtObject(tts: string): TxtObject {
     const removeNEWKeyword = String(tts).replace('NEW', '').trim();
     const txtSettings: BlockTxtSettings = {
-      inlineStyle: settings.inlineStyle,
+      editorCss: settings.editorCss,
       controllerSettings: settings.controllerSettings,
       svgFilters: settings.svgFilters,
     };
@@ -134,12 +134,12 @@
 
   // Watch for code changes and mark as unsaved
   $effect(() => {
-    if (settings.inlineStyle || settings.svgFilters) {
+    if (settings.editorCss || settings.svgFilters) {
       settings.markUnsaved();
     }
   });
 
-  // Update the style tag in the header when inlineStyle changes
+  // Update the style tag in the header when editorCss changes
   $effect(() => {
     if (typeof document !== 'undefined') {
       // Get the existing style tag or create a new one if needed
@@ -151,7 +151,7 @@
       }
 
       // Update the content of the style tag
-      styleTag.textContent = settings.inlineStyle || '';
+      styleTag.textContent = settings.editorCss || '';
     }
   });
 
@@ -258,7 +258,7 @@
           },
         },
         pageContent: {
-          inlineStyle: settings.inlineStyle,
+          editorCss: settings.editorCss,
           svgFilters: settings.svgFilters,
           html: pageContent,
         },
@@ -300,7 +300,7 @@
   <title>a-trans(crip)tion-live-coding-VJ-PDF-printing-tool</title>
   <!-- The static style tag below is kept for initial rendering, but will be replaced/updated by the $effect -->
   <style data-inline-style>
-{settings.inlineStyle}
+{settings.editorCss}
   </style>
 </svelte:head>
 
@@ -338,7 +338,7 @@
     <div class="infobox">
       <div class="dot" class:greenDot={settings.codeEditorContentSaved}></div>
       <CodeEditor
-        bind:value={settings.inlineStyle}
+        bind:value={settings.editorCss}
         language="css"
         controllerSettings={settings.controllerSettings}
         {fontFamilys}

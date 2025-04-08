@@ -5,7 +5,7 @@ export interface FontFamily {
 }
 
 export interface BlockTxtSettings {
-  inlineStyle: string;
+  editorCss: string;
   controllerSettings: ControllerSetting[];
   svgFilters?: string;
 }
@@ -23,7 +23,7 @@ export interface ControllerSetting {
 
 export interface Settings {
   controllerSettings: ControllerSetting[];
-  inlineStyle: string;
+  editorCss: string;
   svgFilters: string;
 }
 

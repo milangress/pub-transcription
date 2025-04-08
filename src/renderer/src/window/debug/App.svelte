@@ -171,13 +171,13 @@
         container.innerHTML = '';
 
         // Inject any dynamic styles
-        if (newPrintJob.pageContent.inlineStyle) {
+        if (newPrintJob.pageContent.editorCss) {
           const styleSheet = document.createElement('style');
-          styleSheet.textContent = newPrintJob.pageContent.inlineStyle;
+          styleSheet.textContent = newPrintJob.pageContent.editorCss;
           document.head.appendChild(styleSheet);
 
           // Update styles loaded status
-          const styleLength = newPrintJob.pageContent.inlineStyle.length;
+          const styleLength = newPrintJob.pageContent.editorCss.length;
           stylesLoaded = `Yes - ${styleLength} - ${new Date().toLocaleTimeString()}`;
           addLogEntry(`Styles loaded (${styleLength} bytes)`);
         } else {

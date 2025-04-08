@@ -107,7 +107,7 @@
         printContent = '';
 
         // Update styles
-        if (printJob.pageContent.inlineStyle) {
+        if (printJob.pageContent.editorCss) {
           // Remove previous style element if it exists
           if (styleElement) {
             document.head.removeChild(styleElement);
@@ -115,10 +115,10 @@
 
           // Create and inject new style element
           styleElement = document.createElement('style');
-          styleElement.textContent = printJob.pageContent.inlineStyle;
+          styleElement.textContent = printJob.pageContent.editorCss;
           document.head.appendChild(styleElement);
 
-          status.msg = `Styles loaded (${printJob.pageContent.inlineStyle.length} bytes)`;
+          status.msg = `Styles loaded (${printJob.pageContent.editorCss.length} bytes)`;
         } else {
           status.warn = 'No inline styles provided for print job';
         }

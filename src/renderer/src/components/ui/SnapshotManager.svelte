@@ -5,7 +5,7 @@
 
   // Original settings for revert functionality
   let originalSettings = $state<{
-    inlineStyle: string;
+    editorCss: string;
     svgFilters: string;
     controllerValues: Record<string, number>;
   } | null>(null);
@@ -31,7 +31,7 @@
     // Store original settings before applying snapshot if not already stored
     if (!originalSettings) {
       originalSettings = {
-        inlineStyle: settings.inlineStyle,
+        editorCss: settings.editorCss,
         svgFilters: settings.svgFilters,
         controllerValues: { ...settings.controllerValues },
       };
@@ -53,7 +53,7 @@
     // Store original settings before merging snapshot if not already stored
     if (!originalSettings) {
       originalSettings = {
-        inlineStyle: settings.inlineStyle,
+        editorCss: settings.editorCss,
         svgFilters: settings.svgFilters,
         controllerValues: { ...settings.controllerValues },
       };
@@ -88,7 +88,7 @@
   function revertToOriginal(): void {
     if (!originalSettings) return;
 
-    settings.inlineStyle = originalSettings.inlineStyle;
+    settings.editorCss = originalSettings.editorCss;
     settings.svgFilters = originalSettings.svgFilters;
 
     // Restore controller values
@@ -129,7 +129,7 @@
         <BlockTxt
           content={snapshot.name}
           settings={{
-            inlineStyle: snapshot.inlineStyle,
+            editorCss: snapshot.editorCss,
             svgFilters: snapshot.svgFilters,
             controllerSettings: $state.snapshot(staticControllerSettings as unknown),
           }}

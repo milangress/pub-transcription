@@ -47,7 +47,7 @@ export const printRequestSchema = z.object({
   pageNumber: z.number(),
   do: printTasksSchema,
   pageContent: z.object({
-    inlineStyle: z.string(),
+    editorCss: z.string(),
     svgFilters: z.string(),
     html: z.string(),
   }),
@@ -104,7 +104,7 @@ export const settingsSnapshotSchema = z.object({
   id: z.string(),
   name: z.string(),
   timestamp: z.number(),
-  inlineStyle: z.string(),
+  editorCss: z.string(),
   svgFilters: z.string(),
   controllerValues: z.record(z.number()),
 });

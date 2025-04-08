@@ -3,7 +3,7 @@ import { mapRange } from '@utils/math.js';
 import type { ControllerSetting, Settings } from 'src/renderer/src/types';
 import type { IpcEvents } from 'src/types/ipc';
 import { WebMidi } from 'webmidi';
-import defaultInlineStyle from '../assets/input-defaults/inlineStyle.js';
+import defaultInlineStyle from '../assets/input-defaults/editorCss.js';
 import inputJson from '../assets/input-defaults/input.json';
 import defaultSvgFilters from '../assets/input-defaults/svgFilters.js';
 
@@ -12,13 +12,13 @@ const emitter = new IpcEmitter<IpcEvents>();
 // Default settings structure
 const defaultSettings: Settings = {
   controllerSettings: [],
-  inlineStyle: '',
+  editorCss: '',
   svgFilters: '',
 };
 
 class SettingsStore {
   controllerSettings = $state<ControllerSetting[]>([]);
-  inlineStyle = $state('');
+  editorCss = $state('');
   svgFilters = $state('');
   #initialized = $state(false);
   #codeEditorContentSaved = $state(true);
@@ -28,7 +28,7 @@ class SettingsStore {
   constructor() {
     // Initialize with default values
     this.controllerSettings = defaultSettings.controllerSettings;
-    this.inlineStyle = defaultSettings.inlineStyle;
+    this.editorCss = defaultSettings.editorCss;
     this.svgFilters = defaultSettings.svgFilters;
   }
 
@@ -75,7 +75,7 @@ class SettingsStore {
     console.log('Saving settings to electron store');
 
     // Check inline style content
-    const isInlineStyleValid = this.#isValidContent(this.inlineStyle, this.#lastSavedInlineStyle);
+    const isInlineStyleValid = this.#isValidContent(this.editorCss, this.#lastSavedInlineStyle);
     // Check SVG filters content
     const isSvgFiltersValid = this.#isValidContent(this.svgFilters, this.#lastSavedSvgFilters);
 
@@ -87,11 +87,11 @@ class SettingsStore {
     }
 
     // Save valid content
-    await emitter.invoke('setStoreValue', 'inlineStyle', this.inlineStyle);
+    await emitter.invoke('setStoreValue', 'editorCss', this.editorCss);
     await emitter.invoke('setStoreValue', 'svgFilters', this.svgFilters);
 
     // Update last saved values
-    this.#lastSavedInlineStyle = this.inlineStyle;
+    this.#lastSavedInlineStyle = this.editorCss;
     this.#lastSavedSvgFilters = this.svgFilters;
     this.#codeEditorContentSaved = true;
   }, 1000);
@@ -99,7 +99,7 @@ class SettingsStore {
   // Reload content from last saved state
   reloadFromSaved(): void {
     if (this.#lastSavedInlineStyle) {
-      this.inlineStyle = this.#lastSavedInlineStyle;
+      this.editorCss = this.#lastSavedInlineStyle;
     }
 
     if (this.#lastSavedSvgFilters) {
@@ -133,18 +133,18 @@ class SettingsStore {
 
     try {
       // Load from electron store
-      const savedInlineStyle = (await emitter.invoke('getStoreValue', 'inlineStyle')) as string;
+      const savedInlineStyle = (await emitter.invoke('getStoreValue', 'editorCss')) as string;
       const savedSvgFilters = (await emitter.invoke('getStoreValue', 'svgFilters')) as string;
 
       // Initialize with defaults and saved values
       const controllers = (inputJson.controllers || []) as ControllerSetting[];
 
       this.controllerSettings = controllers;
-      this.inlineStyle = savedInlineStyle || defaultInlineStyle;
+      this.editorCss = savedInlineStyle || defaultInlineStyle;
       this.svgFilters = savedSvgFilters || defaultSvgFilters;
 
       // Store the initial saved values
-      this.#lastSavedInlineStyle = this.inlineStyle;
+      this.#lastSavedInlineStyle = this.editorCss;
       this.#lastSavedSvgFilters = this.svgFilters;
 
       console.log('init settings', this);

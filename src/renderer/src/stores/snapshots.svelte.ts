@@ -24,7 +24,7 @@ class SnapshotsStore {
         id: uuidv4(),
         name: name || `Snapshot ${new Date().toLocaleString()}`,
         timestamp: Date.now(),
-        inlineStyle: settings.inlineStyle,
+        editorCss: settings.editorCss,
         svgFilters: settings.svgFilters,
         controllerValues: settings.controllerValues,
       };
@@ -75,7 +75,7 @@ class SnapshotsStore {
       }
 
       // Apply the snapshot values to the settings store
-      settings.inlineStyle = snapshot.inlineStyle;
+      settings.editorCss = snapshot.editorCss;
       settings.svgFilters = snapshot.svgFilters;
 
       // Update controller values
@@ -107,8 +107,8 @@ class SnapshotsStore {
       }
 
       // Merge the inline style
-      if (snapshot.inlineStyle && settings.inlineStyle) {
-        settings.inlineStyle = mergeInlineStyles(settings.inlineStyle, snapshot.inlineStyle);
+      if (snapshot.editorCss && settings.editorCss) {
+        settings.editorCss = mergeInlineStyles(settings.editorCss, snapshot.editorCss);
       }
 
       // Update controller values
