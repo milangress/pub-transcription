@@ -139,6 +139,22 @@
     }
   });
 
+  // Update the style tag in the header when inlineStyle changes
+  $effect(() => {
+    if (typeof document !== 'undefined') {
+      // Get the existing style tag or create a new one if needed
+      let styleTag = document.head.querySelector('style[data-inline-style]');
+      if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.setAttribute('data-inline-style', 'true');
+        document.head.appendChild(styleTag);
+      }
+
+      // Update the content of the style tag
+      styleTag.textContent = settings.inlineStyle || '';
+    }
+  });
+
   async function handleOverflow(overflowingItem: TxtObject): Promise<void> {
     // Don't handle overflow if we're already handling overflow
     if (isHandlingOverflow) return;
@@ -279,7 +295,8 @@
 <!-- svelte:head meta title -->
 <svelte:head>
   <title>a-trans(crip)tion-live-coding-VJ-PDF-printing-tool</title>
-  <style>
+  <!-- The static style tag below is kept for initial rendering, but will be replaced/updated by the $effect -->
+  <style data-inline-style>
 {settings.inlineStyle}
   </style>
 </svelte:head>
@@ -291,7 +308,7 @@
 <main>
   {#if currentContentList.length > 0}
     <div class="print-context">
-      <page size="A3">
+      <page size="A3" id="page">
         <div class="content-context">
           {#each committedContent as item (item.id)}
             <item.type
@@ -304,7 +321,7 @@
             <currentSentence.type content={currentSentence.content} {settings} isCurrent />
           {/if}
           <div
-            class="page-number"
+            class="page-number #num"
             style="position: absolute; bottom: 1em; right: 1em;font-size: 2rem;"
           >
             <BlockTxt content={`${pageNumber}`} {settings} />
@@ -374,8 +391,9 @@
     top: 10px;
     left: 10px;
     z-index: 1000;
-    font-size: 24px;
+    font-size: 2rem;
     pointer-events: none;
+    /* background: white; */
   }
 
   main {
@@ -392,7 +410,7 @@
     box-shadow: 0 0 0.5cm rgba(0, 0, 0, 0.5);
   }
 
-  page[size='A3'] {
+  page {
     width: calc(297.3mm * 0.86);
     height: calc(420.2mm * 0.895);
     padding: 2cm;
@@ -405,6 +423,16 @@
     transform: translate(-50%, -50%) scale(0.5) translate3d(0, 0, 0);
     z-index: 500;
     contain: strict;
+  }
+  page:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('../src/assets/scan.png');
+    mix-blend-mode: multiply;
   }
   .print-context {
     text-align: left;
