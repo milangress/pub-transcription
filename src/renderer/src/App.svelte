@@ -330,10 +330,6 @@
 
       <hr />
 
-      <SnapshotManager />
-
-      <hr />
-
       <div class="printControls">
         <button onclick={printFile}>PRINT</button>
         <input id="pageNumberInput" bind:value={pageNumber} type="number" />
@@ -342,7 +338,13 @@
         <input bind:value={printerSettings.deviceName} type="text" disabled />
         <label><input bind:checked={printerSettings.yes} type="checkbox" />Force Print</label>
       </div>
+
       <hr />
+
+      <SnapshotManager />
+
+      <hr />
+
       <CodeEditor
         bind:value={settings.svgFilters}
         language="html"

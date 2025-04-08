@@ -189,7 +189,7 @@
     white-space: nowrap;
     overflow: hidden;
     contain: strict;
-    height: 2em;
+    height: 3.5em;
   }
 
   .snapshotPreview:hover {
