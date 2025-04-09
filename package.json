@@ -15,6 +15,7 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "dev:simulate": "electron-vite dev -- --simulate",
+    "dev:simulate:debug-message": "electron-vite dev -- --simulate --debug-message",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",

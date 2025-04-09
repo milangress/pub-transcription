@@ -95,9 +95,10 @@
 
   ipc.on('whisper-ccp-stream:transcription', (_, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages];
+    log.info('New message:', value);
 
     if (isHandlingOverflow) {
-      console.warn('Overflow handling in progress, discarding:', value);
+      log.warn('Overflow handling in progress, discarding:', value);
       return;
     }
 
@@ -107,6 +108,7 @@
 
   function handleTranscription(text: string): void {
     const isNew = text.includes('NEW');
+    log.silly('Handling transcription:', text, 'isNew:', isNew);
 
     if (isNew) {
       // Only commit if it's not in the unwanted list
@@ -115,6 +117,7 @@
           text.toLowerCase().includes(fragment.toLowerCase()),
         )
       ) {
+        log.info('Committing:', text);
         // Commit the current prediction
         contentStore.commitPrediction();
 
@@ -178,8 +181,10 @@
       isHandlingOverflow = true;
       console.log('Handling overflow for:', overflowingItem.content);
 
-      // Find the index of the overflowing item
-      const index = committedContent.findIndex((item) => item.id === overflowingItem.id);
+      // Find the index of the overflowing item in the contentStore
+      const index = contentStore.committedContent.findIndex(
+        (item) => item.id === overflowingItem.id,
+      );
       if (index === -1) return;
 
       // If this is the first item on the page and it's overflowing,
@@ -189,26 +194,47 @@
           'First item on page is overflowing - forcing it to print alone:',
           overflowingItem.content,
         );
-        // Print just this item on its own page
-        const itemToPrint = [overflowingItem];
-        const remainingItems = committedContent.slice(1);
+        // Save the items for after printing
+        const itemToPrint = contentStore.committedContent[0];
+        const remainingItems = contentStore.committedContent.slice(1);
 
-        // Update committed content to only include the overflowing item
-        committedContent = itemToPrint;
+        // Set isPrinting to prevent showing current prediction during print
+        isPrinting = true;
+
+        // Clear and add only the first item
+        contentStore.clearContent();
+        // We need to manually add the item since clearContent removes everything
+        const tempContent = [itemToPrint];
+        for (const item of tempContent) {
+          // Use the internal array directly to avoid unnecessary processing
+          contentStore.committedContent.push(item);
+        }
+
         await tick(); // Wait for DOM update
 
-        // Print current page and continue with remaining items
+        // Print current page
         await printFile();
-        // Clear the printed content before setting the remaining items
-        committedContent = [];
+
+        // Clear the printed content
+        contentStore.clearContent();
         await tick(); // Wait for DOM update
-        committedContent = remainingItems;
+
+        // Add remaining items back
+        for (const item of remainingItems) {
+          contentStore.committedContent.push(item);
+        }
+
+        // Reset printing state
+        isPrinting = false;
         return;
       }
 
       // Normal case - split at the overflowing item
       const itemsToPrint = contentStore.committedContent.slice(0, index);
       const itemsForNextPage = contentStore.committedContent.slice(index);
+
+      // Set isPrinting to prevent showing current prediction during print
+      isPrinting = true;
 
       // Print current page and continue with remaining items
       contentStore.clearContent();
@@ -217,12 +243,18 @@
       }
       await tick(); // Wait for DOM update
       await printFile();
+
       // Clear the printed content before setting the remaining items
       contentStore.clearContent();
       await tick(); // Wait for DOM update
+
+      // Add remaining items back
       for (const item of itemsForNextPage) {
         contentStore.committedContent.push(item);
       }
+
+      // Reset printing state
+      isPrinting = false;
     } finally {
       isHandlingOverflow = false;
     }
@@ -235,6 +267,7 @@
       return;
     }
     console.log('🖨️ Starting print process');
+    isPrinting = true; // Set printing state to hide current prediction
     await tick(); // Wait for DOM update
 
     try {
@@ -286,13 +319,19 @@
 
       // Send request and clear references
       emitter.send('print', printRequest);
-      committedContent = [];
+
+      // Don't clear content here - it's managed by handleOverflow
+      // The contentStore.clearContent() call should happen in handleOverflow
 
       // Increment page number after successful print
       pageNumber++;
+      isSuccessfulPrint = true;
     } catch (error) {
       console.error('❌ Error during print:', error);
       isSuccessfulPrint = false;
+    } finally {
+      // Reset printing state even if there was an error
+      isPrinting = false;
     }
   }
 

@@ -34,13 +34,13 @@ class ContentStore {
         content: text,
         editorCss,
         controllerValues, // Reference to the global values
-        id: Math.random()
+        id: Math.random(),
       };
     }
   }
   commitPrediction(): void {
     if (!this.#currentPrediction) return;
-    
+
     // Create a frozen copy with snapshot of controller values and editorCss
     const committed = {
       ...this.#currentPrediction,
@@ -49,7 +49,7 @@ class ContentStore {
       controllerValues: $state.snapshot(this.#currentPrediction.controllerValues),
       id: Math.random(),
     };
-    
+
     // Add to committed content
     this.#committedContent = [...this.#committedContent, committed];
     // Reset prediction

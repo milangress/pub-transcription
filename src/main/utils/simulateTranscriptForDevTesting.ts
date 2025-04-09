@@ -24,6 +24,7 @@ export function simulatedTranscriptController(
   mainWindow: BrowserWindow,
   sendMessageEvery = 1800,
   balance = 0.2,
+  commitedMessageCounter = 0,
 ): SimulationController {
   // Words that are saved in the printed transcript
   const naturalPhrases: string[] = [
@@ -121,7 +122,14 @@ export function simulatedTranscriptController(
 
       // Every 3-5 messages, send a NEW message
       if (Math.random() < 0.4) {
-        emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', `${message}NEW`);
+        commitedMessageCounter++;
+        const isDebug = process.argv.includes('--debug-message');
+        const messageDebug = `${commitedMessageCounter}${message}DEBUG${commitedMessageCounter}NEW`;
+        emitter.send(
+          mainWindow.webContents,
+          'whisper-ccp-stream:transcription',
+          isDebug ? messageDebug : message + 'NEW',
+        );
       } else {
         emitter.send(mainWindow.webContents, 'whisper-ccp-stream:transcription', message);
       }
