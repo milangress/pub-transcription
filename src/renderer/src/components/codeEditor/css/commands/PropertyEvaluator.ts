@@ -45,7 +45,7 @@ import {
   Transaction,
 } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { flashEffect, flashLinesEffect } from '../FlashEffect';
+import { flashEffect, flashLinesEffect } from '../FlashLineEffect';
 
 // Cache for storing parsing results to avoid redundant operations
 const parseCache = {

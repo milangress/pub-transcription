@@ -2,7 +2,7 @@ import { Prec, type Extension, type StateCommand } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer';
 import type { IpcEvents } from 'src/types/ipc';
-import { flashEffect, flashLinesEffect } from '../FlashEffect';
+import { flashEffect, flashLinesEffect } from '../FlashLineEffect';
 
 /**
  * Find the block boundaries from the current cursor position, excluding selector lines
