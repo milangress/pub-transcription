@@ -4,12 +4,6 @@ export interface FontFamily {
   name: string;
 }
 
-export interface BlockTxtSettings {
-  editorCss: string;
-  controllerSettings: ControllerSetting[];
-  svgFilters?: string;
-}
-
 export interface ControllerSetting {
   name: string;
   var: string;
@@ -30,6 +24,7 @@ export interface Settings {
 export interface TxtObject {
   type: typeof SvelteComponent;
   content: string;
-  settings: BlockTxtSettings;
+  editorCss: string;
+  controllerValues: Record<string, number>;
   id: number;
 }

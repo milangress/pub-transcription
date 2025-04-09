@@ -20,5 +20,6 @@
   "eslint.validate": ["javascript", "typescript", "svelte"],
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
-  }
+  },
+  "cSpell.words": ["crip"]
 }

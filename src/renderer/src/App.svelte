@@ -9,7 +9,8 @@
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte';
   import SnapshotManager from '@components/ui/SnapshotManager.svelte';
   import log from 'electron-log/renderer';
-  import type { BlockTxtSettings, FontFamily, TxtObject } from '../src/types';
+  import type { FontFamily, TxtObject } from '../src/types';
+  import { contentStore } from './stores/contentStore.svelte';
 
   import type { PrintRequest, PrintTask } from 'src/types';
 
@@ -94,45 +95,56 @@
 
   ipc.on('whisper-ccp-stream:transcription', (_, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages];
-    const formattedSentence = formatTTSasTxtObject(value);
 
     if (isHandlingOverflow) {
       console.warn('Overflow handling in progress, discarding:', value);
       return;
     }
 
-    if (String(value).endsWith('NEW')) {
-      // Final sentence received
-      currentSentence = {} as TxtObject; // Clear current visualization
-
-      // Only commit if it's not in the unwanted list
-      if (
-        !omittedSilenceFragments.some(
-          (x) => x.toLowerCase() === formattedSentence.content.toLowerCase().trim(),
-        )
-      ) {
-        log.silly('Commiting:', formattedSentence.content);
-        committedContent = [...committedContent, formattedSentence];
-      }
-    } else {
-      // Always show partial results, even if they would be filtered when final
-      currentSentence = formattedSentence;
-    }
+    // Handle the transcription using our new function
+    handleTranscription(value);
   });
 
-  function formatTTSasTxtObject(tts: string): TxtObject {
-    const removeNEWKeyword = String(tts).replace('NEW', '').trim();
-    const txtSettings: BlockTxtSettings = {
-      editorCss: remoteSettings.editorCss,
-      controllerSettings: settings.controllerSettings,
-      svgFilters: remoteSettings.svgFilters,
-    };
-    return {
-      type: BlockTxt as unknown as typeof SvelteComponent,
-      content: removeNEWKeyword,
-      settings: JSON.parse(JSON.stringify(txtSettings)), // Deep copy of current settings
-      id: Math.random(),
-    };
+  function handleTranscription(text: string): void {
+    const isNew = text.includes('NEW');
+
+    if (isNew) {
+      // Only commit if it's not in the unwanted list
+      if (
+        !omittedSilenceFragments.some((fragment) =>
+          text.toLowerCase().includes(fragment.toLowerCase()),
+        )
+      ) {
+        // Commit the current prediction
+        contentStore.commitPrediction();
+
+        // Start a new prediction with the cleaned text
+        const cleanText = text.replace('NEW', '').trim();
+        contentStore.updatePrediction(
+          cleanText,
+          remoteSettings.editorCss,
+          settings.controllerValues,
+        );
+
+        // Set the component type if we have a current prediction
+        if (contentStore.currentPrediction) {
+          contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
+        }
+        log.silly('Committing:', cleanText);
+      } else {
+        // Discard unwanted messages
+        console.log('Discarded unwanted fragment:', text);
+        contentStore.commitPrediction();
+      }
+    } else {
+      // Just update the current prediction
+      contentStore.updatePrediction(text, remoteSettings.editorCss, settings.controllerValues);
+
+      // Set the component type if we have a current prediction
+      if (contentStore.currentPrediction) {
+        contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
+      }
+    }
   }
 
   // Watch for code changes and mark as unsaved
@@ -195,17 +207,22 @@
       }
 
       // Normal case - split at the overflowing item
-      const itemsToPrint = committedContent.slice(0, index);
-      const itemsForNextPage = committedContent.slice(index);
+      const itemsToPrint = contentStore.committedContent.slice(0, index);
+      const itemsForNextPage = contentStore.committedContent.slice(index);
 
       // Print current page and continue with remaining items
-      committedContent = itemsToPrint;
+      contentStore.clearContent();
+      for (const item of itemsToPrint) {
+        contentStore.committedContent.push(item);
+      }
       await tick(); // Wait for DOM update
       await printFile();
       // Clear the printed content before setting the remaining items
-      committedContent = [];
+      contentStore.clearContent();
       await tick(); // Wait for DOM update
-      committedContent = itemsForNextPage;
+      for (const item of itemsForNextPage) {
+        contentStore.committedContent.push(item);
+      }
     } finally {
       isHandlingOverflow = false;
     }
@@ -293,9 +310,7 @@
   });
 
   // Handle editor commands
-  ipc.on('editor:command', async (_, command, payload) => {
-    console.log('Received editor command:', command, payload);
-
+  ipc.on('editor:command', async (_, command) => {
     if (command === 'save-snapshot') {
       await snapshots.saveSnapshot();
     }
@@ -310,20 +325,10 @@
   async function openEditor(language: 'css' | 'html'): Promise<void> {
     try {
       const content = language === 'css' ? settings.editorCss : settings.svgFilters;
-
-      // First update our remote settings with the current settings
-      if (language === 'css') {
-        remoteSettings.update({ editorCss: content }, false);
-      } else {
-        remoteSettings.update({ svgFilters: content }, false);
-      }
-
-      // Then open the editor window with the content
       await emitter.invoke('editor:openFile', {
         content,
         language,
       });
-
       console.log(`Opened ${language} editor window`);
     } catch (error) {
       console.error(`Failed to open editor: ${error}`);
@@ -348,11 +353,8 @@
 <div class="text-preview-container">
   <BlockTxt
     content="Text Preview"
-    settings={{
-      editorCss: remoteSettings.editorCss,
-      controllerSettings: settings.controllerSettings,
-      svgFilters: remoteSettings.svgFilters,
-    }}
+    editorCss={remoteSettings.editorCss}
+    controllerValues={settings.controllerValues}
   />
 </div>
 
@@ -361,21 +363,19 @@
     <div class={mode === 'mini' ? 'print-context-mini' : 'print-context'}>
       <page size="A3" id="page">
         <div class="content-context">
-          {#each committedContent as item (item.id)}
+          {#each contentStore.committedContent as item (item.id)}
             <item.type
               content={item.content}
-              settings={item.settings}
+              editorCss={item.editorCss}
+              controllerValues={item.controllerValues}
               onOverflow={() => handleOverflow(item)}
             />
           {/each}
-          {#if !isPrinting && currentSentence?.type}
-            <currentSentence.type
-              content={currentSentence.content}
-              settings={{
-                editorCss: remoteSettings.editorCss,
-                controllerSettings: settings.controllerSettings,
-                svgFilters: remoteSettings.svgFilters,
-              }}
+          {#if !isPrinting && contentStore.currentPrediction}
+            <contentStore.currentPrediction.type
+              content={contentStore.currentPrediction.content}
+              editorCss={contentStore.currentPrediction.editorCss}
+              controllerValues={settings.controllerValues}
               isCurrent
             />
           {/if}
@@ -385,11 +385,8 @@
           >
             <BlockTxt
               content={`${pageNumber}`}
-              settings={{
-                editorCss: remoteSettings.editorCss,
-                controllerSettings: settings.controllerSettings,
-                svgFilters: remoteSettings.svgFilters,
-              }}
+              editorCss={remoteSettings.editorCss}
+              controllerValues={settings.controllerValues}
             />
           </div>
         </div>

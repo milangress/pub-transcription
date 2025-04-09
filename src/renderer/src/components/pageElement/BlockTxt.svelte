@@ -1,32 +1,27 @@
 <script lang="ts">
-  import type { BlockTxtSettings, ControllerSetting } from 'src/renderer/src/types';
   import { checkPosition } from './checkPosition.js';
 
   let {
     content = 'Hello World',
     isCurrent = false,
-    settings = {
-      editorCss: '',
-      controllerSettings: [],
-    },
+    editorCss = '',
+    controllerValues = {},
     onOverflow = () => {},
   } = $props<{
     content?: string;
     isCurrent?: boolean;
-    settings?: BlockTxtSettings;
+    editorCss?: string;
+    controllerValues: Record<string, number>;
     onOverflow?: () => void;
   }>();
 
   function transformSassToCSS(
     str: string | undefined,
-    controllerSettings: ControllerSetting[],
+    controllerValues: Record<string, number> = {},
   ): string {
     if (!str) return '';
-    const staticString = $state.snapshot(str);
-    const staticControllerSettings = $state.snapshot(controllerSettings);
-
     // Extract only the .el{} element
-    const elMatch = staticString.match(/\.el\s*{([^}]*)}/);
+    const elMatch = str.match(/\.el\s*{([^}]*)}/);
     if (!elMatch || !elMatch[1]) return '';
 
     // Get just the content inside .el{}
@@ -35,21 +30,15 @@
     // Remove comments in one pass
     cssContent = cssContent.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '');
 
-    // If no controller settings, return cleaned CSS
-    if (!controllerSettings?.length) return cssContent.trim();
-
-    // Create a variable lookup map for faster access
-    const varMap = new Map();
-    for (const setting of staticControllerSettings) {
-      varMap.set(setting.var, setting.value);
-    }
+    // If no controller values, return cleaned CSS
+    if (Object.keys(controllerValues).length === 0) return cssContent.trim();
 
     // Process variable replacements efficiently
     // Handle both $var and $var * value patterns in a single pass
     const result = cssContent.replace(
       /\$([a-zA-Z0-9_]+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g,
       (match, varName, multiplier, unit) => {
-        const value = varMap.get(varName);
+        const value = controllerValues[varName];
         if (value === undefined) return match; // Keep original if var not found
 
         if (multiplier !== undefined) {
@@ -65,9 +54,7 @@
   }
 
   let isCurrentClass = $derived(isCurrent ? 'current' : '');
-  let compiledStyle = $derived(
-    transformSassToCSS(settings?.editorCss, settings?.controllerSettings),
-  );
+  let compiledStyle = $derived(transformSassToCSS(editorCss, controllerValues));
 </script>
 
 <span

@@ -11,20 +11,20 @@
   import type { ControllerSetting, FontFamily } from 'src/renderer/src/types';
   import { onMount } from 'svelte';
   import { settings } from '../../stores/settings.svelte.js';
-  import { createAIExtension } from './AIExtension';
-  import { livecodingKeymap } from './css/commands/LivecodingKeymapExtra.js';
-  import { propertyEvaluator } from './css/commands/PropertyEvaluator.js';
-  import { stackModeEvaluator } from './css/commands/StackModeEvaluator.js';
-  import { createCompletionSource, updateCompletionOptions } from './css/Completions.js';
+  import { createAIExtension } from './lang-css/ai/AIExtension.js';
+  import { livecodingKeymap } from './lang-css/commands/LivecodingKeymapExtra.js';
+  import { propertyEvaluator } from './lang-css/commands/PropertyEvaluator.js';
+  import { stackModeEvaluator } from './lang-css/commands/StackModeEvaluator.js';
+  import { createCompletionSource, updateCompletionOptions } from './lang-css/Completions.js';
   import {
     controllerValueSliders,
     updateControllerSliderValues,
-  } from './css/ControllerValueSliderWidget.js';
+  } from './lang-css/ControllerValueSliderWidget.js';
   import {
     compiledControllerValues,
     updateControllerValues,
-  } from './css/ControllerValuesLineAnnotation.js';
-  import { propertyHighlighter } from './css/PropertyHighlighter.js';
+  } from './lang-css/ControllerValuesLineAnnotation.js';
+  import { propertyHighlighter } from './lang-css/SamePropertyHighlighter.js';
 
   let {
     value = $bindable(''),
