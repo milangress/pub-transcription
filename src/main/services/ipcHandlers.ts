@@ -14,6 +14,7 @@ import { notifyStatus } from '../print/setPrintStatus';
 import { openPdfFolder } from '../utils/helper';
 import { ipcLogger } from '../utils/logger';
 import { printWindowManager } from '../window/PrintWindow';
+import { getCurrentSession, saveJsonToSession, saveToSession } from './SessionManager';
 import { deleteSnapshot, getSnapshots, loadSnapshot, saveSnapshot } from './snapshots';
 
 const store = new Store();
@@ -92,7 +93,17 @@ export function setupIpcHandlers(): void {
 
   // Settings snapshot handlers
   ipc.handle('save-settings-snapshot', async (_event, snapshot: SettingsSnapshot) => {
-    return await saveSnapshot(snapshot);
+    const savedSnapshot = await saveSnapshot(snapshot);
+    
+    // Also save to the current session if one exists
+    const session = getCurrentSession();
+    if (session) {
+      const filename = `snapshot-${savedSnapshot.id}.json`;
+      await saveJsonToSession(savedSnapshot, filename, 'snapshot');
+      ipcLogger.info(`Saved snapshot to session: ${filename}`);
+    }
+    
+    return savedSnapshot;
   });
 
   ipc.handle('get-settings-snapshots', async () => {
@@ -181,6 +192,28 @@ export function setupIpcHandlers(): void {
       };
 
       notifyStatus.printStart(printJob.printId);
+      
+      // Take a screenshot of the page before printing
+      try {
+        const session = getCurrentSession();
+        if (session) {
+          const timestamp = new Date().toISOString().replace(/:/g, '-');
+          const screenshotName = `screenshot-${printJob.printId}-${timestamp}.png`;
+          
+          ipcLogger.info(`Taking screenshot before printing: ${screenshotName}`);
+          const imageData = await printWindow.webContents.capturePage();
+          const pngBuffer = imageData.toPNG();
+          
+          // Save to session
+          const imagePath = await saveToSession(pngBuffer, screenshotName, 'image');
+          if (imagePath) {
+            ipcLogger.info(`Saved screenshot to: ${imagePath}`);
+          }
+        }
+      } catch (screenshotError) {
+        ipcLogger.error('Error taking screenshot:', screenshotError);
+        // Continue with printing even if screenshot fails
+      }
 
       // Handle direct printing
       if (printJob.do.print.yes === true) {
@@ -203,19 +236,35 @@ export function setupIpcHandlers(): void {
       // Default to handle PDF saving
       if (printJob.do.pdfSave?.yes !== false) {
         const dateString = new Date().toISOString().replace(/:/g, '-');
-        const pdfDir = join(app.getPath('userData'), 'pdfs');
-
-        if (!existsSync(pdfDir)) {
-          await fs.mkdir(pdfDir, { recursive: true });
+        const session = getCurrentSession();
+        let pdfDir = join(app.getPath('userData'), 'pdfs');
+        let pdfPath = join(pdfDir, `transcript-${dateString}.pdf`);
+        
+        // Use session directory if available
+        if (session) {
+          pdfDir = session.pdfPath;
+          pdfPath = join(pdfDir, `transcript-${dateString}.pdf`);
+        } else {
+          // Ensure default PDF directory exists
+          if (!existsSync(pdfDir)) {
+            await fs.mkdir(pdfDir, { recursive: true });
+          }
         }
 
-        const pdfPath = join(pdfDir, `transcript-${dateString}.pdf`);
         ipcLogger.debug('Printing to PDF...', pdfPath, pdfOptions);
         const pdfData = await printWindow.webContents.printToPDF(pdfOptions);
 
         if (pdfData) {
+          // Save to file system
           await fs.writeFile(pdfPath, pdfData);
           ipcLogger.info(`Wrote PDF successfully to ${pdfPath}`);
+          
+          // Also save to session if available
+          if (session) {
+            const pdfFilename = `transcript-${dateString}.pdf`;
+            await saveToSession(pdfData, pdfFilename, 'pdf');
+            ipcLogger.info(`Saved PDF to session: ${pdfFilename}`);
+          }
 
           notifyStatus.pdfSuccess(printJob.printId, pdfPath);
 

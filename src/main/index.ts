@@ -5,6 +5,8 @@ import { setupEditorIPC } from './ipc/editor';
 import { createMenu } from './menu';
 import { printQueue } from './print/PrintQueue';
 import { setupIpcHandlers } from './services/ipcHandlers';
+import { createSession } from './services/SessionManager';
+import { spawnWhisperStream } from './services/WhisperStream';
 import { checkApplicationFolder } from './utils/applicationFolder';
 import { mainWindowManager } from './window/MainWindow';
 import { printWindowManager } from './window/PrintWindow';
@@ -33,13 +35,26 @@ app.whenReady().then(() => {
   setupEditorIPC();
 
   // Create the main window
-  mainWindowManager.getOrCreateMainWindow();
+  const mainWindow = mainWindowManager.getOrCreateMainWindow();
 
   // Create the print window
   printWindowManager.getOrCreatePrintWindow();
 
   // Check if we should move to Applications folder
   checkApplicationFolder(isDev);
+  
+  // Create a new session for this recording
+  createSession().then(session => {
+    console.log(`Created new recording session: ${session.name}`);
+    
+    // Start WhisperStream with the new session
+    spawnWhisperStream(mainWindow);
+  }).catch(error => {
+    console.error('Failed to create session:', error);
+    
+    // Still start WhisperStream even if session creation fails
+    spawnWhisperStream(mainWindow);
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -9,6 +9,7 @@ import ggmlModelSmallEnQ51Bin from '../../../resources/models/ggml-small.en-q5_1
 import type { IpcRendererEvent } from '../../types/ipc';
 import { serviceLogger } from '../utils/logger';
 import { startPowerSaveBlocker } from '../utils/startPowerSaveBlocker';
+import { getCurrentSession, getSessionPath } from './SessionManager';
 
 const emitter = new IpcEmitter<IpcRendererEvent>();
 
@@ -84,10 +85,18 @@ export function spawnWhisperStream(
     }
   };
 
-  // Create audio directory in userData if it doesn't exist
-  const audioDir = join(app.getPath('userData'), 'audio');
-  if (!existsSync(audioDir)) {
-    mkdirSync(audioDir, { recursive: true });
+  // Use session audio directory if available, otherwise fallback to default
+  let audioDir = getSessionPath('audio');
+  
+  if (!audioDir) {
+    // Fallback to default audio directory if no session is active
+    audioDir = join(app.getPath('userData'), 'audio');
+    if (!existsSync(audioDir)) {
+      mkdirSync(audioDir, { recursive: true });
+    }
+    log.msg(`No active session, using default audio directory: ${audioDir}`);
+  } else {
+    log.msg(`Using session audio directory: ${audioDir}`);
   }
 
   const spawnOptions = { cwd: audioDir };
