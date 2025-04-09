@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@itseasy21/mcp-knowledge-graph"],
+      "env": {
+        "MEMORY_FILE_PATH": "/Users/milan/ai/cursor_memory/pub_transcriptions.jsonl"
+      }
+    }
+  }
+}
