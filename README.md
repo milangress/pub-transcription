@@ -32,9 +32,13 @@ Built with Electron + Svelte 5
 
 ## The Livecoding Editor
 
-A block is a continuous section of properties inside a CSS selector without any empty lines in between.
+![The Livecoding Editor](doc/css-editor.gif)
+
+> [!NOTE]
+> A block is a continuous section of properties inside a CSS selector without any empty lines in between.
 
 ### "Executing CSS"
+
 The editor simulates executing CSS by toggling line comments on and off:
 
 - `Alt-Enter`: Line execution & comment line if uncommented
@@ -73,22 +77,21 @@ Through the config, you can define MIDI inputs:
 ```
 
 In the code editor, these $m2 variables will create draggable values:
+
 - Hold `ALT` while dragging a value to not clamp to range
 
-
-### Additional Shortkeys:
+### Additional Shortkeys
 
 - `Ctrl + /`: Comment toggle
 - `Shift + Alt + A`: Block comment
 - `Ctrl-Space`: Completion
 - `Alt-A`: Trigger AI edit
 
-### Code Completion:
+### Code Completion
 
 - MIDI variables (`$`)
 - SVG filters (`filter: url(#`)
 - Typography (`font-family:`)
-
 
 ## CSS Structure
 
