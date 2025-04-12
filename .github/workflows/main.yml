@@ -31,7 +31,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Download Whisper model
-        run: pnpm dlwisper
+        run: pnpm download-whisper-model
 
       - name: Build app
         run: pnpm build
