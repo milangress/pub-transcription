@@ -1,6 +1,6 @@
 {
   "name": "pub-transcriptions",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Pub Transcriptions",
   "main": "./out/main/index.js",
   "private": false,
