@@ -6,7 +6,7 @@ import { createMenu } from './menu';
 import { printQueue } from './print/PrintQueue';
 import { setupIpcHandlers } from './services/ipcHandlers';
 import { createSession } from './services/SessionManager';
-import { spawnWhisperStream } from './services/WhisperStream';
+import { spawnWhisperStream, stopStreamProcess } from './services/WhisperStream';
 import { checkApplicationFolder } from './utils/applicationFolder';
 import { mainWindowManager } from './window/MainWindow';
 import { printWindowManager } from './window/PrintWindow';
@@ -42,19 +42,21 @@ app.whenReady().then(() => {
 
   // Check if we should move to Applications folder
   checkApplicationFolder(isDev);
-  
+
   // Create a new session for this recording
-  createSession().then(session => {
-    console.log(`Created new recording session: ${session.name}`);
-    
-    // Start WhisperStream with the new session
-    spawnWhisperStream(mainWindow);
-  }).catch(error => {
-    console.error('Failed to create session:', error);
-    
-    // Still start WhisperStream even if session creation fails
-    spawnWhisperStream(mainWindow);
-  });
+  createSession()
+    .then((session) => {
+      console.log(`Created new recording session: ${session.name}`);
+
+      // Start WhisperStream (it will handle simulation mode internally)
+      global.streamProcess = spawnWhisperStream(mainWindow);
+    })
+    .catch((error) => {
+      console.error('Failed to create session:', error);
+
+      // Still start WhisperStream
+      global.streamProcess = spawnWhisperStream(mainWindow);
+    });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -63,17 +65,19 @@ app.whenReady().then(() => {
   });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// Handle window-all-closed event
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // Stop the stream process when all windows are closed
+  stopStreamProcess();
+  app.quit();
 });
 
 // Cleanup on app quit
 app.on('before-quit', () => {
+  // Stop the stream process
+  stopStreamProcess();
+
+  // Clean up the print queue
   printQueue.cleanup();
 
   // Clean up the main window manager

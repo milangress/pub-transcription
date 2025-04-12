@@ -2,10 +2,8 @@ import { BrowserWindow, app } from 'electron';
 import { join } from 'path';
 import icon from '../../../resources/favicon.png?asset';
 import { printQueue } from '../print/PrintQueue';
-import { spawnWhisperStream } from '../services/WhisperStream';
 import { isDev } from '../utils/helper';
 import { windowLogger } from '../utils/logger';
-import { simulatedTranscriptController } from '../utils/simulateTranscriptForDevTesting';
 import { printWindowManager } from './PrintWindow';
 
 /**
@@ -13,7 +11,6 @@ import { printWindowManager } from './PrintWindow';
  */
 export class MainWindow {
   private mainWindow: BrowserWindow | null = null;
-  private simulationController: ReturnType<typeof simulatedTranscriptController> | null = null;
 
   /**
    * Creates a main window if one doesn't exist or returns the existing one
@@ -50,25 +47,12 @@ export class MainWindow {
       this.mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
     }
 
-    // Window event handlers
-    let isWindowShown = false;
-    let isContentLoaded = false;
-
-    const checkAndStartProcesses = (): void => {
-      if (isWindowShown && isContentLoaded && this.mainWindow) {
-        this.startProcesses();
-      }
-    };
-
     this.mainWindow.once('ready-to-show', () => {
       this.mainWindow?.show();
-      isWindowShown = true;
-      checkAndStartProcesses();
     });
 
     this.mainWindow.webContents.once('did-finish-load', () => {
-      isContentLoaded = true;
-      checkAndStartProcesses();
+      windowLogger.info('Main window did-finish-load');
     });
 
     // Handle window closing
@@ -76,12 +60,6 @@ export class MainWindow {
       // If there are active print jobs, show the print window
       if (printQueue.hasActiveJobs()) {
         printWindowManager.showPrintWindow();
-      }
-
-      // Clean up stream process
-      if (global.streamProcess) {
-        global.streamProcess.kill();
-        global.streamProcess = null;
       }
 
       this.mainWindow = null;
@@ -108,35 +86,10 @@ export class MainWindow {
   }
 
   /**
-   * Starts the processes needed for the application
-   */
-  private startProcesses(): void {
-    if (!this.mainWindow) return;
-
-    if (process.argv.includes('--simulate')) {
-      windowLogger.info('Running in simulation mode');
-      this.simulationController = simulatedTranscriptController(this.mainWindow);
-      this.simulationController.start();
-    } else {
-      // Store the stream process in the global variable for access across the app
-      global.streamProcess = spawnWhisperStream(this.mainWindow);
-    }
-  }
-
-  /**
    * Cleans up resources when application is quitting
    */
   public cleanup(): void {
-    if (this.simulationController) {
-      this.simulationController.stop();
-      this.simulationController = null;
-    }
-
-    // Clean up stream process
-    if (global.streamProcess) {
-      global.streamProcess.kill();
-      global.streamProcess = null;
-    }
+    // Clean up any resources if needed
   }
 }
 

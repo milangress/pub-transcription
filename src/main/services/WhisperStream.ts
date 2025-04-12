@@ -8,13 +8,15 @@ import ggmlStreamBin from '../../../resources/lib/stream?asset&asarUnpack';
 import ggmlModelSmallEnQ51Bin from '../../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
 import type { IpcRendererEvent } from '../../types/ipc';
 import { serviceLogger } from '../utils/logger';
+import { simulatedTranscriptController } from '../utils/simulateTranscriptForDevTesting';
 import { startPowerSaveBlocker } from '../utils/startPowerSaveBlocker';
 import { getSessionPath } from './SessionManager';
 
 const emitter = new IpcEmitter<IpcRendererEvent>();
 
-// Keep track of the stream process
+// Keep track of the stream process or simulation controller
 let activeStreamProcess: ChildProcess | null = null;
+let activeSimulationController: ReturnType<typeof simulatedTranscriptController> | null = null;
 
 interface StreamOptions {
   name: string;
@@ -41,23 +43,25 @@ const DEFAULT_OPTIONS: StreamOptions = {
 };
 
 /**
- * Creates and manages a child process for real-time audio stream transcription.
+ * Creates and manages either a real whisper stream process or a simulated one for development
  *
  * @param mainWindow - The Electron main window instance to send transcription events
  * @param options - Optional configuration for the stream process
- * @returns The spawned child process instance
- *
- * The process handles:
- * - Spawning the stream executable with model and configuration parameters
- * - Streaming transcription data back to the main window
- * - Error handling and status updates
- * - Process lifecycle management
+ * @returns The spawned child process instance if not in simulation mode
  */
 export function spawnWhisperStream(
   mainWindow: BrowserWindow,
   options: Partial<StreamOptions> = {},
   printTranscription: boolean = false,
-): ChildProcess {
+): ChildProcess | null {
+  // Check if we're in simulation mode
+  if (process.argv.includes('--simulate')) {
+    serviceLogger.info('Running in simulation mode');
+    activeSimulationController = simulatedTranscriptController(mainWindow);
+    activeSimulationController.start();
+    return null;
+  }
+
   const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
 
   const log = {
@@ -155,18 +159,46 @@ export function spawnWhisperStream(
 }
 
 /**
+ * Stop the currently active stream process or simulation, if any
+ * @param force Whether to force kill the process if it doesn't exit gracefully
+ */
+export function stopStreamProcess(force: boolean = true): void {
+  // Stop simulation if active
+  if (activeSimulationController) {
+    activeSimulationController.stop();
+    activeSimulationController = null;
+    return;
+  }
+
+  // Stop real process if active
+  if (activeStreamProcess) {
+    try {
+      // First try graceful shutdown
+      activeStreamProcess.kill();
+
+      if (force) {
+        // Force kill after a short delay if process is still running
+        setTimeout(() => {
+          if (activeStreamProcess) {
+            try {
+              activeStreamProcess.kill('SIGKILL');
+            } catch {
+              // Process might already be gone
+            }
+            activeStreamProcess = null;
+          }
+        }, 1000);
+      }
+    } catch {
+      // Process might already be gone
+      activeStreamProcess = null;
+    }
+  }
+}
+
+/**
  * Get the currently active stream process, if any
  */
 export function getActiveStreamProcess(): ChildProcess | null {
   return activeStreamProcess;
-}
-
-/**
- * Stop the currently active stream process, if any
- */
-export function stopStreamProcess(): void {
-  if (activeStreamProcess) {
-    activeStreamProcess.kill();
-    activeStreamProcess = null;
-  }
 }
