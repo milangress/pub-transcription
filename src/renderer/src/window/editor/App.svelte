@@ -21,9 +21,6 @@
     // If this is a new session, make sure we don't have a document marked as edited
     emitter.invoke('editor:set-document-edited', false);
 
-    // Set default represented filename
-    emitter.invoke('editor:set-represented-file', storageKey);
-
     // Set up keyboard shortcuts
     document.addEventListener('keydown', handleKeyDown);
 
@@ -52,30 +49,28 @@
     }
   });
 
+  // Update storage key based on current state
+  function updateStorageKey(): void {
+    if (currentFilePath) {
+      storageKey = `editor:file:${currentFilePath}`;
+      // Set the represented filename in the window title
+      emitter.invoke('editor:set-represented-file', currentFilePath);
+    } else {
+      storageKey = `editor:${editorLanguage}:unknown`;
+    }
+  }
+
   // Handle editor init event
   ipc.on('editor:init', (_, options) => {
     editorValue = options.content;
     editorLanguage = options.language;
-
-    // Update storage key based on language
     updateStorageKey();
-
-    // Try to load from localStorage first
-    const savedContent = localStorage.getItem(storageKey);
-    if (savedContent) {
-      // Don't mark as edited on initial load from localStorage
-      ignoreNextChange = true;
-      editorValue = savedContent;
-    }
   });
 
   // Handle when a file is opened
   ipc.on('editor:opened-file', (_, filePath) => {
     currentFilePath = filePath;
     updateStorageKey();
-
-    // Save to localStorage
-    localStorage.setItem(storageKey, editorValue);
 
     // Reset the edited state
     isDocumentEdited = false;
@@ -109,25 +104,10 @@
   ipc.on('editor:save-complete', (_, filePath) => {
     if (filePath) {
       currentFilePath = filePath;
-
-      // Update storage key to use the file path
-      storageKey = `editor:file:${filePath}`;
-
-      // Save to localStorage
-      localStorage.setItem(storageKey, editorValue);
-
+      updateStorageKey();
       console.log(`File saved to ${filePath}`);
     }
   });
-
-  // Update storage key based on current state
-  function updateStorageKey(): void {
-    if (currentFilePath) {
-      storageKey = `editor:file:${currentFilePath}`;
-    } else {
-      storageKey = `editor:${editorLanguage}:unknown`;
-    }
-  }
 
   // Save content to file and localStorage
   async function saveContent(): Promise<void> {
@@ -137,9 +117,6 @@
       if (filePath) {
         currentFilePath = filePath;
         updateStorageKey();
-
-        // Set the represented filename in the window
-        await emitter.invoke('editor:set-represented-file', filePath);
       } else {
         // User canceled the dialog
         return;
@@ -176,7 +153,6 @@
     localStorage.setItem(storageKey, value);
 
     // Send the update to remote settings in other windows
-    // This will not affect the main settings store in other windows
     if (editorLanguage === 'css') {
       emitter.send('editor:settings-updated', { editorCss: value });
     } else if (editorLanguage === 'html') {

@@ -1,6 +1,5 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/main';
 import { BrowserWindow, Menu, MenuItemConstructorOptions, app, dialog, shell } from 'electron';
-import { promises as fs } from 'fs';
 import type { IpcRendererEvent } from '../../types/ipc';
 import { editorWindowManager } from '../window/EditorWindow';
 import { mainWindowManager } from '../window/MainWindow';
@@ -56,21 +55,12 @@ export function createMenu(): void {
             });
 
             if (!result.canceled && result.filePaths.length > 0) {
-              const filePath = result.filePaths[0];
-              const content = await fs.readFile(filePath, 'utf8');
-              const window = editorWindowManager.createEditorWindow({
-                initialContent: content,
-                language: 'css',
-              });
-
-              // Set the represented filename
-              window.setRepresentedFilename(filePath);
-              window.setTitle(filePath.split('/').pop() || filePath);
-
-              // Send the file path to the renderer
-              window.once('ready-to-show', () => {
-                window.webContents.send('editor:opened-file', filePath);
-              });
+              try {
+                await editorWindowManager.openFile(result.filePaths[0]);
+              } catch (error) {
+                console.error('Failed to open file:', error);
+                dialog.showErrorBox('Error', 'Failed to open file');
+              }
             }
           },
         },

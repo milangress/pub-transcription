@@ -1,4 +1,5 @@
 import { BrowserWindow, WebContents, app } from 'electron';
+import { promises as fs } from 'fs';
 import os from 'os';
 import { join } from 'path';
 import icon from '../../../resources/favicon.png?asset';
@@ -6,6 +7,35 @@ import { mainWindowManager } from './MainWindow';
 
 export class EditorWindow {
   private editorWindows: BrowserWindow[] = [];
+
+  public async openFile(filePath: string): Promise<BrowserWindow> {
+    try {
+      const content = await fs.readFile(filePath, 'utf8');
+
+      // Determine language based on file extension
+      const ext = filePath.split('.').pop()?.toLowerCase();
+      const language = ext === 'html' ? 'html' : 'css';
+
+      const window = this.createEditorWindow({
+        initialContent: content,
+        language,
+      });
+
+      // Set the represented filename
+      window.setRepresentedFilename(filePath);
+      window.setTitle(filePath.split('/').pop() || filePath);
+
+      // Send the file path to the renderer
+      window.once('ready-to-show', () => {
+        window.webContents.send('editor:opened-file', filePath);
+      });
+
+      return window;
+    } catch (error) {
+      console.error('Error opening file:', error);
+      throw error;
+    }
+  }
 
   public createEditorWindow(
     options: { initialContent?: string; language?: 'css' | 'html' } = {},
