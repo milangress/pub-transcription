@@ -6,11 +6,25 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin } from '@codemir
 const propertyHighlightTheme = EditorView.baseTheme({
   '&light .cm-propertyHighlight': { backgroundColor: 'oklch(0.93 0.26 121.72 / 0.19);' },
   '&dark .cm-propertyHighlight': { backgroundColor: 'oklch(0.93 0.26 121.72 / 0.19);' },
+  '&light .cm-propertyText': { color: 'red' },
+  '&dark .cm-propertyText': { color: 'red' },
+  '&light .cm-defaultPropertyText': { color: 'green' },
+  '&dark .cm-defaultPropertyText': { color: 'green' },
 });
 
 // Decoration for highlighting the entire line
 const propertyHighlight = Decoration.line({
   attributes: { class: 'cm-propertyHighlight' },
+});
+
+// Decoration for highlighting matching property names in red
+const propertyTextHighlight = Decoration.mark({
+  attributes: { class: 'cm-propertyText' },
+});
+
+// Decoration for highlighting all property names in green
+const defaultPropertyHighlight = Decoration.mark({
+  attributes: { class: 'cm-defaultPropertyText' },
 });
 
 // Check if the cursor is on a line containing a PropertyName node or a commented property
@@ -117,15 +131,40 @@ function findMatchingPropertyLines(view: EditorView, propertyName: string): numb
 // Create the decorations for matching properties
 function createPropertyDecorations(view: EditorView): DecorationSet {
   const property = getPropertyNameAtCursor(view);
+  const decorations: Array<{ from: number; to: number; value: Decoration }> = [];
+  const matchingLines = property ? findMatchingPropertyLines(view, property.name) : [];
 
-  if (!property) {
-    return Decoration.none;
+  // Single pass through the syntax tree to handle both default and matching properties
+  syntaxTree(view.state).iterate({
+    enter: (node) => {
+      if (node.type.name === 'PropertyName') {
+        const name = view.state.doc.sliceString(node.from, node.to).trim();
+
+        // Add line background highlight if this is a matching property
+        if (property && name === property.name) {
+          const line = view.state.doc.lineAt(node.from);
+          decorations.push(propertyHighlight.range(line.from));
+          decorations.push(propertyTextHighlight.range(node.from, node.to));
+        } else {
+          // Apply default green highlight to non-matching properties
+          decorations.push(defaultPropertyHighlight.range(node.from, node.to));
+        }
+      }
+    },
+  });
+
+  // Add line background highlights for commented lines (without text highlighting)
+  if (property) {
+    for (const lineStart of matchingLines) {
+      const line = view.state.doc.lineAt(lineStart);
+      const lineText = line.text.trim();
+      if (lineText.startsWith('//')) {
+        decorations.push(propertyHighlight.range(lineStart));
+      }
+    }
   }
 
-  const matchingLines = findMatchingPropertyLines(view, property.name);
-  const decorations = matchingLines.map((lineStart) => propertyHighlight.range(lineStart));
-
-  return Decoration.set(decorations);
+  return Decoration.set(decorations.sort((a, b) => a.from - b.from));
 }
 
 // Create the plugin that manages property highlighting
