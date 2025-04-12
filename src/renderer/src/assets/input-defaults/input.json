@@ -17,7 +17,7 @@
       "value": 0,
       "default": 0,
       "step": 5,
-      "knobNR": 0,
+      "knobNum": 0,
       "range": [0, 255]
     },
     {
@@ -26,7 +26,7 @@
       "value": 0,
       "default": 0,
       "step": 5,
-      "knobNR": 1,
+      "knobNum": 1,
       "range": [0, 255]
     },
     {
@@ -35,7 +35,7 @@
       "value": 0,
       "default": 0,
       "step": 5,
-      "knobNR": 2,
+      "knobNum": 2,
       "range": [0, 255]
     },
     {
@@ -44,7 +44,7 @@
       "value": 0,
       "default": 0,
       "step": 0.05,
-      "knobNR": 3,
+      "knobNum": 3,
       "range": [0, 1]
     },
     {
@@ -53,7 +53,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 4,
+      "knobNum": 4,
       "range": [0, 1]
     },
     {
@@ -62,7 +62,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 5,
+      "knobNum": 5,
       "range": [0, 1]
     },
     {
@@ -71,7 +71,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 6,
+      "knobNum": 6,
       "range": [0, 1]
     },
     {
@@ -80,7 +80,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 7,
+      "knobNum": 7,
       "range": [0, 1]
     },
     {
@@ -89,7 +89,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 8,
+      "knobNum": 8,
       "range": [0, 10]
     },
     {
@@ -98,7 +98,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 9,
+      "knobNum": 9,
       "range": [0, 10]
     },
     {
@@ -107,7 +107,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 10,
+      "knobNum": 10,
       "range": [0, 10]
     },
     {
@@ -116,7 +116,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 11,
+      "knobNum": 11,
       "range": [0, 10]
     },
 
@@ -126,7 +126,7 @@
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 15,
+      "knobNum": 15,
       "range": [0.5, 4]
     },
     {
@@ -135,7 +135,7 @@
       "value": 0,
       "default": 0,
       "step": 1,
-      "knobNR": 12,
+      "knobNum": 12,
       "range": [-20, 20]
     }
   ]

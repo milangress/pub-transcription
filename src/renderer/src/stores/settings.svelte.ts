@@ -200,7 +200,7 @@ class SettingsStore {
         console.log('mySynth', mySynth);
 
         mySynth.channels[1].addListener('controlchange', (e) => {
-          if (e.controller.number === controller.knobNR && typeof e.value === 'number') {
+          if (e.controller.number === controller.knobNum && typeof e.value === 'number') {
             const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1]);
             this.updateControllerValue(controller.var, Number.parseFloat(value.toFixed(2)));
           }

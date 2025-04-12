@@ -2801,7 +2801,7 @@ export default `.el {
       "value": 0,
       "default": 0,
       "step": 5,
-      "knobNR": 0,
+      "knobNum": 0,
       "range": [0, 255]
     },
     {
@@ -2810,7 +2810,7 @@ export default `.el {
       "value": 0,
       "default": 0,
       "step": 5,
-      "knobNR": 1,
+      "knobNum": 1,
       "range": [0, 255]
     },
     {
@@ -2819,7 +2819,7 @@ export default `.el {
       "value": 0,
       "default": 0,
       "step": 5,
-      "knobNR": 2,
+      "knobNum": 2,
       "range": [0, 255]
     },
     {
@@ -2828,7 +2828,7 @@ export default `.el {
       "value": 0,
       "default": 0,
       "step": 0.05,
-      "knobNR": 3,
+      "knobNum": 3,
       "range": [0, 1]
     },
     {
@@ -2837,7 +2837,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 4,
+      "knobNum": 4,
       "range": [0, 1]
     },
     {
@@ -2846,7 +2846,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 5,
+      "knobNum": 5,
       "range": [0, 1]
     },
     {
@@ -2855,7 +2855,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 6,
+      "knobNum": 6,
       "range": [0, 1]
     },
     {
@@ -2864,7 +2864,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 7,
+      "knobNum": 7,
       "range": [0, 1]
     },
     {
@@ -2873,7 +2873,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 8,
+      "knobNum": 8,
       "range": [0, 10]
     },
     {
@@ -2882,7 +2882,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 9,
+      "knobNum": 9,
       "range": [0, 10]
     },
     {
@@ -2891,7 +2891,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 10,
+      "knobNum": 10,
       "range": [0, 10]
     },
     {
@@ -2900,7 +2900,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 11,
+      "knobNum": 11,
       "range": [0, 10]
     },
 
@@ -2910,7 +2910,7 @@ export default `.el {
       "value": 1,
       "default": 1,
       "step": 0.1,
-      "knobNR": 15,
+      "knobNum": 15,
       "range": [0.5, 4]
     },
     {
@@ -2919,7 +2919,7 @@ export default `.el {
       "value": 0,
       "default": 0,
       "step": 1,
-      "knobNR": 12,
+      "knobNum": 12,
       "range": [-20, 20]
     }
   ]
@@ -5391,7 +5391,7 @@ export const useDebounce = (
 <div class="controller-wrapper">
   {#each controllerSettings as item}
     <div class="item">
-      <MIDIKnobPreview knobNR={item.knobNR} />
+      <MIDIKnobPreview knobNum={item.knobNum} />
       <div>
         <p><strong>{item.name}</strong></p>
         <p>{item.range[0]}/{item.range[1]}</p>
@@ -5481,8 +5481,8 @@ export const useDebounce = (
 
 <file path="src/renderer/src/components/midi/MIDIKnobPreview.svelte">
 <script lang="ts">
-  let { knobNR = 0 } = $props<{
-    knobNR?: number;
+  let { knobNum = 0 } = $props<{
+    knobNum?: number;
   }>();
 
   const maxKnobs: number = 16;
@@ -5491,7 +5491,7 @@ export const useDebounce = (
 
 <div class="midiController">
   {#each midiKnobs as knob}
-    {#if knob === knobNR}
+    {#if knob === knobNum}
       <div class="knob active"></div>
     {:else}
       <div class="knob"></div>
@@ -6607,7 +6607,7 @@ class SettingsStore {
         console.log('mySynth', mySynth);
 
         mySynth.channels[1].addListener('controlchange', (e) => {
-          if (e.controller.number === controller.knobNR && typeof e.value === 'number') {
+          if (e.controller.number === controller.knobNum && typeof e.value === 'number') {
             const value = mapRange(e.value, 0, 1, controller.range[0], controller.range[1]);
             this.updateControllerValue(controller.var, Number.parseFloat(value.toFixed(2)));
           }
@@ -9120,7 +9120,7 @@ export interface ControllerSetting {
   value: number;
   default: number;
   step: number;
-  knobNR: number;
+  knobNum: number;
   range: [number, number];
   keys?: string[];
 }
@@ -9971,7 +9971,7 @@ Parameter space exploration through:
   "value": 1,
   "default": 1,
   "step": 0.1,
-  "knobNR": 5,
+  "knobNum": 5,
   "range": [0, 1],
   "keys": {
     "up": "y",

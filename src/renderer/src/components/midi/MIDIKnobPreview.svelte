@@ -1,6 +1,6 @@
 <script lang="ts">
-  let { knobNR = 0 } = $props<{
-    knobNR?: number;
+  let { knobNum = 0 } = $props<{
+    knobNum?: number;
   }>();
 
   const maxKnobs: number = 16;
@@ -9,7 +9,7 @@
 
 <div class="midiController">
   {#each midiKnobs as knob}
-    {#if knob === knobNR}
+    {#if knob === knobNum}
       <div class="knob active"></div>
     {:else}
       <div class="knob"></div>

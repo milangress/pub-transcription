@@ -10,7 +10,7 @@ export interface ControllerSetting {
   value: number;
   default: number;
   step: number;
-  knobNR: number;
+  knobNum: number;
   range: [number, number];
   keys?: string[];
 }

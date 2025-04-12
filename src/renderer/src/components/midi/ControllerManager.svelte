@@ -36,7 +36,7 @@
 <div class="controller-wrapper">
   {#each controllerSettings as item}
     <div class="item">
-      <MIDIKnobPreview knobNR={item.knobNR} />
+      <MIDIKnobPreview knobNum={item.knobNum} />
       <div>
         <p><strong>{item.name}</strong></p>
         <p>{item.range[0]}/{item.range[1]}</p>
