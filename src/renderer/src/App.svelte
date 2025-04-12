@@ -144,13 +144,6 @@
     }
   }
 
-  // Watch for code changes and mark as unsaved
-  $effect(() => {
-    if (settings.editorCss || settings.svgFilters) {
-      settings.markUnsaved();
-    }
-  });
-
   // Update the style tag in the header when editorCss changes from remote
   $effect(() => {
     if (typeof document !== 'undefined') {

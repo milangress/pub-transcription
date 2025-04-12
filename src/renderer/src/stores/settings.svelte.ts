@@ -85,12 +85,6 @@ class SettingsStore {
     });
   }
 
-  // Mark content as unsaved and trigger save
-  markUnsaved(): void {
-    this.#editorCssStorage.markUnsaved();
-    this.#svgFiltersStorage.markUnsaved();
-  }
-
   // Computed values
   get codeEditorContentSaved(): boolean {
     return this.#editorCssStorage.contentSaved && this.#svgFiltersStorage.contentSaved;

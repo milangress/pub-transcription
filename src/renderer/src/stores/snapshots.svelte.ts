@@ -86,9 +86,6 @@ class SnapshotsStore {
         });
       }
 
-      // Trigger save in the settings store
-      settings.markUnsaved();
-
       console.log(`Applied snapshot: ${snapshot.name}`);
       return true;
     } catch (error) {
@@ -121,9 +118,6 @@ class SnapshotsStore {
 
       // Keep current SVG filters
       // settings.svgFilters remains unchanged
-
-      // Trigger save in the settings store
-      settings.markUnsaved();
 
       console.log(`Merged snapshot: ${snapshot.name}`);
       return true;
