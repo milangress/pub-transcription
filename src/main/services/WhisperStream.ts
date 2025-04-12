@@ -8,7 +8,7 @@ import ggmlStreamBin from '../../../resources/lib/stream?asset&asarUnpack';
 import ggmlModelSmallEnQ51Bin from '../../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
 import type { IpcRendererEvent } from '../../types/ipc';
 import { serviceLogger } from '../utils/logger';
-import { simulatedTranscriptController } from '../utils/simulateTranscriptForDevTesting';
+import { simulateWhisperFromFile } from '../utils/simulateTranscriptFromText';
 import { startPowerSaveBlocker } from '../utils/startPowerSaveBlocker';
 import { getSessionPath } from './SessionManager';
 
@@ -16,7 +16,7 @@ const emitter = new IpcEmitter<IpcRendererEvent>();
 
 // Keep track of the stream process or simulation controller
 let activeStreamProcess: ChildProcess | null = null;
-let activeSimulationController: ReturnType<typeof simulatedTranscriptController> | null = null;
+let activeSimulationController: ReturnType<typeof simulateWhisperFromFile> | null = null;
 
 interface StreamOptions {
   name: string;
@@ -57,7 +57,7 @@ export function spawnWhisperStream(
   // Check if we're in simulation mode
   if (process.argv.includes('--simulate')) {
     serviceLogger.info('Running in simulation mode');
-    activeSimulationController = simulatedTranscriptController(mainWindow);
+    activeSimulationController = simulateWhisperFromFile(mainWindow);
     activeSimulationController.start();
     return null;
   }

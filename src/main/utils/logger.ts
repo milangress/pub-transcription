@@ -31,5 +31,9 @@ export const windowLogger = log.scope('window');
 export const ipcLogger = log.scope('ipc');
 export const serviceLogger = log.scope('service');
 
+export const whisperLogger = log.scope('whisper');
+export const simulateWhisperLogger = log.scope('whisper:simulated');
+export const textWhisperLogger = log.scope('whisper:text');
+
 // Export the base logger as default
 export default log;
