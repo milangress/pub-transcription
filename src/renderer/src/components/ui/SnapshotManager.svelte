@@ -103,10 +103,6 @@
   }
 </script>
 
-<div class="snapshotHeader">
-  <BlockTxt content="Snapshots" {settings} />
-</div>
-
 <div class="snapshotControls">
   <button onclick={() => saveSnapshot()}>Save Snapshot</button>
   {#if originalSettings}
@@ -116,23 +112,12 @@
 
 <div class="snapshotsContainer">
   {#each snapshots.snapshots as snapshot (snapshot.id)}
-    {@const staticControllerSettings = settings.controllerSettings.map((ctrl) => ({
-      ...ctrl,
-      value:
-        snapshot.controllerValues[ctrl.var] !== undefined
-          ? snapshot.controllerValues[ctrl.var]
-          : ctrl.value,
-    }))}
-
     <div class="snapshotItem">
       <button class="snapshotPreview" onclick={() => mergeSnapshot(snapshot.id)}>
         <BlockTxt
           content={snapshot.name}
-          settings={{
-            editorCss: snapshot.editorCss,
-            svgFilters: snapshot.svgFilters,
-            controllerSettings: $state.snapshot(staticControllerSettings as unknown),
-          }}
+          editorCss={snapshot.editorCss}
+          controllerValues={snapshot.controllerValues}
         />
       </button>
       <div class="snapshotActions">
@@ -144,11 +129,6 @@
 </div>
 
 <style>
-  .snapshotHeader {
-    position: relative;
-    margin-bottom: 1rem;
-  }
-
   .snapshotControls {
     display: flex;
     align-items: baseline;

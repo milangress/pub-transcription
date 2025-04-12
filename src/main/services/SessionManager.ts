@@ -12,7 +12,6 @@ export interface Session {
   path: string;
   audioPath: string;
   pdfPath: string;
-  snapshotsPath: string;
   imagesPath: string;
 }
 
@@ -29,29 +28,27 @@ export async function createSession(customName?: string): Promise<Session> {
     const sessionId = uuidv4();
     const timestamp = Date.now();
     const dateString = new Date(timestamp).toISOString().replace(/:/g, '-').replace(/\.\+/, '');
-    
+
     // Create a name for the session using date and optional custom name
     const name = customName ? `${dateString}-${customName}` : `session-${dateString}`;
-    
+
     // Create session directory structure
     const sessionsDir = join(app.getPath('userData'), 'sessions');
     const sessionPath = join(sessionsDir, name);
     const audioPath = join(sessionPath, 'audio');
     const pdfPath = join(sessionPath, 'pdf');
-    const snapshotsPath = join(sessionPath, 'snapshots');
     const imagesPath = join(sessionPath, 'images');
-    
+
     // Ensure directories exist
     if (!existsSync(sessionsDir)) {
       await fs.mkdir(sessionsDir, { recursive: true });
     }
-    
+
     await fs.mkdir(sessionPath, { recursive: true });
     await fs.mkdir(audioPath, { recursive: true });
     await fs.mkdir(pdfPath, { recursive: true });
-    await fs.mkdir(snapshotsPath, { recursive: true });
     await fs.mkdir(imagesPath, { recursive: true });
-    
+
     // Create session object
     const session: Session = {
       id: sessionId,
@@ -60,22 +57,21 @@ export async function createSession(customName?: string): Promise<Session> {
       path: sessionPath,
       audioPath,
       pdfPath,
-      snapshotsPath,
       imagesPath,
     };
-    
+
     // Save session metadata
     await fs.writeFile(
       join(sessionPath, 'session.json'),
       JSON.stringify(session, null, 2),
-      'utf-8'
+      'utf-8',
     );
-    
+
     // Set as current session
     currentSession = session;
-    
+
     serviceLogger.info(`Created new session: ${name} at ${sessionPath}`);
-    
+
     return session;
   } catch (error) {
     serviceLogger.error('Error creating session:', error);
@@ -101,16 +97,16 @@ export function getCurrentSession(): Session | null {
 export async function saveToSession(
   fileBuffer: Buffer,
   filename: string,
-  type: 'audio' | 'pdf' | 'snapshot' | 'image'
+  type: 'audio' | 'pdf' | 'snapshot' | 'image',
 ): Promise<string | null> {
   if (!currentSession) {
     serviceLogger.error('No active session to save file to');
     return null;
   }
-  
+
   try {
     let targetDir: string;
-    
+
     switch (type) {
       case 'audio':
         targetDir = currentSession.audioPath;
@@ -118,21 +114,18 @@ export async function saveToSession(
       case 'pdf':
         targetDir = currentSession.pdfPath;
         break;
-      case 'snapshot':
-        targetDir = currentSession.snapshotsPath;
-        break;
       case 'image':
         targetDir = currentSession.imagesPath;
         break;
       default:
         targetDir = currentSession.path;
     }
-    
+
     const filePath = join(targetDir, filename);
     await fs.writeFile(filePath, fileBuffer);
-    
+
     serviceLogger.info(`Saved ${type} file to session: ${filePath}`);
-    
+
     return filePath;
   } catch (error) {
     serviceLogger.error(`Error saving ${type} file to session:`, error);
@@ -150,21 +143,21 @@ export async function saveToSession(
 export async function saveJsonToSession(
   data: Record<string, unknown>,
   filename: string,
-  type: 'snapshot' | 'other' = 'other'
+  type: 'snapshot' | 'other' = 'other',
 ): Promise<string | null> {
   if (!currentSession) {
     serviceLogger.error('No active session to save JSON to');
     return null;
   }
-  
+
   try {
-    const targetDir = type === 'snapshot' ? currentSession.snapshotsPath : currentSession.path;
-    
+    const targetDir = currentSession.path;
+
     const filePath = join(targetDir, filename);
     await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
-    
+
     serviceLogger.info(`Saved ${type} JSON to session: ${filePath}`);
-    
+
     return filePath;
   } catch (error) {
     serviceLogger.error(`Error saving ${type} JSON to session:`, error);
@@ -178,12 +171,12 @@ export async function saveJsonToSession(
  * @returns The path or null if no session is active
  */
 export function getSessionPath(
-  type: 'root' | 'audio' | 'pdf' | 'snapshot' | 'image'
+  type: 'root' | 'audio' | 'pdf' | 'snapshot' | 'image',
 ): string | null {
   if (!currentSession) {
     return null;
   }
-  
+
   switch (type) {
     case 'root':
       return currentSession.path;
@@ -191,8 +184,6 @@ export function getSessionPath(
       return currentSession.audioPath;
     case 'pdf':
       return currentSession.pdfPath;
-    case 'snapshot':
-      return currentSession.snapshotsPath;
     case 'image':
       return currentSession.imagesPath;
     default:
