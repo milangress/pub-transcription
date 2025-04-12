@@ -79,11 +79,6 @@
 
   let mode = $state<'full' | 'mini'>('full');
 
-  // Initialize settings when the app starts
-  $effect(() => {
-    if (!settings.controllerSettings.length) settings.init();
-  });
-
   // Ensure snapshots are loaded when the app starts
   $effect(() => {
     if (settings.controllerSettings.length > 0) {

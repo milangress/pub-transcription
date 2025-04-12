@@ -1,6 +1,5 @@
 import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer';
 import type { IpcEvents } from 'src/types/ipc';
-import { onMount } from 'svelte';
 
 const emitter = new IpcEmitter<IpcEvents>();
 
@@ -21,7 +20,8 @@ const useElectronStorage = <T>(
   let value = $state<T>(initialValue);
   let isLoaded = $state(false);
 
-  onMount(async () => {
+  // Initialize from electron store immediately
+  (async (): Promise<void> => {
     try {
       const storedValue = (await emitter.invoke('getStoreValue', key)) as T;
       if (storedValue !== undefined && storedValue !== null) {
@@ -32,7 +32,7 @@ const useElectronStorage = <T>(
       console.error(`Error loading value from Electron store for key "${key}":`, error);
       isLoaded = true;
     }
-  });
+  })();
 
   const save = async (): Promise<void> => {
     try {
