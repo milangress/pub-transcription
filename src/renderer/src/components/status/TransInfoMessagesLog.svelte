@@ -11,11 +11,20 @@
   });
 </script>
 
-{#each messages as item}
-  <p>{item}</p>
-{/each}
+<h3>TransInfoMessagesLog</h3>
+<div class="transInfoMessagesLog">
+  {#each messages as item}
+    <p>{item}</p>
+  {/each}
+</div>
 
 <style>
+  .transInfoMessagesLog {
+    contain: strict;
+    height: 60vh;
+    overflow: auto;
+  }
+
   p {
     margin: 0.25em 0;
     font-family: inherit;

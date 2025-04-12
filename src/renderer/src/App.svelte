@@ -473,11 +473,13 @@
           <h3>SVG Filters</h3>
           <button onclick={() => openEditor('html')}> ❇️ </button>
         </div>
-        <CodeEditor
-          bind:value={settings.svgFilters}
-          language="html"
-          controllerSettings={settings.controllerSettings}
-        />
+        <div class="svgFiltersContainer">
+          <CodeEditor
+            bind:value={settings.svgFilters}
+            language="html"
+            controllerSettings={settings.controllerSettings}
+          />
+        </div>
         <div style="display: none">
           <!-- eslint-disable-next-line svelte/no-at-html-tags -->
           {@html settings.svgFilters}
@@ -612,6 +614,12 @@
 
   .codeEditorHeader h3 {
     margin: 0;
+  }
+
+  .svgFiltersContainer {
+    contain: strict;
+    height: 60vh;
+    overflow: auto;
   }
 
   @media print {
