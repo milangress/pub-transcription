@@ -6,9 +6,6 @@
   import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
   import { onMount } from 'svelte';
 
-  // Initialize settings store
-  settings.init();
-
   const emitter = new IpcEmitter<IpcEvents>();
   const ipc = new IpcListener<IpcRendererEvent>();
 
@@ -199,11 +196,8 @@
   <div class="header">
     <BlockTxt
       content={`Editor (${editorLanguage})${isDocumentEdited ? ' *' : ''}`}
-      settings={{
-        editorCss: editorLanguage === 'css' ? editorValue : settings.editorCss,
-        controllerSettings: settings.controllerSettings,
-        svgFilters: editorLanguage === 'html' ? editorValue : settings.svgFilters,
-      }}
+      editorCss={editorLanguage === 'css' ? editorValue : settings.editorCss}
+      controllerValues={settings.controllerValues}
     />
   </div>
 
