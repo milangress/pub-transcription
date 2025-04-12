@@ -95,7 +95,6 @@
 
   ipc.on('whisper-ccp-stream:transcription', (_, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages];
-    log.info('New message:', value);
 
     if (isHandlingOverflow) {
       log.warn('Overflow handling in progress, discarding:', value);
