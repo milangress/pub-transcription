@@ -427,12 +427,14 @@
           <div class="dot" class:greenDot={settings.codeEditorContentSaved}></div>
           <button onclick={() => openEditor('css')}>Open in Editor Window</button>
         </div>
-        <CodeEditor
-          bind:value={settings.editorCss}
-          language="css"
-          controllerSettings={settings.controllerSettings}
-          {fontFamilys}
-        />
+        <div class="codeEditorContainer">
+          <CodeEditor
+            bind:value={settings.editorCss}
+            language="css"
+            controllerSettings={settings.controllerSettings}
+            {fontFamilys}
+          />
+        </div>
 
         <hr />
 
@@ -597,6 +599,11 @@
     justify-content: space-between;
     align-items: right;
     margin-bottom: 0.5rem;
+  }
+
+  .codeEditorContainer {
+    height: 60vh;
+    overflow: auto;
   }
 
   .codeEditorHeader h3 {
