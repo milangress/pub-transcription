@@ -7,7 +7,8 @@
   "license": "MIT",
   "author": "Milan Gress <mgress@me.com>",
   "scripts": {
-    "download-whisper-model": "./resources/models/download-ggml-model.sh small.en-q5_1",
+    "build:whisper": "node scripts/whisper-build/build.js",
+    "download:models": "node scripts/whisper-build/download-models.js",
     "format": "prettier --plugin prettier-plugin-svelte --config .prettierrc.yaml --write .",
     "lint": "eslint --cache .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
@@ -18,7 +19,7 @@
     "dev:simulate": "electron-vite dev -- --simulate",
     "dev:simulate:debug-message": "electron-vite dev -- --simulate --debug-message",
     "build": "npm run typecheck && electron-vite build",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "npm run build:whisper && npm run download:models && electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
