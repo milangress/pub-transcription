@@ -58,7 +58,9 @@ export function spawnWhisperStream(
   if (process.argv.includes('--simulate')) {
     serviceLogger.info('Running in simulation mode');
     activeSimulationController = simulateWhisperFromFile(mainWindow);
-    activeSimulationController.start();
+    setTimeout(() => {
+      activeSimulationController?.start();
+    }, 5000);
     return null;
   }
 
