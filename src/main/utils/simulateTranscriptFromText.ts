@@ -11,70 +11,80 @@ interface FileSimulationController {
   stop: () => void;
 }
 
-// Helper Function: Chunk Text - Revised Logic v2
-// Creates smaller chunks based on word count, line breaks, and pause markers.
+// Helper Function: Chunk Text - Revised Logic v3
+// Creates smaller chunks, respecting line breaks, pause markers, and attempting to preserve original spacing.
 function chunkText(text: string): string[] {
-  const chunks: string[] = [];
-  // Normalize line endings and remove potential BOM
-  const normalizedText = text.replace(/\r\n/g, '\n').replace(/^\uFEFF/, '');
+    const chunks: string[] = [];
+    const normalizedText = text.replace(/\r\n/g, '\n').replace(/^\uFEFF/, '');
+    const blocks = normalizedText.split(/\n\s*\n+/);
 
-  // 1. Split into paragraphs/major blocks
-  const blocks = normalizedText.split(/\n\s*\n+/);
+    const maxWordsPerChunk = 12; // Target max words per chunk
+    const sentenceTerminators = ['.', '?', '!'];
+    const pauseMarkers = ['…', '–', '-'];
+    // Combine terminators and pause markers for break checking
+    const breakChars = [...sentenceTerminators, ...pauseMarkers, ','];
 
-  const maxWordsPerChunk = 12; // Target max words per chunk (adjust as needed)
-  const sentenceTerminators = ['.', '?', '!'];
-  const pauseMarkers = ['…', '–', '-']; // Consider '-' carefully if it's part of words
-  const breakChars = [...sentenceTerminators, ...pauseMarkers, ',']; // Include comma
+    for (const block of blocks) {
+        if (!block.trim()) continue;
+        const lines = block.split('\n');
 
-  for (const block of blocks) {
-    if (!block.trim()) continue; // Skip empty blocks
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
 
-    // 2. Split block into lines
-    const lines = block.split('\n');
+            // Split line by spaces, but keep the spaces as elements in the array
+            // This helps preserve original spacing when rejoining parts.
+            const parts = trimmedLine.split(/(\s+)/); // e.g., ["word1", " ", "word2", "  ", "word3."]
 
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) {
-        // Treat empty lines between text lines as hard breaks if necessary,
-        // but the current logic finalizes chunks at line ends anyway.
-        continue;
-      }
+            let currentChunkParts: string[] = [];
+            let wordCountInChunk = 0;
 
-      // 3. Process words in the line
-      const words = trimmedLine.split(/\s+/).filter(Boolean);
-      let currentChunkBuffer: string[] = [];
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                if (!part) continue; // Skip empty strings that might result from split
 
-      for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        currentChunkBuffer.push(word);
+                const isWord = /\S/.test(part); // Check if the part contains non-whitespace
 
-        const isLastWordOfLine = i === words.length - 1;
-        // Check if the *last character* of the word is a break character
-        const lastChar = word.slice(-1);
-        // Simple check: does the word end with any break character?
-        const isPunctuationBreak = breakChars.includes(lastChar);
-        // TODO: Add more sophisticated check for standalone '-' if needed
+                if (isWord) {
+                    wordCountInChunk++;
+                }
+                currentChunkParts.push(part); // Add the word or the space
 
-        // Conditions to finalize the current chunk:
-        const wordCountReached = currentChunkBuffer.length >= maxWordsPerChunk;
+                // Determine if a break should occur AFTER this part
+                let shouldBreak = false;
+                const isLastPart = i === parts.length - 1;
 
-        if (wordCountReached || isPunctuationBreak || isLastWordOfLine) {
-          // Ensure we don't add empty chunks
-          if (currentChunkBuffer.length > 0) {
-            chunks.push(currentChunkBuffer.join(' '));
-          }
-          currentChunkBuffer = []; // Reset for the next chunk
+                if (isWord) {
+                    const lastChar = part.trim().slice(-1); // Check last char of the actual word part
+                    if (breakChars.includes(lastChar)) {
+                        shouldBreak = true; // Break if word ends with punctuation/pause
+                    } else if (wordCountInChunk >= maxWordsPerChunk) {
+                        shouldBreak = true; // Break if max word count reached
+                    }
+                }
+
+                if (isLastPart) {
+                    shouldBreak = true; // Always break at the end of the line
+                }
+
+
+                if (shouldBreak) {
+                    const chunkContent = currentChunkParts.join('').trim(); // Rejoin parts, trim ends
+                    if (chunkContent) {
+                        chunks.push(chunkContent);
+                    }
+                    currentChunkParts = []; // Reset for the next chunk
+                    wordCountInChunk = 0;
+                }
+            }
+             // Safety check: If the loop finished with parts left (shouldn't happen with isLastPart)
+             // if (currentChunkParts.length > 0) {
+             //     const finalChunkContent = currentChunkParts.join('').trim();
+             //     if (finalChunkContent) chunks.push(finalChunkContent);
+             // }
         }
-      }
-      // This check should be redundant because isLastWordOfLine handles the final part.
-      // if (currentChunkBuffer.length > 0) {
-      //    chunks.push(currentChunkBuffer.join(' '));
-      // }
     }
-  }
-
-  // Final filter for any genuinely empty chunks (should be minimal)
-  return chunks.filter((chunk) => chunk.length > 0);
+    return chunks.filter(chunk => chunk.length > 0);
 }
 
 /**
