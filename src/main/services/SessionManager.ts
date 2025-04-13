@@ -10,7 +10,7 @@ export interface Session {
   timestamp: number;
   name: string;
   path: string;
-  audioPath: string;
+  whisperSessionPath: string;
   pdfPath: string;
   imagesPath: string;
 }
@@ -35,7 +35,7 @@ export async function createSession(customName?: string): Promise<Session> {
     // Create session directory structure
     const sessionsDir = join(app.getPath('userData'), 'sessions');
     const sessionPath = join(sessionsDir, name);
-    const audioPath = join(sessionPath, 'audio');
+    const whisperSessionPath = join(sessionPath);
     const pdfPath = join(sessionPath, 'pdf');
     const imagesPath = join(sessionPath, 'images');
 
@@ -45,7 +45,7 @@ export async function createSession(customName?: string): Promise<Session> {
     }
 
     await fs.mkdir(sessionPath, { recursive: true });
-    await fs.mkdir(audioPath, { recursive: true });
+    await fs.mkdir(whisperSessionPath, { recursive: true });
     await fs.mkdir(pdfPath, { recursive: true });
     await fs.mkdir(imagesPath, { recursive: true });
 
@@ -55,7 +55,7 @@ export async function createSession(customName?: string): Promise<Session> {
       timestamp,
       name,
       path: sessionPath,
-      audioPath,
+      whisperSessionPath,
       pdfPath,
       imagesPath,
     };
@@ -97,7 +97,7 @@ export function getCurrentSession(): Session | null {
 export async function saveToSession(
   fileBuffer: Buffer,
   filename: string,
-  type: 'audio' | 'pdf' | 'snapshot' | 'image',
+  type: 'audio' | 'pdf' | 'whisper' | 'image',
 ): Promise<string | null> {
   if (!currentSession) {
     serviceLogger.error('No active session to save file to');
@@ -109,13 +109,16 @@ export async function saveToSession(
 
     switch (type) {
       case 'audio':
-        targetDir = currentSession.audioPath;
+        targetDir = currentSession.whisperSessionPath;
         break;
       case 'pdf':
         targetDir = currentSession.pdfPath;
         break;
       case 'image':
         targetDir = currentSession.imagesPath;
+        break;
+      case 'whisper':
+        targetDir = currentSession.path;
         break;
       default:
         targetDir = currentSession.path;
@@ -143,7 +146,7 @@ export async function saveToSession(
 export async function saveJsonToSession(
   data: Record<string, unknown>,
   filename: string,
-  type: 'snapshot' | 'other' = 'other',
+  type: 'other',
 ): Promise<string | null> {
   if (!currentSession) {
     serviceLogger.error('No active session to save JSON to');
@@ -170,9 +173,7 @@ export async function saveJsonToSession(
  * @param type The type of path to get
  * @returns The path or null if no session is active
  */
-export function getSessionPath(
-  type: 'root' | 'audio' | 'pdf' | 'snapshot' | 'image',
-): string | null {
+export function getSessionPath(type: 'root' | 'whisper' | 'pdf' | 'image'): string | null {
   if (!currentSession) {
     return null;
   }
@@ -180,8 +181,8 @@ export function getSessionPath(
   switch (type) {
     case 'root':
       return currentSession.path;
-    case 'audio':
-      return currentSession.audioPath;
+    case 'whisper':
+      return currentSession.whisperSessionPath;
     case 'pdf':
       return currentSession.pdfPath;
     case 'image':
