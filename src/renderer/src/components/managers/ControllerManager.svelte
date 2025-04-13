@@ -1,7 +1,7 @@
 <script lang="ts">
   import { settings } from '@/stores/settings.svelte';
   import type { ControllerSetting } from 'src/renderer/src/types';
-  import MIDIKnobPreview from './MIDIKnobPreview.svelte';
+  import MIDIKnobPreview from './ControllerMIDIKnobGraphic.svelte';
 
   let { controllerSettings = $bindable([]) } = $props<{
     controllerSettings: ControllerSetting[];

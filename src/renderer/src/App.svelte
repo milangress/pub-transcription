@@ -1,13 +1,13 @@
 <script lang="ts">
+  import ControllerManager from '@/components/managers/ControllerManager.svelte';
+  import SnapshotManager from '@/components/managers/SnapshotManager.svelte';
   import PrintStatusBar from '@/components/status/PrintStatusBar.svelte';
   import { remoteSettings } from '@/stores/remoteSettings.svelte.ts';
   import { settings } from '@/stores/settings.svelte.js';
   import { snapshots } from '@/stores/snapshots.svelte.js';
   import CodeEditor from '@components/codeEditor/CodeEditor.svelte';
-  import ControllerManager from '@components/midi/ControllerManager.svelte';
   import BlockTxt from '@components/pageElement/BlockTxt.svelte';
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte';
-  import SnapshotManager from '@components/ui/SnapshotManager.svelte';
   import log from 'electron-log/renderer';
   import type { FontFamily, TxtObject } from '../src/types';
   import { contentStore } from './stores/contentStore.svelte';
