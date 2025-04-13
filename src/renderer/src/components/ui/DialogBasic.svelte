@@ -47,7 +47,7 @@
         {title}
       </Dialog.Title>
 
-      <Tabs tab1Label="Tab 1" tab2Label="Tab 2">
+      <Tabs tab1Label="Tab 1 label" tab2Label="Tab 2 label">
         {#snippet tabContent1()}
           <p>Tab 1 content</p>
         {/snippet}
