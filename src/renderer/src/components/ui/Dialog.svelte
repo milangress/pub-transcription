@@ -2,80 +2,50 @@
   import { Dialog, type WithoutChild } from 'bits-ui';
   import { X } from 'phosphor-svelte';
   import type { Snippet } from 'svelte';
-  import Button from './Button.svelte';
-  import Checkbox from './Checkbox.svelte';
-  import Select from './Select.svelte';
-  import Separator from './Seperator.svelte';
-  import Tabs from './Tabs.svelte';
 
   type Props = Dialog.RootProps & {
-    buttonText: string;
-    title: string;
-    description: Snippet;
+    title?: string;
+    description?: Snippet;
+    showClose?: boolean;
     contentProps?: WithoutChild<Dialog.ContentProps>;
-    // ...other component props if you wish to pass them
+    children?: Snippet;
   };
 
   let {
     open = $bindable(false),
-    children,
-    buttonText,
-    contentProps,
     title,
     description,
+    showClose = true,
+    contentProps,
+    children,
     ...restProps
   }: Props = $props();
-
-  const items = [
-    { value: '1', label: 'Item 1' },
-    { value: '2', label: 'Item 2' },
-    { value: '3', label: 'Item 3' },
-  ];
-  let selectedItem = $state('1');
 </script>
 
 <Dialog.Root bind:open {...restProps}>
-  <Dialog.Trigger>
-    {buttonText}
-  </Dialog.Trigger>
-
   <Dialog.Portal>
     <Dialog.Overlay class="dialog-overlay" />
-
     <Dialog.Content class="dialog-content" {...contentProps}>
-      <Dialog.Title>
-        {title}
-      </Dialog.Title>
+      {#if title}
+        <Dialog.Title class="dialog-title">
+          {title}
+        </Dialog.Title>
+      {/if}
 
-      <Tabs tab1Label="Tab 1 label" tab2Label="Tab 2 label">
-        {#snippet tabContent1()}
-          <p>Tab 1 content</p>
-        {/snippet}
-        {#snippet tabContent2()}
-          <p>Tab 2 content</p>
-        {/snippet}
-      </Tabs>
-      <Dialog.Description>
-        {@render description()}
-      </Dialog.Description>
+      {#if description}
+        <Dialog.Description class="dialog-description">
+          {@render description()}
+        </Dialog.Description>
+      {/if}
 
       {@render children?.()}
 
-      <Checkbox labelText="Checkbox" />
-
-      <Separator />
-
-      <Select {items} bind:value={selectedItem} type="single" />
-
-      <div class="dialog-actions">
-        <Button buttonText="Save" />
-        <Button buttonText="Cancel" />
-      </div>
-
-      <Dialog.Close class="dialog-close">
-        <X size={18} />
-        <span class="sr-only">Close</span>
-      </Dialog.Close>
+      {#if showClose}
+        <Dialog.Close class="dialog-close">
+          <X size={18} />
+          <span class="sr-only">Close</span>
+        </Dialog.Close>
+      {/if}
     </Dialog.Content>
   </Dialog.Portal>
 </Dialog.Root>
@@ -130,15 +100,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-xs);
+    padding: var(--spacing-md);
   }
 
   :global(.dialog-close:hover) {
     color: var(--accent-color);
-  }
-
-  :global(.dialog-body) {
-    padding: var(--spacing-sm) 0;
   }
 
   :global(.sr-only) {

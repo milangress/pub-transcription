@@ -18,7 +18,7 @@
   import { tick } from 'svelte';
   import { WebMidi } from 'webmidi';
 
-  import Dialog from '@/components/ui/DialogBasic.svelte';
+  import Dialog from '@/components/ui/DialogExample.svelte';
   import TitleBar from '@components/ui/TitleBar.svelte';
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
   import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
