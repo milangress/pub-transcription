@@ -6,17 +6,11 @@ import { join } from 'path';
 import ggmlStreamBin from '../../../resources/lib/whisper-stream?asset&asarUnpack';
 import ggmlModelSmallEnQ51Bin from '../../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
 import type { IpcRendererEvent, WhisperDevice } from '../../types/ipc';
-import { jsonSafeParse, jsonSafeParseWrapStringify } from '../utils/json';
-import { serviceLogger } from '../utils/logger';
-import { simulateWhisperFromFile } from '../utils/simulateTranscriptFromText';
+import { jsonSafeParseWrapStringify } from '../utils/json';
+import { whisperLogger } from '../utils/logger';
 import { startPowerSaveBlocker } from '../utils/startPowerSaveBlocker';
 import { getSessionPath } from './SessionManager';
-
 const emitter = new IpcEmitter<IpcRendererEvent>();
-
-// Keep track of the stream process or simulation controller
-let activeStreamProcess: ChildProcess | null = null;
-let activeSimulationController: ReturnType<typeof simulateWhisperFromFile> | null = null;
 
 interface StreamOptions {
   name: string;
@@ -28,23 +22,10 @@ interface StreamOptions {
   maxTokens: number;
   saveAudio: boolean;
   captureId?: number;
-  language?: string;
-  translate?: boolean;
+  language: string;
+  translate: boolean;
+  deviceId: string;
 }
-
-// Keep track of the last used options
-let lastUsedOptions: StreamOptions = {
-  name: 'whisper-stream',
-  model: ggmlModelSmallEnQ51Bin,
-  threads: 8,
-  step: 800,
-  length: 5000,
-  keep: 300,
-  maxTokens: 64,
-  saveAudio: true,
-  language: 'en',
-  translate: false,
-};
 
 interface WhisperInitResponse {
   devices: WhisperDevice[];
@@ -60,281 +41,218 @@ interface WhisperInitResponse {
     [key: string]: unknown;
   };
   type: string;
+  success: boolean;
+  error?: string;
 }
 
-/**
- * Get audio devices from whisper-stream
- * @returns List of audio devices and their IDs
- */
-export async function getAudioDevices(): Promise<WhisperDevice[]> {
-  const audioDir = getSessionPath('whisper') || join(app.getPath('userData'), 'whisper');
+export class WhisperStreamManager {
+  private activeProcess: ChildProcess | null = null;
+  private mainWindow: BrowserWindow | null = null;
+  private options: StreamOptions;
+  private stopPowerSaveBlocker: (() => void) | null = null;
 
-  return new Promise((resolve, reject) => {
-    try {
-      // Use last options but enforce --get-audio-devices and --json
-      const args = [
-        '--model',
-        lastUsedOptions.model,
-        '-t',
-        lastUsedOptions.threads.toString(),
-        '--get-audio-devices',
-        '--json',
-      ];
-
-      const ls = spawn(ggmlStreamBin, args, {
-        cwd: audioDir,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-
-      ls.stdout?.on('data', (data: Buffer) => {
-        const line = new TextDecoder().decode(data);
-        const [json, error] = jsonSafeParse<WhisperInitResponse>(line);
-
-        if (error.Fail()) {
-          // Not JSON or invalid JSON, ignore
-          return;
-        }
-
-        if (json?.type === 'init' && Array.isArray(json.devices)) {
-          resolve(json.devices);
-        }
-      });
-
-      ls.stderr?.on('data', (data: Buffer) => {
-        const line = new TextDecoder().decode(data);
-        serviceLogger.debug(`[getAudioDevices] stderr: ${line}`);
-      });
-
-      ls.on('error', (error: Error) => {
-        reject(new Error(`Failed to spawn whisper-stream: ${error.message}`));
-      });
-
-      ls.on('close', (code: number | null) => {
-        if (code !== 0) {
-          reject(new Error(`Process exited with code ${code}`));
-        }
-      });
-    } catch (error) {
-      reject(error instanceof Error ? error : new Error('Unknown error occurred'));
-    }
-  });
-}
-
-/**
- * Creates and manages either a real whisper stream process or a simulated one for development
- *
- * @param mainWindow - The Electron main window instance to send transcription events
- * @param options - Optional configuration for the stream process
- * @returns The spawned child process instance if not in simulation mode
- */
-export function spawnWhisperStream(
-  mainWindow: BrowserWindow,
-  options: Partial<StreamOptions> = {},
-  printTranscription: boolean = false,
-): ChildProcess | null {
-  // Update last used options
-  lastUsedOptions = { ...lastUsedOptions, ...options };
-
-  // Check if we're in simulation mode
-  if (process.argv.includes('--simulate')) {
-    serviceLogger.info('Running in simulation mode');
-    activeSimulationController = simulateWhisperFromFile(mainWindow);
-    setTimeout(() => {
-      activeSimulationController?.start();
-    }, 5000);
-    return null;
+  constructor() {
+    this.options = {
+      name: 'whisper-stream',
+      model: ggmlModelSmallEnQ51Bin,
+      threads: 8,
+      step: 800,
+      length: 5000,
+      keep: 300,
+      maxTokens: 64,
+      saveAudio: true,
+      language: 'en',
+      translate: false,
+      deviceId: '',
+    };
   }
 
-  const log = {
-    msg: (message: string | object): void => {
-      const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
-      serviceLogger.debug(`[${lastUsedOptions.name}] ${text}`);
-    },
-    toWindow: (message: string): void => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        serviceLogger.debug(`[${lastUsedOptions.name}] [send] ${message}`);
-        sendToWindowIfAvailable('whisper-ccp-stream:status', message);
-      }
-    },
-    error: (message: string | object): void => {
-      const text = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
-      serviceLogger.error(`[${lastUsedOptions.name}] [error] ${text}`);
-    },
-  };
-
-  const sendToWindowIfAvailable = (channel: keyof IpcRendererEvent, message: string): void => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      emitter.send(mainWindow.webContents, channel, message);
-    } else {
-      log.error(`mainWindow Unavailable! Message: ${message}`);
+  private getAudioDir(): string {
+    const sessionDir = getSessionPath('whisper');
+    if (sessionDir) {
+      return sessionDir;
     }
-  };
 
-  // Use session audio directory if available, otherwise fallback to default
-  let audioDir = getSessionPath('whisper');
-
-  if (!audioDir) {
     // Fallback to default audio directory if no session is active
-    audioDir = join(app.getPath('userData'), 'whisper');
-    if (!existsSync(audioDir)) {
-      mkdirSync(audioDir, { recursive: true });
+    const defaultDir = join(app.getPath('userData'), 'whisper');
+    if (!existsSync(defaultDir)) {
+      mkdirSync(defaultDir, { recursive: true });
     }
-    log.msg(`No active session, using default audio directory: ${audioDir}`);
-  } else {
-    log.msg(`Using session audio directory: ${audioDir}`);
+    whisperLogger.debug(`No active session, using default audio directory: ${defaultDir}`);
+    return defaultDir;
   }
 
-  const timestamp = new Date().getTime();
-  const outputFile = join(audioDir, `transcript${timestamp}.jsonl`);
+  private constructSpawnArgs(extraArgs: string[] = []): string[] {
+    const args = [
+      '--model',
+      this.options.model,
+      '-t',
+      this.options.threads.toString(),
+      '--json',
+      ...extraArgs,
+    ];
 
-  const spawnOptions = { cwd: audioDir };
-  const args = [
-    '--model',
-    lastUsedOptions.model,
-    '-t',
-    lastUsedOptions.threads.toString(),
-    '--step',
-    lastUsedOptions.step.toString(),
-    '--length',
-    lastUsedOptions.length.toString(),
-    '--keep',
-    lastUsedOptions.keep.toString(),
-    '--max-tokens',
-    lastUsedOptions.maxTokens.toString(),
-    '--json',
-    '--file',
-    outputFile,
-  ];
-
-  if (lastUsedOptions.saveAudio) {
-    args.push('--save-audio');
-  }
-
-  if (lastUsedOptions.captureId !== undefined) {
-    args.push('--capture', lastUsedOptions.captureId.toString());
-  }
-
-  if (lastUsedOptions.language) {
-    args.push('--language', lastUsedOptions.language);
-  }
-
-  if (lastUsedOptions.translate) {
-    args.push('--translate');
-  }
-
-  log.msg(`Starting in ${audioDir}`);
-  log.msg(`Command: ${ggmlStreamBin} ${args.join(' ')}`);
-
-  const stopPowerSaveBlocker = startPowerSaveBlocker(log.toWindow);
-
-  const ls = spawn(ggmlStreamBin, args, spawnOptions);
-  activeStreamProcess = ls;
-
-  ls.stdout.on('data', (data: Buffer) => {
-    const line = new TextDecoder().decode(data);
-    if (printTranscription) {
-      log.msg(`stdout: ${line}`);
+    if (this.options.saveAudio) {
+      args.push('--save-audio');
     }
 
-    // Try to parse as JSON
-    const [json, parseError] = jsonSafeParse<unknown>(line);
-    if (parseError.Fail()) {
-      // If not JSON, wrap in a text object
-      const [wrapped, wrapError] = jsonSafeParseWrapStringify({ text: line });
-      if (wrapError.Fail()) {
-        log.error(`Failed to wrap text: ${wrapError}`);
-        return;
-      }
-      sendToWindowIfAvailable('whisper-ccp-stream:transcription', wrapped!);
+    if (this.options.captureId !== undefined) {
+      args.push('--capture', this.options.captureId.toString());
+    }
+
+    if (this.options.language) {
+      args.push('--language', this.options.language);
+    }
+
+    if (this.options.translate) {
+      args.push('--translate');
+    }
+
+    return args;
+  }
+
+  private sendToWindow(channel: keyof IpcRendererEvent, message: string): void {
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      emitter.send(this.mainWindow.webContents, channel, message);
     } else {
-      // If JSON, send as is
-      const [stringified, stringifyError] = jsonSafeParseWrapStringify(json);
-      if (stringifyError.Fail()) {
-        log.error(`Failed to stringify JSON: ${stringifyError}`);
-        return;
-      }
-      sendToWindowIfAvailable('whisper-ccp-stream:transcription', stringified!);
+      whisperLogger.error(`mainWindow Unavailable! Message: ${message}`);
     }
-  });
-
-  ls.stderr.on('data', (info: Buffer) => {
-    const line = new TextDecoder().decode(info);
-    // Send stderr as status messages
-    const [wrapped, error] = jsonSafeParseWrapStringify({ text: line });
-    if (error.Fail()) {
-      log.error(`Failed to wrap stderr: ${error}`);
-      return;
-    }
-    sendToWindowIfAvailable('whisper-ccp-stream:status', wrapped!);
-  });
-
-  ls.on('error', (error: Error) => {
-    log.error(`Process error: ${error.message}`);
-    const [wrapped, wrapError] = jsonSafeParseWrapStringify({ error: error.message });
-    if (wrapError.Fail()) {
-      log.error(`Failed to wrap error: ${wrapError}`);
-      return;
-    }
-    sendToWindowIfAvailable('whisper-ccp-stream:status', wrapped!);
-  });
-
-  ls.on('close', (code: number | null) => {
-    log.error(`Process exited with code ${code}`);
-    activeStreamProcess = null;
-    stopPowerSaveBlocker();
-  });
-
-  return ls;
-}
-
-/**
- * Stop the currently active stream process or simulation, if any
- * @param force Whether to force kill the process if it doesn't exit gracefully
- */
-export function stopStreamProcess(force: boolean = true): void {
-  // Stop simulation if active
-  if (activeSimulationController) {
-    activeSimulationController.stop();
-    activeSimulationController = null;
-    return;
   }
 
-  // Stop real process if active
-  if (activeStreamProcess) {
-    try {
-      // First try graceful shutdown
-      activeStreamProcess.kill();
+  /**
+   * Get audio devices from whisper-stream
+   */
+  async getAudioDevices(): Promise<WhisperDevice[]> {
+    return getAudioDevices();
+  }
 
-      if (force) {
-        // Force kill after a short delay if process is still running
-        setTimeout(() => {
-          if (activeStreamProcess) {
-            try {
-              activeStreamProcess.kill('SIGKILL');
-            } catch {
-              // Process might already be gone
+  /**
+   * Start the whisper stream process
+   */
+  start(window: BrowserWindow, options: Partial<StreamOptions> = {}): void {
+    this.stop();
+    this.mainWindow = window;
+    this.options = { ...this.options, ...options };
+
+    const audioDir = this.getAudioDir();
+    const timestamp = new Date().getTime();
+    const outputFile = join(audioDir, `transcript${timestamp}.jsonl`);
+
+    const args = this.constructSpawnArgs([
+      '--step',
+      this.options.step.toString(),
+      '--length',
+      this.options.length.toString(),
+      '--keep',
+      this.options.keep.toString(),
+      '--max-tokens',
+      this.options.maxTokens.toString(),
+      '--file',
+      outputFile,
+    ]);
+
+    whisperLogger.debug(`Starting in ${audioDir}`);
+    whisperLogger.debug(`Command: ${ggmlStreamBin} ${args.join(' ')}`);
+
+    this.stopPowerSaveBlocker = startPowerSaveBlocker((msg) =>
+      this.sendToWindow('whisper-ccp-stream:status', JSON.stringify({ text: msg })),
+    );
+
+    const ls = spawn(ggmlStreamBin, args, { cwd: audioDir });
+    this.activeProcess = ls;
+
+    ls.stdout.on('data', (data) => {
+      const line = new TextDecoder().decode(data);
+      const [result, error] = jsonSafeParseWrapStringify(line, (val) => ({ text: val }));
+      if (!error.Fail()) {
+        this.sendToWindow('whisper-ccp-stream:transcription', result!);
+      } else {
+        this.sendToWindow(
+          'whisper-ccp-stream:status',
+          JSON.stringify({ text: line, error: error }),
+        );
+        whisperLogger.error(`Failed to process stdout: ${error}`);
+      }
+    });
+    ls.stderr.on('data', (data) => {
+      const line = new TextDecoder().decode(data);
+      const [result, error] = jsonSafeParseWrapStringify(line, (val) => ({ text: val }));
+      if (!error.Fail()) {
+        this.sendToWindow('whisper-ccp-stream:status', result);
+      } else {
+        whisperLogger.error(`Failed to process stderr: ${error}`);
+      }
+    });
+
+    ls.on('error', (error: Error) => {
+      whisperLogger.error(`Process error: ${error.message}`);
+      const [result, wrapError] = jsonSafeParseWrapStringify({ error: error.message });
+      if (!wrapError.Fail()) {
+        this.sendToWindow('whisper-ccp-stream:status', result!);
+      }
+    });
+
+    ls.on('close', (code: number | null) => {
+      whisperLogger.error(`Process exited with code ${code}`);
+      this.activeProcess = null;
+      if (this.stopPowerSaveBlocker) {
+        this.stopPowerSaveBlocker();
+        this.stopPowerSaveBlocker = null;
+      }
+    });
+  }
+
+  /**
+   * Stop the currently active stream process
+   */
+  stop(force: boolean = true): void {
+    if (this.activeProcess) {
+      try {
+        this.activeProcess.kill();
+
+        if (force) {
+          setTimeout(() => {
+            if (this.activeProcess) {
+              try {
+                this.activeProcess.kill('SIGKILL');
+              } catch {
+                // Process might already be gone
+              }
+              this.activeProcess = null;
             }
-            activeStreamProcess = null;
-          }
-        }, 1000);
+          }, 1000);
+        }
+      } catch {
+        // Process might already be gone
+        this.activeProcess = null;
       }
-    } catch {
-      // Process might already be gone
-      activeStreamProcess = null;
     }
+
+    if (this.stopPowerSaveBlocker) {
+      this.stopPowerSaveBlocker();
+      this.stopPowerSaveBlocker = null;
+    }
+
+    this.mainWindow = null;
+    this.options = { ...this.options, deviceId: '' };
+
+    whisperLogger.info('Stopped whisper stream');
+  }
+
+  /**
+   * Get the current options
+   */
+  getOptions(): StreamOptions {
+    return { ...this.options };
+  }
+
+  /**
+   * Check if a process is currently running
+   */
+  isRunning(): boolean {
+    return this.activeProcess !== null;
   }
 }
 
-/**
- * Get the currently active stream process, if any
- */
-export function getActiveStreamProcess(): ChildProcess | null {
-  return activeStreamProcess;
-}
-
-/**
- * Get the last used options
- */
-export function getLastUsedOptions(): StreamOptions {
-  return { ...lastUsedOptions };
-}
+// Export a singleton instance
+export const whisperStreamManager = new WhisperStreamManager();
