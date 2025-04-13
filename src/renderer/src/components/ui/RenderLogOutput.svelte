@@ -17,6 +17,8 @@
   let scrollTop = $state(0);
   let containerHeight = $state(0);
   let lineHeight = $state(0);
+  let hasNewMessages = $state(false);
+  let shouldScrollToBottom = $state(false);
 
   // Calculate visible range
   const visibleLines = $derived.by(() => {
@@ -34,19 +36,38 @@
     return {
       start: startIndex,
       end: endIndex,
+      isNearBottom: lines.length - endIndex < 1,
     };
   });
+
+  $effect(() => {
+    checkForNewMessages(lines.length);
+  });
+
+  function checkForNewMessages(linesLenght: number) {
+    if (visibleLines.end < linesLenght - 1) {
+      hasNewMessages = true;
+    }
+  }
 
   // Calculate padding to maintain scroll position
   const padding = $derived.by(() => ({
     top: visibleLines.start * lineHeight,
+    // Remove bottom padding when near the end
     bottom: (lines.length - visibleLines.end) * lineHeight,
   }));
 
   // Handle scroll events
   function onScroll(event: Event) {
+    shouldScrollToBottom = false;
     const target = event.target as HTMLDivElement;
     scrollTop = target.scrollTop;
+
+    // Clear new messages indicator when scrolled to bottom
+    if (visibleLines.isNearBottom) {
+      hasNewMessages = false;
+      shouldScrollToBottom = true;
+    }
   }
 
   // Initialize measurements after mount
@@ -72,9 +93,22 @@
       },
     };
   }
+
+  // Auto-scroll to bottom when near bottom and new lines are added
+  $effect(() => {
+    if (containerRef && visibleLines.isNearBottom && shouldScrollToBottom) {
+      containerRef.scrollTop = containerRef.scrollHeight;
+    }
+  });
 </script>
 
-<div class="log-output" bind:this={containerRef} onscroll={onScroll} style:--rows={rows}>
+<div
+  class="log-output"
+  class:has-new-messages={hasNewMessages}
+  bind:this={containerRef}
+  onscroll={onScroll}
+  style:--rows={rows}
+>
   {#if header}
     <div class="log-header">
       {@render header()}
@@ -107,6 +141,10 @@
     overflow-y: auto;
     contain: strict;
     border: var(--border-width) solid var(--border-color);
+  }
+
+  .log-output.has-new-messages {
+    border-bottom: 3px solid var(--accent-color);
   }
 
   .log-header {

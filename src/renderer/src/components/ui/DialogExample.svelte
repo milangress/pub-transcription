@@ -29,7 +29,7 @@
   onMount(() => {
     setInterval(() => {
       logLines.push(`line ${logLines.length + 1}`);
-    }, 100);
+    }, 1000);
   });
 </script>
 
