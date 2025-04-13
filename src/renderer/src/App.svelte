@@ -18,9 +18,10 @@
   import { tick } from 'svelte';
   import { WebMidi } from 'webmidi';
 
+  import Dialog from '@/components/ui/DialogBasic.svelte';
+  import TitleBar from '@components/ui/TitleBar.svelte';
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
   import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
-
   const ipc = new IpcListener<IpcRendererEvent>();
   const emitter = new IpcEmitter<IpcEvents>();
 
@@ -91,6 +92,7 @@
   ipc.on('whisper-ccp-stream:transcription', (_, value: string) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages];
 
+    console.log('🔊 Incoming TTS message:', value);
     if (isHandlingOverflow) {
       log.warn('Overflow handling in progress, discarding:', value);
       return;
@@ -376,6 +378,8 @@
   </style>
 </svelte:head>
 
+<TitleBar />
+
 <div class="text-preview-container">
   <BlockTxt
     content="Text Preview"
@@ -384,6 +388,13 @@
   />
 </div>
 
+<Dialog buttonText="Open Dialog" title="Account settings">
+  {#snippet description()}
+    Manage your account settings and preferences.
+  {/snippet}
+
+  <p>Additional dialog content here...</p>
+</Dialog>
 <main>
   {#if currentContentList.length > 0}
     <div class={mode === 'mini' ? 'print-context-mini' : 'print-context'}>
@@ -487,11 +498,12 @@
   :global(html, body) {
     margin: 0;
     padding: 0;
+    --title-bar-height: 28px;
   }
 
   .text-preview-container {
     position: fixed;
-    top: 10px;
+    top: calc(var(--title-bar-height) + 10px);
     left: 10px;
     z-index: 1000;
     font-size: 2rem;
@@ -501,7 +513,7 @@
 
   main {
     text-align: left;
-    font-family: 'Garamondt-Regular', 'American Typewriter', monospace;
+    font-family: 'SpaceMono', 'Garamondt-Regular', 'American Typewriter', monospace;
     display: grid;
     grid-template-columns: 1fr;
     height: 100%;

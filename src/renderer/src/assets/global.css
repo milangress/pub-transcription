@@ -15,6 +15,49 @@
   --grain-min: url('data:image/svg+xml,    <svg xmlns="http://www.w3.org/2000/svg">      <filter id="grain">       <feTurbulence type="turbulence" baseFrequency="0.5" numOctaves="2" result="turbulence"/>       <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="1" xChannelSelector="R" yChannelSelector="G"/>       </filter>   </svg>#grain');
 }
 
+:root {
+  /* Colors */
+  --accent-color: #00ff00;
+  --accent-color-hover: #33ff33;
+  --border-color: #000;
+  --border-color-light: #ddd;
+  --bg-color: #fff;
+  --bg-color-hover: rgba(0, 0, 0, 0.05);
+  --text-color: #000;
+  --text-color-muted: #888;
+  --danger-color: #f00;
+  --info-color: #4a90e2;
+  --info-color-hover: #2a70c2;
+  --inactive-color: lightgray;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 0.8rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.5rem;
+
+  /* Typography */
+  --font-size-xs: 0.8em;
+  --font-size-sm: 0.9em;
+  --font-size-md: 1em;
+  --font-size-lg: 1.2em;
+  --font-size-xl: 1.5em;
+
+  /* Borders */
+  --border-width: 1px;
+  --border-radius-sm: 0.5em;
+  --border-radius: 1em;
+
+  /* Component sizes */
+  --knob-size: 0.5em;
+  --controller-width: 3em;
+  --controller-height: 3em;
+
+  /* Grid */
+  --grid-gap: 0.8rem;
+}
+
 html,
 body {
   position: relative;
@@ -27,9 +70,10 @@ body {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family:
+  /* font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell,
-    'Helvetica Neue', sans-serif;
+    'Helvetica Neue', sans-serif; */
+  font-family: 'SpaceMono', 'Garamondt-Regular', 'American Typewriter', monospace;
 }
 
 a {
