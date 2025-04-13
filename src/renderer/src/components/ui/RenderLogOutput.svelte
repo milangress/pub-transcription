@@ -53,7 +53,6 @@
   // Calculate padding to maintain scroll position
   const padding = $derived.by(() => ({
     top: visibleLines.start * lineHeight,
-    // Remove bottom padding when near the end
     bottom: (lines.length - visibleLines.end) * lineHeight,
   }));
 
