@@ -5,14 +5,14 @@ import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import ggmlStreamBin from '../../../resources/lib/whisper-stream?asset&asarUnpack';
 import ggmlModelSmallEnQ51Bin from '../../../resources/models/ggml-small.en-q5_1.bin?asset&asarUnpack';
-import type { IpcRendererEvent, WhisperDevice } from '../../types/ipc';
-import { jsonSafeParseWrapStringify } from '../utils/json';
+import type { IpcRendererEvent } from '../../types/ipc';
+import { jsonSafeParseWrap, jsonSafeParseWrapStringify } from '../utils/json';
 import { whisperLogger } from '../utils/logger';
 import { startPowerSaveBlocker } from '../utils/startPowerSaveBlocker';
 import { getSessionPath } from './SessionManager';
 const emitter = new IpcEmitter<IpcRendererEvent>();
 
-interface StreamOptions {
+export interface StreamOptions {
   name: string;
   model: string;
   threads: number;
@@ -25,8 +25,14 @@ interface StreamOptions {
   language: string;
   translate: boolean;
   deviceId: string;
+  outputFile?: boolean;
+  getAudioDevices?: boolean;
 }
 
+export interface WhisperDevice {
+  id: number;
+  name: string;
+}
 interface WhisperInitResponse {
   devices: WhisperDevice[];
   model: {
@@ -82,15 +88,8 @@ export class WhisperStreamManager {
     return defaultDir;
   }
 
-  private constructSpawnArgs(extraArgs: string[] = []): string[] {
-    const args = [
-      '--model',
-      this.options.model,
-      '-t',
-      this.options.threads.toString(),
-      '--json',
-      ...extraArgs,
-    ];
+  private constructSpawnArgs(): string[] {
+    const args = ['--model', this.options.model, '-t', this.options.threads.toString(), '--json'];
 
     if (this.options.saveAudio) {
       args.push('--save-audio');
@@ -108,6 +107,33 @@ export class WhisperStreamManager {
       args.push('--translate');
     }
 
+    if (this.options.step) {
+      args.push('--step', this.options.step.toString());
+    }
+
+    if (this.options.length) {
+      args.push('--length', this.options.length.toString());
+    }
+
+    if (this.options.keep) {
+      args.push('--keep', this.options.keep.toString());
+    }
+
+    if (this.options.maxTokens) {
+      args.push('--max-tokens', this.options.maxTokens.toString());
+    }
+
+    if (this.options.getAudioDevices) {
+      args.push('--get-audio-devices');
+    }
+
+    if (this.options.outputFile) {
+      const audioDir = this.getAudioDir();
+      const timestamp = new Date().getTime();
+      const outputFile = join(audioDir, `transcript${timestamp}.jsonl`);
+      args.push('--file', outputFile);
+    }
+
     return args;
   }
 
@@ -123,7 +149,46 @@ export class WhisperStreamManager {
    * Get audio devices from whisper-stream
    */
   async getAudioDevices(): Promise<WhisperDevice[]> {
-    return getAudioDevices();
+    return new Promise((resolve, reject) => {
+      const audioDir = this.getAudioDir();
+      const tempOptions = { ...this.options, getAudioDevices: true };
+      this.options = tempOptions;
+
+      const ls = spawn(ggmlStreamBin, this.constructSpawnArgs(), { cwd: audioDir });
+      let initResponse: WhisperInitResponse | null = null;
+
+      ls.stdout.on('data', (data) => {
+        const line = new TextDecoder().decode(data);
+        const [result, error] = jsonSafeParseWrap(line);
+        if (error.Ok() && result && typeof result === 'object' && 'type' in result) {
+          const response = result as WhisperInitResponse;
+          if (response.type === 'init' && Array.isArray(response.devices)) {
+            initResponse = response;
+            ls.kill();
+            resolve(response.devices);
+          }
+        }
+      });
+
+      ls.stderr.on('data', (data) => {
+        const line = new TextDecoder().decode(data);
+        whisperLogger.error(`getAudioDevices stderr: ${line}`);
+      });
+
+      ls.on('error', (error: Error) => {
+        whisperLogger.error(`getAudioDevices error: ${error.message}`);
+        reject(error);
+      });
+
+      ls.on('close', (code: number | null) => {
+        if (!initResponse) {
+          reject(new Error(`Process exited with code ${code} without returning devices`));
+        }
+      });
+
+      // Reset options
+      this.options = { ...this.options, getAudioDevices: false };
+    });
   }
 
   /**
@@ -132,33 +197,21 @@ export class WhisperStreamManager {
   start(window: BrowserWindow, options: Partial<StreamOptions> = {}): void {
     this.stop();
     this.mainWindow = window;
-    this.options = { ...this.options, ...options };
+    this.options = {
+      ...this.options,
+      ...options,
+      outputFile: true,
+    };
 
     const audioDir = this.getAudioDir();
-    const timestamp = new Date().getTime();
-    const outputFile = join(audioDir, `transcript${timestamp}.jsonl`);
-
-    const args = this.constructSpawnArgs([
-      '--step',
-      this.options.step.toString(),
-      '--length',
-      this.options.length.toString(),
-      '--keep',
-      this.options.keep.toString(),
-      '--max-tokens',
-      this.options.maxTokens.toString(),
-      '--file',
-      outputFile,
-    ]);
-
     whisperLogger.debug(`Starting in ${audioDir}`);
-    whisperLogger.debug(`Command: ${ggmlStreamBin} ${args.join(' ')}`);
+    whisperLogger.debug(`Command: ${ggmlStreamBin} ${this.constructSpawnArgs().join(' ')}`);
 
     this.stopPowerSaveBlocker = startPowerSaveBlocker((msg) =>
       this.sendToWindow('whisper-ccp-stream:status', JSON.stringify({ text: msg })),
     );
 
-    const ls = spawn(ggmlStreamBin, args, { cwd: audioDir });
+    const ls = spawn(ggmlStreamBin, this.constructSpawnArgs(), { cwd: audioDir });
     this.activeProcess = ls;
 
     ls.stdout.on('data', (data) => {
@@ -174,6 +227,7 @@ export class WhisperStreamManager {
         whisperLogger.error(`Failed to process stdout: ${error}`);
       }
     });
+
     ls.stderr.on('data', (data) => {
       const line = new TextDecoder().decode(data);
       const [result, error] = jsonSafeParseWrapStringify(line, (val) => ({ text: val }));

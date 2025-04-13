@@ -1,29 +1,16 @@
 import { IpcListener } from '@electron-toolkit/typed-ipc/main';
 import type { IpcEvents } from '../../types/ipc';
-import { getAudioDevices, spawnWhisperStream, stopStreamProcess } from '../services/WhisperStream';
+import { WhisperStreamManager, type StreamOptions } from '../services/WhisperStream';
 import { mainWindowManager } from '../window/MainWindow';
-
 const ipc = new IpcListener<IpcEvents>();
+const whisperStreamManager = new WhisperStreamManager();
 //const emitter = new IpcEmitter<IpcRendererEvent>();
-
-interface WhisperConfig {
-  model: string;
-  language: string;
-  captureId?: number;
-  threads?: number;
-  step?: number;
-  length?: number;
-  keep?: number;
-  maxTokens?: number;
-  saveAudio?: boolean;
-  translate?: boolean;
-}
 
 export function setupWhisperStreamIPC(): void {
   // Get available audio devices
   ipc.handle('whisper:get-devices', async () => {
     try {
-      return await getAudioDevices();
+      return await whisperStreamManager.getAudioDevices();
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to get audio devices: ${error.message}`);
@@ -34,29 +21,19 @@ export function setupWhisperStreamIPC(): void {
 
   // Get current whisper configuration
   ipc.handle('whisper:get-config', async () => {
-    return {
-      model: 'small.en',
-      language: 'en',
-      threads: 8,
-      step: 800,
-      length: 5000,
-      keep: 300,
-      maxTokens: 64,
-      saveAudio: true,
-      translate: false,
-    };
+    return whisperStreamManager.getOptions();
   });
 
   // Start whisper stream with configuration
-  ipc.handle('whisper:start', async (_event, config: Partial<WhisperConfig>) => {
+  ipc.handle('whisper:start', async (_event, config: Partial<StreamOptions>) => {
     const mainWindow = mainWindowManager.getMainWindow();
     if (!mainWindow) {
       throw new Error('Main window not available');
     }
 
     try {
-      const process = spawnWhisperStream(mainWindow, config);
-      return process !== null;
+      whisperStreamManager.start(mainWindow, config);
+      return true;
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to start whisper stream: ${error.message}`);
@@ -68,7 +45,7 @@ export function setupWhisperStreamIPC(): void {
   // Stop whisper stream
   ipc.handle('whisper:stop', async () => {
     try {
-      stopStreamProcess();
+      whisperStreamManager.stop();
       return true;
     } catch (error: unknown) {
       if (error instanceof Error) {

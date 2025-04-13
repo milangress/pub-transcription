@@ -23,6 +23,7 @@ export class MainWindow {
     const options = {
       width: 1200,
       height: 950,
+      titleBarStyle: 'hidden',
       webPreferences: {
         titleBarStyle: {
           hiddenInset: true,

@@ -61,17 +61,12 @@ export function jsonSafeParse<T>(text: string): [T, Status] {
  * @param value The value to wrap
  * @param wrapper Optional function to wrap the value before returning
  */
-export function jsonSafeParseWrap<T, R = T>(
-  value: string | T,
-  wrapper?: (val: T) => R,
-): [R, Status] {
-  if (typeof value === 'string') {
-    const [parsed, error] = jsonSafeParse<T>(value);
-    if (error.Fail()) {
-      return [value as unknown as R, error];
-    }
-    value = parsed!;
+export function jsonSafeParseWrap<T, R = T>(value: T, wrapper?: (val: T) => R): [R, Status] {
+  const [parsed, error] = jsonSafeParse<T>(String(value));
+  if (error.Fail()) {
+    return [value as unknown as R, error];
   }
+  value = parsed!;
 
   try {
     return [wrapper ? wrapper(value as T) : (value as unknown as R), NO_ERROR];
@@ -89,7 +84,7 @@ export function jsonSafeParseWrap<T, R = T>(
  * @param wrapper Optional function to wrap the value before stringifying
  */
 export function jsonSafeParseWrapStringify<T, R = T>(
-  value: string | T,
+  value: T,
   wrapper?: (val: T) => R,
 ): [string, Status] {
   const [wrapped, wrapError] = jsonSafeParseWrap(value, wrapper);

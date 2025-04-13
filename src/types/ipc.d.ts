@@ -14,24 +14,6 @@ export type CommandResponse<T = unknown> = {
   error?: string;
 };
 
-export interface WhisperConfig {
-  model: string;
-  language: string;
-  captureId?: number;
-  threads?: number;
-  step?: number;
-  length?: number;
-  keep?: number;
-  maxTokens?: number;
-  saveAudio?: boolean;
-  translate?: boolean;
-}
-
-export interface WhisperDevice {
-  id: number;
-  name: string;
-}
-
 // Main process ipc events (from renderer to main)
 export type IpcEvents =
   | {
@@ -68,9 +50,9 @@ export type IpcEvents =
       // Command channel handlers
       'command:execute': <T>(command: string, payload?: unknown) => Promise<CommandResponse<T>>;
       // Whisper handlers
-      'whisper:get-config': () => Promise<WhisperConfig>;
+      'whisper:get-config': () => Promise<StreamOptions>;
       'whisper:get-devices': () => Promise<WhisperDevice[]>;
-      'whisper:start': (config: Partial<WhisperConfig>) => Promise<boolean>;
+      'whisper:start': (config: Partial<StreamOptions>) => Promise<boolean>;
       'whisper:stop': () => Promise<boolean>;
     };
 
