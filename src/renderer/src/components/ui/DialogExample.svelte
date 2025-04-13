@@ -1,8 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import { onMount } from 'svelte';
   import Button from './Button.svelte';
   import Checkbox from './Checkbox.svelte';
   import Dialog from './Dialog.svelte';
+  import RenderLogOutput from './RenderLogOutput.svelte';
   import Select from './Select.svelte';
   import Separator from './Seperator.svelte';
   import Tabs from './Tabs.svelte';
@@ -22,6 +24,13 @@
     { value: '3', label: 'Item 3' },
   ];
   let selectedItem = $state('1');
+
+  let logLines = $state(['line 1', 'line 2', 'line 3']);
+  onMount(() => {
+    setInterval(() => {
+      logLines.push(`line ${logLines.length + 1}`);
+    }, 100);
+  });
 </script>
 
 <Button {buttonText} onclick={() => (open = true)} />
@@ -35,6 +44,7 @@
         {/snippet}
         {#snippet tabContent2()}
           <p>Tab 2 content</p>
+          <RenderLogOutput lines={logLines} />
         {/snippet}
       </Tabs>
 
