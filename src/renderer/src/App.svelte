@@ -14,6 +14,7 @@
 
   import type { PrintRequest, PrintTask } from 'src/types';
 
+  import WhisperManagerDialog from '@/components/managers/WhisperManagerDialog.svelte';
   import type { SvelteComponent } from 'svelte';
   import { tick } from 'svelte';
   import { WebMidi } from 'webmidi';
@@ -395,6 +396,8 @@
 
   <p>Additional dialog content here...</p>
 </Dialog>
+
+<WhisperManagerDialog />
 <main>
   {#if currentContentList.length > 0}
     <div class={mode === 'mini' ? 'print-context-mini' : 'print-context'}>

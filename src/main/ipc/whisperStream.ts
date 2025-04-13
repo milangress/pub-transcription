@@ -8,20 +8,15 @@ const whisperStreamManager = new WhisperStreamManager();
 
 export function setupWhisperStreamIPC(): void {
   // Get available audio devices
-  ipc.handle('whisper:get-devices', async () => {
+  ipc.handle('whisper:get-init-object', async () => {
     try {
-      return await whisperStreamManager.getAudioDevices();
+      return await whisperStreamManager.getInitObject();
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Failed to get audio devices: ${error.message}`);
       }
       throw new Error('Failed to get audio devices');
     }
-  });
-
-  // Get current whisper configuration
-  ipc.handle('whisper:get-config', async () => {
-    return whisperStreamManager.getOptions();
   });
 
   // Start whisper stream with configuration

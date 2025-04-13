@@ -51,7 +51,7 @@ export type IpcEvents =
       'command:execute': <T>(command: string, payload?: unknown) => Promise<CommandResponse<T>>;
       // Whisper handlers
       'whisper:get-config': () => Promise<StreamOptions>;
-      'whisper:get-devices': () => Promise<WhisperDevice[]>;
+      'whisper:get-init-object': () => Promise<WhisperInitResponse>;
       'whisper:start': (config: Partial<StreamOptions>) => Promise<boolean>;
       'whisper:stop': () => Promise<boolean>;
     };
