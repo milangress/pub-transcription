@@ -1,0 +1,4 @@
+[submodule "vendor/whisper.cpp"]
+	path = vendor/whisper.cpp
+	url = git@github.com:milangress/whisper.cpp.git
+	branch = milan/stream
