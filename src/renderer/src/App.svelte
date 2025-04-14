@@ -23,23 +23,9 @@
   import TitleBar from '@components/ui/TitleBar.svelte';
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
   import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
+  import type { WhisperStreamOutput } from 'src/types/whisperParser';
   const ipc = new IpcListener<IpcRendererEvent>();
   const emitter = new IpcEmitter<IpcEvents>();
-
-  let {
-    omittedSilenceFragments = [
-      '[ Silence ]',
-      '[silence]',
-      '[BLANK_AUDIO]',
-      '[ [ [ [',
-      '[ [ [',
-      '[ [',
-      '[',
-      '(buzzer)',
-      '(buzzing)',
-      '.',
-    ],
-  } = $props();
 
   // Only Contains the final sentences
   let committedContent = $state<TxtObject[]>([]);
@@ -90,7 +76,7 @@
 
   let currentContentList = $derived([...committedContent, currentSentence]);
 
-  ipc.on('whisper-ccp-stream:transcription', (_, value: string) => {
+  ipc.on('whisper-ccp-stream:transcription', (_, value) => {
     allIncomingTTSMessages = [value, ...allIncomingTTSMessages];
 
     console.log('🔊 Incoming TTS message:', value);
@@ -103,47 +89,29 @@
     handleTranscription(value);
   });
 
-  function handleTranscription(text: string): void {
-    const isNew = text.includes('NEW');
-    log.silly('Handling transcription:', text, 'isNew:', isNew);
-
-    if (isNew) {
+  function handleTranscription(data: WhisperStreamOutput): void {
+    if (data.type === 'transcription') {
       // Only commit if it's not in the unwanted list
-      if (
-        !omittedSilenceFragments.some((fragment) =>
-          text.toLowerCase().includes(fragment.toLowerCase()),
-        )
-      ) {
-        log.info('Committing:', text);
-        // Commit the current prediction
-        contentStore.commitPrediction();
+      log.info('Committing:', data.text);
+      // Commit the current prediction
+      contentStore.commitPrediction();
 
-        // Start a new prediction with the cleaned text
-        const cleanText = text.replace('NEW', '').trim();
-        contentStore.updatePrediction(
-          cleanText,
-          remoteSettings.editorCss,
-          settings.controllerValues,
-        );
-
-        // Set the component type if we have a current prediction
-        if (contentStore.currentPrediction) {
-          contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
-        }
-        log.silly('Committing:', cleanText);
-      } else {
-        // Discard unwanted messages
-        console.log('Discarded unwanted fragment:', text);
-        contentStore.commitPrediction();
-      }
-    } else {
-      // Just update the current prediction
-      contentStore.updatePrediction(text, remoteSettings.editorCss, settings.controllerValues);
+      contentStore.updatePrediction(data.text, remoteSettings.editorCss, settings.controllerValues);
 
       // Set the component type if we have a current prediction
       if (contentStore.currentPrediction) {
         contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
       }
+    } else if (data.type === 'prediction') {
+      // Just update the current prediction
+      contentStore.updatePrediction(data.text, remoteSettings.editorCss, settings.controllerValues);
+
+      // Set the component type if we have a current prediction
+      if (contentStore.currentPrediction) {
+        contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
+      }
+    } else {
+      console.log('👀 unknown transcription type', data);
     }
   }
 

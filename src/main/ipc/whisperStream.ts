@@ -1,6 +1,7 @@
 import { IpcListener } from '@electron-toolkit/typed-ipc/main';
 import type { IpcEvents } from '../../types/ipc';
-import { WhisperStreamManager, type StreamOptions } from '../services/WhisperStream';
+import type { ParamsType } from '../../types/whisperParser';
+import { WhisperStreamManager } from '../services/WhisperStream';
 import { mainWindowManager } from '../window/MainWindow';
 const ipc = new IpcListener<IpcEvents>();
 const whisperStreamManager = new WhisperStreamManager();
@@ -19,8 +20,12 @@ export function setupWhisperStreamIPC(): void {
     }
   });
 
+  ipc.handle('whisper:get-params', async () => {
+    return whisperStreamManager.getParams();
+  });
+
   // Start whisper stream with configuration
-  ipc.handle('whisper:start', async (_event, config: Partial<StreamOptions>) => {
+  ipc.handle('whisper:start', async (_event, config: Partial<ParamsType>) => {
     const mainWindow = mainWindowManager.getMainWindow();
     if (!mainWindow) {
       throw new Error('Main window not available');

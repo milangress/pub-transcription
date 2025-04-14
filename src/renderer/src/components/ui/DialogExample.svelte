@@ -36,30 +36,28 @@
 <Button {buttonText} onclick={() => (open = true)} />
 
 <Dialog bind:open {title} {description}>
-  {#snippet children()}
-    <div class="dialog-body">
-      <Tabs tab1Label="Tab 1 label" tab2Label="Tab 2 label">
-        {#snippet tabContent1()}
-          <p>Tab 1 content</p>
-        {/snippet}
-        {#snippet tabContent2()}
-          <p>Tab 2 content</p>
-          <RenderLogOutput lines={logLines} />
-        {/snippet}
-      </Tabs>
+  <div class="dialog-body">
+    <Tabs tab1Label="Tab 1 label" tab2Label="Tab 2 label">
+      {#snippet tabContent1()}
+        <p>Tab 1 content</p>
+      {/snippet}
+      {#snippet tabContent2()}
+        <p>Tab 2 content</p>
+        <RenderLogOutput lines={logLines} />
+      {/snippet}
+    </Tabs>
 
-      <Checkbox labelText="Checkbox" />
+    <Checkbox labelText="Checkbox" />
 
-      <Separator />
+    <Separator />
 
-      <Select {items} bind:value={selectedItem} type="single" />
+    <Select {items} bind:value={selectedItem} type="single" />
 
-      <div class="dialog-actions">
-        <Button buttonText="Save" />
-        <Button buttonText="Cancel" onclick={() => (open = false)} />
-      </div>
+    <div class="dialog-actions">
+      <Button buttonText="Save" />
+      <Button buttonText="Cancel" onclick={() => (open = false)} />
     </div>
-  {/snippet}
+  </div>
 </Dialog>
 
 <style>

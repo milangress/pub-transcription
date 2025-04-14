@@ -1,40 +1,20 @@
 import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
 import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
-
-// Types
-interface AudioDevice {
-  id: number;
-  name: string;
-}
-
-interface WhisperParams {
-  audio_ctx: number;
-  beam_size: number;
-  capture_id: number;
-  flash_attn: boolean;
-  freq_thold: number;
-  keep_ms: number;
-  language: string;
-  length_ms: number;
-  max_tokens: number;
-  n_threads: number;
-  no_context: boolean;
-  no_fallback: boolean;
-  print_special: boolean;
-  save_audio: boolean;
-  step_ms: number;
-  translate: boolean;
-  use_gpu: boolean;
-  vad_thold: number;
-}
+import type {
+  DeviceType,
+  ParamsType,
+  TranscriptionType,
+  WhisperStreamOutput,
+} from '../../../types/whisperParser';
 
 class WhisperStore {
+  #isStreaming = $state(false);
   #emitter = new IpcEmitter<IpcEvents>();
   #ipc = new IpcListener<IpcRendererEvent>();
 
   // Store state
-  #devices = $state<AudioDevice[]>([]);
-  #params = $state<WhisperParams>({
+  #devices = $state<DeviceType[]>([]);
+  #params = $state<Partial<ParamsType>>({
     audio_ctx: 0,
     beam_size: -1,
     capture_id: -1,
@@ -53,27 +33,32 @@ class WhisperStore {
     translate: false,
     use_gpu: true,
     vad_thold: 0.6,
+    replay: false,
+    replay_file: '',
+    model: '',
   });
-  #transcriptionLines = $state<string[]>([]);
-  #statusMessages = $state<string[]>([]);
+  #miniLogs = $state<string[]>([]);
+
+  #transcriptions = $state<TranscriptionType[]>([]);
 
   constructor() {
     this.setupIpcListeners();
-    this.reloadAudioDevicesAndParams();
   }
 
-  // Public getters
-  get devices(): AudioDevice[] {
+  get transcriptions(): TranscriptionType[] {
+    return this.#transcriptions;
+  }
+  get devices(): DeviceType[] {
     return this.#devices;
   }
-  get params(): WhisperParams {
+  get params(): Partial<ParamsType> {
     return this.#params;
   }
-  get transcriptionLines(): string[] {
-    return this.#transcriptionLines;
+  get isStreaming(): boolean {
+    return this.#isStreaming;
   }
-  get statusMessages(): string[] {
-    return this.#statusMessages;
+  get miniLogs(): string[] {
+    return this.#miniLogs;
   }
 
   get captureIdString(): string {
@@ -89,88 +74,64 @@ class WhisperStore {
     }));
   }
 
-  // Actions
-  addTranscriptionLine(line: string): void {
-    this.#transcriptionLines = [...this.#transcriptionLines, line];
+  addMiniLog(message: string): void {
+    message.split('\n').forEach((line) => {
+      this.#miniLogs = [...this.#miniLogs, line];
+    });
   }
 
-  addStatusMessage(message: string): void {
-    this.#statusMessages = [...this.#statusMessages, message];
-  }
-
-  clearTranscriptionLines(): void {
-    this.#transcriptionLines = [];
-  }
-
-  clearStatusMessages(): void {
-    this.#statusMessages = [];
-  }
-
-  clearAllLogs(): void {
-    this.clearTranscriptionLines();
-    this.clearStatusMessages();
+  clearMiniLogs(): void {
+    this.#miniLogs = [];
   }
 
   // IPC Methods
   async startStream(): Promise<void> {
-    await this.#emitter.invoke('whisper:start', this.#params);
+    this.#isStreaming = true;
+    await this.#emitter.invoke('whisper:start', $state.snapshot(this.#params));
   }
 
   async stopStream(): Promise<void> {
+    this.#isStreaming = false;
     await this.#emitter.invoke('whisper:stop');
   }
 
-  async reloadAudioDevicesAndParams(): Promise<void> {
+  async reloadAudioDevices(): Promise<void> {
     try {
       const response = await this.#emitter.invoke('whisper:get-init-object');
       if (response) {
         if (response.devices) {
           this.#devices = response.devices;
-          this.addStatusMessage('Successfully fetched audio devices');
-        }
-        if (response.params) {
-          // Update params while preserving reactivity
-          Object.assign(this.#params, response.params);
-          this.addStatusMessage('Successfully loaded whisper parameters');
+          this.addMiniLog('Successfully fetched audio devices');
         }
       } else {
-        this.addStatusMessage('No devices or params found in response');
+        this.addMiniLog('No devices or params found in response');
       }
     } catch (error) {
-      this.addStatusMessage(`Error fetching devices and params: ${error}`);
+      this.addMiniLog(`Error getInitObject: ${error}`);
     }
   }
 
   private setupIpcListeners() {
-    const removeTranscriptionListener = this.#ipc.on('whisper-ccp-stream:transcription', (data) => {
-      if (typeof data === 'string') {
-        try {
-          const parsedData = JSON.parse(data);
-          if (parsedData.text) {
-            this.addTranscriptionLine(parsedData.text);
-          }
-        } catch {
-          this.addTranscriptionLine(data);
+    const removeTranscriptionListener = this.#ipc.on(
+      'whisper-ccp-stream:transcription',
+      (_, data: WhisperStreamOutput) => {
+        this.#isStreaming = true;
+        if (data.type === 'transcription') {
+          this.addMiniLog(data.text);
         }
-      } else {
-        this.addTranscriptionLine(JSON.stringify(data));
-      }
-    });
+      },
+    );
 
-    const removeStatusListener = this.#ipc.on('whisper-ccp-stream:status', (data) => {
-      if (typeof data === 'string') {
-        try {
-          const parsedData = JSON.parse(data);
-          if (parsedData.text) {
-            this.addStatusMessage(parsedData.text);
-          }
-        } catch {
-          this.addStatusMessage(data);
+    const removeStatusListener = this.#ipc.on(
+      'whisper-ccp-stream:status',
+      (_, status: WhisperStreamOutput) => {
+        if (status.type === 'stderr' || status.type === 'stdout') {
+          this.addMiniLog(status.text);
+        } else {
+          this.addMiniLog(JSON.stringify(status));
         }
-      } else {
-        this.addStatusMessage(JSON.stringify(data));
-      }
-    });
+      },
+    );
 
     return (): void => {
       removeTranscriptionListener();

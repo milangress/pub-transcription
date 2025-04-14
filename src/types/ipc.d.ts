@@ -50,10 +50,11 @@ export type IpcEvents =
       // Command channel handlers
       'command:execute': <T>(command: string, payload?: unknown) => Promise<CommandResponse<T>>;
       // Whisper handlers
-      'whisper:get-config': () => Promise<StreamOptions>;
+      'whisper:get-config': () => Promise<Partial<ParamsType>>;
       'whisper:get-init-object': () => Promise<WhisperInitResponse>;
-      'whisper:start': (config: Partial<StreamOptions>) => Promise<boolean>;
+      'whisper:start': (config: Partial<ParamsType>) => Promise<boolean>;
       'whisper:stop': () => Promise<boolean>;
+      'whisper:get-params': () => Promise<Partial<ParamsType>>;
     };
 
 // Renderer ipc events (from main to renderer)
@@ -65,8 +66,8 @@ export type IpcRendererEvent = {
   'PrintWindow:printJob': [job: PrintJob];
 
   // Transcription related events
-  'whisper-ccp-stream:transcription': [data: string];
-  'whisper-ccp-stream:status': [status: string];
+  'whisper-ccp-stream:transcription': [data: WhisperStreamOutput];
+  'whisper-ccp-stream:status': [status: WhisperStreamOutput];
 
   // Editor related events
   'editor:init': [options: { content: string; language: 'css' | 'html' }];

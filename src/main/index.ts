@@ -7,10 +7,10 @@ import { createMenu } from './menu';
 import { printQueue } from './print/PrintQueue';
 import { setupIpcHandlers } from './services/ipcHandlers';
 import { createSession } from './services/SessionManager';
+import { whisperStreamManager } from './services/WhisperStream';
 import { checkApplicationFolder } from './utils/applicationFolder';
 import { mainWindowManager } from './window/MainWindow';
 import { printWindowManager } from './window/PrintWindow';
-
 const isDev = (): boolean => !app.isPackaged;
 
 // App initialization
@@ -52,6 +52,8 @@ app.whenReady().then(() => {
     .catch((error) => {
       console.error('Failed to create session:', error);
     });
+
+  whisperStreamManager.start(mainWindowManager.getOrCreateMainWindow());
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

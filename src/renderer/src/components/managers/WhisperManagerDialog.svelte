@@ -13,194 +13,197 @@
 
   $effect(() => {
     if (open) {
-      whisperStore.reloadAudioDevicesAndParams();
+      whisperStore.reloadAudioDevices();
     }
   });
+  $effect(() => {
+    openDialog();
+  });
+  function openDialog() {
+    open = true;
+  }
+
+  function stopStream() {
+    whisperStore.stopStream();
+  }
+
+  function startStream() {
+    whisperStore.startStream();
+  }
 </script>
 
 <Button buttonText="Transcription Settings" onclick={() => (open = true)} />
 
 <Dialog bind:open title="Whisper Stream Manager">
-  {#snippet description()}
-    Select a microphone and start streaming with Whisper
-  {/snippet}
+  <div class="dialog-body">
+    <Tabs tab1Label="Basic" tab2Label="Advanced Settings">
+      {#snippet tabContent1()}
+        <div class="input-row">
+          <label for="device-select">Microphone:</label>
+          <Select
+            items={whisperStore.deviceOptionsObject}
+            bind:value={whisperStore.captureIdString}
+            type="single"
+          />
+        </div>
 
-  {#snippet children()}
-    <div class="dialog-body">
-      <Tabs tab1Label="Basic" tab2Label="Advanced Settings">
-        {#snippet tabContent1()}
-          <div class="input-row">
-            <label for="device-select">Microphone:</label>
-            <Select
-              items={whisperStore.deviceOptionsObject}
-              bind:value={whisperStore.captureIdString}
-              type="single"
-            />
+        <div class="input-row checkbox-row">
+          <Checkbox bind:checked={whisperStore.params.save_audio} labelText="Save Audio" />
+        </div>
+
+        <Separator />
+
+        <div class="transcript-container">
+          <div class="transcript-header">
+            <h3>Transcription Output</h3>
+            <Button buttonText="Clear" onclick={() => whisperStore.clearMiniLogs()} />
           </div>
+          <div class="transcript-output">
+            <RenderLogOutput lines={whisperStore.miniLogs} />
+          </div>
+        </div>
+      {/snippet}
 
-          <div class="input-row checkbox-row">
-            <Checkbox bind:checked={whisperStore.params.save_audio} labelText="Save Audio" />
+      {#snippet tabContent2()}
+        <div class="advanced-settings">
+          <div class="settings-section">
+            <h3>Performance Settings</h3>
+            <div class="settings-grid">
+              <div class="input-row">
+                <label for="threads">Threads:</label>
+                <input
+                  id="threads"
+                  type="number"
+                  bind:value={whisperStore.params.n_threads}
+                  min="1"
+                  max="32"
+                />
+              </div>
+
+              <div class="input-row">
+                <label for="maxTokens">Max Tokens:</label>
+                <input
+                  id="maxTokens"
+                  type="number"
+                  bind:value={whisperStore.params.max_tokens}
+                  min="1"
+                />
+              </div>
+
+              <div class="input-row">
+                <label for="beamSize">Beam Size:</label>
+                <input
+                  id="beamSize"
+                  type="number"
+                  bind:value={whisperStore.params.beam_size}
+                  min="-1"
+                />
+              </div>
+            </div>
+
+            <div class="checkbox-grid">
+              <Checkbox bind:checked={whisperStore.params.use_gpu} labelText="Use GPU" />
+              <Checkbox bind:checked={whisperStore.params.flash_attn} labelText="Flash Attention" />
+            </div>
           </div>
 
           <Separator />
 
-          <div class="transcript-container">
-            <div class="transcript-header">
-              <h3>Transcription Output</h3>
-              <Button buttonText="Clear" onclick={() => whisperStore.clearAllLogs()} />
+          <div class="settings-section">
+            <h3>Audio Processing</h3>
+            <div class="settings-grid">
+              <div class="input-row">
+                <label for="step">Step (ms):</label>
+                <input id="step" type="number" bind:value={whisperStore.params.step_ms} min="0" />
+              </div>
+
+              <div class="input-row">
+                <label for="length">Length (ms):</label>
+                <input
+                  id="length"
+                  type="number"
+                  bind:value={whisperStore.params.length_ms}
+                  min="1000"
+                />
+              </div>
+
+              <div class="input-row">
+                <label for="keep">Keep (ms):</label>
+                <input id="keep" type="number" bind:value={whisperStore.params.keep_ms} min="0" />
+              </div>
+
+              <div class="input-row">
+                <label for="audioCtx">Audio Context:</label>
+                <input
+                  id="audioCtx"
+                  type="number"
+                  bind:value={whisperStore.params.audio_ctx}
+                  min="0"
+                />
+              </div>
+
+              <div class="input-row">
+                <label for="vadThreshold">VAD Threshold:</label>
+                <input
+                  id="vadThreshold"
+                  type="number"
+                  bind:value={whisperStore.params.vad_thold}
+                  min="0"
+                  max="1"
+                  step="0.01"
+                />
+              </div>
+
+              <div class="input-row">
+                <label for="freqThreshold">Freq Threshold:</label>
+                <input
+                  id="freqThreshold"
+                  type="number"
+                  bind:value={whisperStore.params.freq_thold}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
             </div>
-            <div class="transcript-output">
-              <RenderLogOutput
-                lines={[...whisperStore.transcriptionLines, ...whisperStore.statusMessages]}
+          </div>
+
+          <Separator />
+
+          <div class="settings-section">
+            <h3>Language Settings</h3>
+            <div class="settings-grid">
+              <div class="input-row">
+                <label for="language">Language:</label>
+                <input id="language" type="text" bind:value={whisperStore.params.language} />
+              </div>
+            </div>
+
+            <div class="checkbox-grid">
+              <Checkbox bind:checked={whisperStore.params.translate} labelText="Translate" />
+              <Checkbox bind:checked={whisperStore.params.no_fallback} labelText="No Fallback" />
+              <Checkbox
+                bind:checked={whisperStore.params.print_special}
+                labelText="Print Special"
               />
+              <Checkbox bind:checked={whisperStore.params.no_context} labelText="No Context" />
             </div>
           </div>
-        {/snippet}
+        </div>
+      {/snippet}
+    </Tabs>
 
-        {#snippet tabContent2()}
-          <div class="advanced-settings">
-            <div class="settings-section">
-              <h3>Performance Settings</h3>
-              <div class="settings-grid">
-                <div class="input-row">
-                  <label for="threads">Threads:</label>
-                  <input
-                    id="threads"
-                    type="number"
-                    bind:value={whisperStore.params.n_threads}
-                    min="1"
-                    max="32"
-                  />
-                </div>
-
-                <div class="input-row">
-                  <label for="maxTokens">Max Tokens:</label>
-                  <input
-                    id="maxTokens"
-                    type="number"
-                    bind:value={whisperStore.params.max_tokens}
-                    min="1"
-                  />
-                </div>
-
-                <div class="input-row">
-                  <label for="beamSize">Beam Size:</label>
-                  <input
-                    id="beamSize"
-                    type="number"
-                    bind:value={whisperStore.params.beam_size}
-                    min="-1"
-                  />
-                </div>
-              </div>
-
-              <div class="checkbox-grid">
-                <Checkbox bind:checked={whisperStore.params.use_gpu} labelText="Use GPU" />
-                <Checkbox
-                  bind:checked={whisperStore.params.flash_attn}
-                  labelText="Flash Attention"
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            <div class="settings-section">
-              <h3>Audio Processing</h3>
-              <div class="settings-grid">
-                <div class="input-row">
-                  <label for="step">Step (ms):</label>
-                  <input id="step" type="number" bind:value={whisperStore.params.step_ms} min="0" />
-                </div>
-
-                <div class="input-row">
-                  <label for="length">Length (ms):</label>
-                  <input
-                    id="length"
-                    type="number"
-                    bind:value={whisperStore.params.length_ms}
-                    min="1000"
-                  />
-                </div>
-
-                <div class="input-row">
-                  <label for="keep">Keep (ms):</label>
-                  <input id="keep" type="number" bind:value={whisperStore.params.keep_ms} min="0" />
-                </div>
-
-                <div class="input-row">
-                  <label for="audioCtx">Audio Context:</label>
-                  <input
-                    id="audioCtx"
-                    type="number"
-                    bind:value={whisperStore.params.audio_ctx}
-                    min="0"
-                  />
-                </div>
-
-                <div class="input-row">
-                  <label for="vadThreshold">VAD Threshold:</label>
-                  <input
-                    id="vadThreshold"
-                    type="number"
-                    bind:value={whisperStore.params.vad_thold}
-                    min="0"
-                    max="1"
-                    step="0.01"
-                  />
-                </div>
-
-                <div class="input-row">
-                  <label for="freqThreshold">Freq Threshold:</label>
-                  <input
-                    id="freqThreshold"
-                    type="number"
-                    bind:value={whisperStore.params.freq_thold}
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            <div class="settings-section">
-              <h3>Language Settings</h3>
-              <div class="settings-grid">
-                <div class="input-row">
-                  <label for="language">Language:</label>
-                  <input id="language" type="text" bind:value={whisperStore.params.language} />
-                </div>
-              </div>
-
-              <div class="checkbox-grid">
-                <Checkbox bind:checked={whisperStore.params.translate} labelText="Translate" />
-                <Checkbox bind:checked={whisperStore.params.no_fallback} labelText="No Fallback" />
-                <Checkbox
-                  bind:checked={whisperStore.params.print_special}
-                  labelText="Print Special"
-                />
-                <Checkbox bind:checked={whisperStore.params.no_context} labelText="No Context" />
-              </div>
-            </div>
-          </div>
-        {/snippet}
-      </Tabs>
-
-      <div class="dialog-actions">
-        <Button
-          buttonText="Reload Devices"
-          variant="outline"
-          onclick={() => whisperStore.reloadAudioDevicesAndParams()}
-        />
-        <div class="spacer"></div>
-        <Button buttonText="Stop" variant="destructive" onclick={() => whisperStore.stopStream()} />
-        <Button buttonText="Start" variant="default" onclick={() => whisperStore.startStream()} />
-        <Button buttonText="Close" variant="outline" onclick={() => (open = false)} />
-      </div>
+    <div class="dialog-actions">
+      <Button
+        buttonText="Reload Devices"
+        variant="outline"
+        onclick={() => whisperStore.reloadAudioDevices()}
+      />
+      <div class="spacer"></div>
+      <Button buttonText="Stop" variant="destructive" onclick={stopStream} />
+      <Button buttonText="Start" variant="default" onclick={startStream} />
+      <Button buttonText="Close" variant="outline" onclick={() => (open = false)} />
     </div>
-  {/snippet}
+  </div>
 </Dialog>
 
 <style>

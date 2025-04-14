@@ -33,7 +33,7 @@ try {
     stdio: 'inherit',
     cwd: ROOT_DIR,
   });
-  execSync('git diff --submodule', {
+  execSync('git diff --submodule=diff', {
     stdio: 'inherit',
     cwd: ROOT_DIR,
   });
