@@ -285,7 +285,7 @@ export class WhisperStreamManager {
         } else if (parsed.type === 'prediction') {
           console.log('Pred: ', parsed.text);
         } else {
-          console.log('Unkn?: ', parsed.type);
+          console.log('Unkn?: ', JSON.stringify(parsed).slice(0, 100));
         }
 
         this.sendToWindow('whisper-ccp-stream:transcription', parsed);
