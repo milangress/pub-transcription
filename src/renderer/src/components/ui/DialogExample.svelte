@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
   import { onMount } from 'svelte';
   import Button from './Button.svelte';
   import Checkbox from './Checkbox.svelte';
@@ -12,10 +11,9 @@
   type Props = {
     buttonText: string;
     dialogTitle: string;
-    description: Snippet;
   };
 
-  let { buttonText, dialogTitle, description }: Props = $props();
+  let { buttonText, dialogTitle }: Props = $props();
 
   let open = $state(false);
   const items = [
@@ -35,7 +33,7 @@
 
 <Button {buttonText} onclick={() => (open = true)} />
 
-<Dialog bind:open title={dialogTitle} {description}>
+<Dialog bind:open title={dialogTitle}>
   <div class="dialog-body">
     <Tabs tab1Label="Tab 1 label" tab2Label="Tab 2 label">
       {#snippet tabContent1()}

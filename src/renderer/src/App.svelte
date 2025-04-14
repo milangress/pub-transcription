@@ -300,9 +300,9 @@
   />
 </div>
 
-<Dialog buttonText="Open Dialog" dialogTitle="Account settings">
-  <p>Additional dialog content here...</p>
-</Dialog>
+<!-- <RenderScan /> -->
+
+<Dialog buttonText="Open Dialog" dialogTitle="Account settings"></Dialog>
 
 <WhisperManagerDialog />
 <main>
