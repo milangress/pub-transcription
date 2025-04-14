@@ -13,6 +13,82 @@ class SettingsStore {
   #editorCssStorage = useCodeElectronStorage('editorCss', defaultInlineStyle);
   #svgFiltersStorage = useCodeElectronStorage('svgFilters', defaultSvgFilters);
 
+  editorCssBySelector = $derived.by(() => {
+    const css = this.editorCss;
+    const result: Record<string, string[]> = {};
+
+    // Use regex to split on closing braces followed by optional whitespace
+    const blocks = css.split(/}\s*/);
+
+    for (const block of blocks) {
+      // Skip empty blocks
+      if (!block.trim()) continue;
+
+      // Split each block into selector and properties
+      const [selectorPart, ...propertiesParts] = block.split('{');
+      if (!selectorPart || !propertiesParts.length) continue;
+
+      const selector = selectorPart.trim();
+      const propertiesStr = propertiesParts.join('{'); // Rejoin in case there were '{' in the properties
+
+      // Split properties into lines and process each line
+      const cleanedProperties = propertiesStr
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(
+          (line) =>
+            line && // Remove empty lines
+            !line.startsWith('//') && // Remove comment lines
+            !line.match(/^\s*\/\//), // Remove lines that start with whitespace followed by comments
+        );
+
+      if (cleanedProperties.length) {
+        result[selector] = cleanedProperties;
+      }
+    }
+
+    return result;
+  });
+
+  // Transform SASS variables in a CSS string to their computed values
+  transformSassToCSS(lines: string[]): string[] {
+    if (!lines?.length) return [];
+
+    // If no controller settings, return cleaned lines
+    if (!this.#controllerSettings?.length) return lines;
+
+    // Create a variable lookup map for faster access
+    const varMap = new Map(this.#controllerSettings.map((setting) => [setting.var, setting.value]));
+
+    // Process each line that contains variables
+    return lines.map((line) => {
+      if (!line.includes('$')) return line;
+
+      // Process variable replacements efficiently
+      // Handle both $var and $var * value patterns in a single pass
+      return line.replace(
+        /\$([a-zA-Z0-9_]+)(?:\s*\*\s*([\d.]+)([a-z%]+)?)?/g,
+        (match, varName, multiplier, unit) => {
+          const value = varMap.get(varName);
+          if (value === undefined) return match; // Keep original if var not found
+
+          if (multiplier !== undefined) {
+            const calculated = value * parseFloat(multiplier);
+            return unit ? calculated + unit : calculated.toString();
+          }
+
+          return value.toString();
+        },
+      );
+    });
+  }
+
+  // Computed CSS for .el selector with variables replaced
+  editorCssElCompiled = $derived.by(() => {
+    const elProperties = this.editorCssBySelector['.el'] || [];
+    return this.transformSassToCSS(elProperties);
+  });
+
   set controllerSettings(value: ControllerSetting[]) {
     this.#controllerSettings = value;
   }

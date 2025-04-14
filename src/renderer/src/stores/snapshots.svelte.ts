@@ -2,7 +2,7 @@ import { IpcEmitter } from '@electron-toolkit/typed-ipc/renderer';
 import type { SettingsSnapshot, SettingsSnapshotListResponse } from 'src/types';
 import type { IpcEvents } from 'src/types/ipc';
 import { v4 as uuidv4 } from 'uuid';
-import { mergeInlineStyles } from '../utils/styleMerger';
+import { mergeInlineStyles } from '../utils/cssStringHelper';
 import { remoteSettings } from './remoteSettings.svelte';
 import { settings } from './settings.svelte';
 

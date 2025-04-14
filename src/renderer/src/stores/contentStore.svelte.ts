@@ -12,6 +12,8 @@ class ContentStore {
   #currentPrediction = $state<TxtObject | null>(null);
   #committedContent = $state<TxtObject[]>([]);
 
+  #predictionCounter = $state(0);
+
   #silencePatterns = $state([
     '[ Silence ]',
     '[silence]',
@@ -34,6 +36,7 @@ class ContentStore {
 
   updatePrediction(data: WhisperStreamOutput): void {
     if (data.type !== 'prediction') return;
+    this.#predictionCounter++;
 
     if (this.#currentPrediction) {
       this.#currentPrediction.content = data.text;
@@ -60,6 +63,7 @@ class ContentStore {
   commitPrediction(prediction: TxtObject): void {
     if (!prediction) return;
     if (this.isSilenceOrNoise(prediction.content)) return;
+    this.#predictionCounter = 0;
 
     console.log('👀 [Commit]', prediction.content);
 
@@ -80,6 +84,10 @@ class ContentStore {
 
   removeItem(id: number): void {
     this.#committedContent = this.#committedContent.filter((item) => item.id !== id);
+  }
+
+  get predictionCounter(): number {
+    return this.#predictionCounter;
   }
 }
 
