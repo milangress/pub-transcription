@@ -29,6 +29,14 @@ try {
     stdio: 'inherit',
     cwd: ROOT_DIR,
   });
+  execSync('git submodule update --remote', {
+    stdio: 'inherit',
+    cwd: ROOT_DIR,
+  });
+  execSync('git diff --submodule', {
+    stdio: 'inherit',
+    cwd: ROOT_DIR,
+  });
 
   // Change to whisper.cpp directory
   process.chdir(WHISPER_DIR);
