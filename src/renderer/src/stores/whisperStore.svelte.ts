@@ -63,51 +63,64 @@ class WhisperStore {
   }
 
   // Public getters
-  get devices() {
+  get devices(): AudioDevice[] {
     return this.#devices;
   }
-  get params() {
+  get params(): WhisperParams {
     return this.#params;
   }
-  get transcriptionLines() {
+  get transcriptionLines(): string[] {
     return this.#transcriptionLines;
   }
-  get statusMessages() {
+  get statusMessages(): string[] {
     return this.#statusMessages;
   }
 
+  get captureIdString(): string {
+    return String('#' + this.#params.capture_id);
+  }
+  set captureIdString(value: string) {
+    this.#params.capture_id = parseInt(value.replace('#', ''));
+  }
+  get deviceOptionsObject(): { value: string; label: string }[] {
+    return this.#devices.map((device) => ({
+      value: '#' + device.id.toString(),
+      label: `(${device.id}) ${device.name}`,
+    }));
+  }
+
   // Actions
-  addTranscriptionLine(line: string) {
+  addTranscriptionLine(line: string): void {
     this.#transcriptionLines = [...this.#transcriptionLines, line];
   }
 
-  addStatusMessage(message: string) {
+  addStatusMessage(message: string): void {
     this.#statusMessages = [...this.#statusMessages, message];
   }
 
-  clearTranscriptionLines() {
+  clearTranscriptionLines(): void {
     this.#transcriptionLines = [];
   }
 
-  clearStatusMessages() {
+  clearStatusMessages(): void {
     this.#statusMessages = [];
   }
 
-  clearAllLogs() {
+  clearAllLogs(): void {
     this.clearTranscriptionLines();
     this.clearStatusMessages();
   }
 
   // IPC Methods
-  async startStream(config: Partial<WhisperParams>) {
-    await this.#emitter.invoke('whisper:start', config);
+  async startStream(): Promise<void> {
+    await this.#emitter.invoke('whisper:start', this.#params);
   }
 
-  async stopStream() {
+  async stopStream(): Promise<void> {
     await this.#emitter.invoke('whisper:stop');
   }
 
-  async reloadAudioDevicesAndParams() {
+  async reloadAudioDevicesAndParams(): Promise<void> {
     try {
       const response = await this.#emitter.invoke('whisper:get-init-object');
       if (response) {
@@ -159,7 +172,7 @@ class WhisperStore {
       }
     });
 
-    return () => {
+    return (): void => {
       removeTranscriptionListener();
       removeStatusListener();
     };
