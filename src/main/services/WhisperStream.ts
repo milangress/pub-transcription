@@ -61,13 +61,13 @@ export class WhisperStreamManager {
     // Only store options that differ from defaults
     this.options = {
       model: ggmlModelSmallEnQ51Bin,
-      n_threads: 8, // Different from default
-      step_ms: 800, // Different from default
-      length_ms: 5000, // Different from default
-      keep_ms: 300, // Different from default
-      max_tokens: 64, // Different from default
-      save_audio: true, // Different from default
-      json_output: true, // Different from default
+      n_threads: 8,
+      step_ms: 800,
+      length_ms: 5000,
+      keep_ms: 300,
+      max_tokens: 64,
+      save_audio: true,
+      json_output: true,
     };
   }
 
@@ -280,6 +280,14 @@ export class WhisperStreamManager {
     ls.stdout?.on('data', (data) => {
       try {
         const parsed = parseStdout(data.toString());
+        if (parsed.type === 'transcription') {
+          console.log('Final: ', parsed.text);
+        } else if (parsed.type === 'prediction') {
+          console.log('Pred: ', parsed.text);
+        } else {
+          console.log('Unkn?: ', parsed.type);
+        }
+
         this.sendToWindow('whisper-ccp-stream:transcription', parsed);
       } catch (error) {
         whisperLogger.error(`Failed to process stdout: ${error}`, data);

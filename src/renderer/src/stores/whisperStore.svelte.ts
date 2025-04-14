@@ -167,7 +167,7 @@ class WhisperStore {
     if (data.type === 'transcription') {
       // Check if the transcription contains silence or noise patterns
       if (!this.isSilenceOrNoise(data.text)) {
-        // Regular transcription handling
+        console.log('👀 Final transcription', data.text);
         contentStore.commitPrediction();
         contentStore.updatePrediction(
           data.text,
@@ -175,6 +175,7 @@ class WhisperStore {
           settings.controllerValues,
         );
       } else {
+        console.log('👀 Silence or Noise', data.text);
         // Silence or Noise: Just update the current prediction
         contentStore.updatePrediction(
           data.text,
@@ -188,6 +189,7 @@ class WhisperStore {
         contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
       }
     } else if (data.type === 'prediction') {
+      console.log('👀 Prediction', data.text);
       // Just update the current prediction
       contentStore.updatePrediction(data.text, remoteSettings.editorCss, settings.controllerValues);
     } else {
