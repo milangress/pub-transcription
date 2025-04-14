@@ -1,6 +1,5 @@
 import { BrowserWindow, app } from 'electron';
 import { join } from 'path';
-import icon from '../../../resources/favicon.png?asset';
 import { printQueue } from '../print/PrintQueue';
 import { isDev } from '../utils/helper';
 import { windowLogger } from '../utils/logger';
@@ -23,16 +22,12 @@ export class MainWindow {
     const options = {
       width: 1200,
       height: 950,
-      titleBarStyle: 'hidden',
+      titleBarStyle: 'hidden' as const,
+      show: true,
       webPreferences: {
-        titleBarStyle: {
-          hiddenInset: true,
-        },
         nodeIntegration: true,
         preload: join(__dirname, '../preload/index.js'),
       },
-      icon,
-      show: false,
     };
 
     this.mainWindow = new BrowserWindow(options);
