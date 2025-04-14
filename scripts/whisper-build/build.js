@@ -74,9 +74,11 @@ try {
 
     // Make executable
     execSync(`chmod +x "${path.join(LIB_DIR, 'whisper-stream')}"`, { stdio: 'inherit' });
+    execSync(`"${path.join(LIB_DIR, 'whisper-stream')}" --version`, { stdio: 'inherit' });
   } else if (platform === 'win32') {
     // Windows
     execSync('cmake -B build -DWHISPER_SDL2=ON', { stdio: 'inherit' });
+    console.log('Build completed successfully!');
     execSync('cmake --build build --config Release', { stdio: 'inherit' });
 
     // Copy binary to the resources/lib directory
@@ -100,6 +102,8 @@ try {
   console.log(
     `Binary located at: ${path.join(LIB_DIR, platform === 'win32' ? 'whisper-stream.exe' : 'whisper-stream')}`,
   );
+
+  execSync(`"${path.join(LIB_DIR, 'whisper-stream')}" --version`, { stdio: 'inherit' });
 } catch (error) {
   console.error('Build failed:', error);
   process.exit(1);
