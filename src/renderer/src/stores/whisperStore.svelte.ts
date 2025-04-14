@@ -146,7 +146,7 @@ class WhisperStore {
       const currentPrediction = contentStore.currentPrediction;
       if (currentPrediction) {
         console.log('👀 [Final]');
-        await contentStore.commitPrediction();
+        contentStore.commitPrediction(currentPrediction);
       }
       console.log('🪱', contentStore.committedContent);
     } else {

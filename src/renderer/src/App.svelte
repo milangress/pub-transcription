@@ -306,10 +306,10 @@
 
 <WhisperManagerDialog />
 <main>
-  {#if contentStore.committedContent.length > 0}
-    <div class={mode === 'mini' ? 'print-context-mini' : 'print-context'}>
-      <page size="A3" id="page">
-        <div class="content-context">
+  <div class={mode === 'mini' ? 'print-context-mini' : 'print-context'}>
+    <page size="A3" id="page">
+      <div class="content-context">
+        {#if contentStore.committedContent.length > 0}
           {#each contentStore.committedContent as item (item.id)}
             <item.type
               content={item.content}
@@ -318,28 +318,28 @@
               onOverflow={() => handleOverflow(item)}
             />
           {/each}
-          {#if !isPrinting && contentStore.currentPrediction}
-            <contentStore.currentPrediction.type
-              content={contentStore.currentPrediction.content}
-              editorCss={contentStore.currentPrediction.editorCss}
-              controllerValues={settings.controllerValues}
-              isCurrent
-            />
-          {/if}
-          <div
-            class="page-number #num"
-            style="position: absolute; bottom: 1em; right: 1em;font-size: 2rem;"
-          >
-            <BlockTxt
-              content={`${pageNumber}`}
-              editorCss={remoteSettings.editorCss}
-              controllerValues={settings.controllerValues}
-            />
-          </div>
+        {/if}
+        {#if !isPrinting && contentStore.currentPrediction}
+          <contentStore.currentPrediction.type
+            content={contentStore.currentPrediction.content}
+            editorCss={contentStore.currentPrediction.editorCss}
+            controllerValues={settings.controllerValues}
+            isCurrent
+          />
+        {/if}
+        <div
+          class="page-number #num"
+          style="position: absolute; bottom: 1em; right: 1em;font-size: 2rem;"
+        >
+          <BlockTxt
+            content={`${pageNumber}`}
+            editorCss={remoteSettings.editorCss}
+            controllerValues={settings.controllerValues}
+          />
         </div>
-      </page>
-    </div>
-  {/if}
+      </div>
+    </page>
+  </div>
 
   {#if mode === 'full'}
     <div class="print-non" class:printFailed={!isSuccessfulPrint}>

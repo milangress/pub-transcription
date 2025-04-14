@@ -57,26 +57,19 @@ class ContentStore {
     );
   }
 
-  async commitPrediction(): Promise<boolean> {
-    return new Promise((resolve) => {
-      if (!this.#currentPrediction) return resolve(false);
-      if (this.isSilenceOrNoise(this.#currentPrediction.content)) return resolve(false);
+  commitPrediction(prediction: TxtObject): void {
+    if (!prediction) return;
+    if (this.isSilenceOrNoise(prediction.content)) return;
 
-      console.log('👀 [Commit]', this.#currentPrediction.content);
+    console.log('👀 [Commit]', prediction.content);
 
-      const committed = {
-        ...this.#currentPrediction,
-        editorCss: $state.snapshot(remoteSettings.editorCss),
-        controllerValues: $state.snapshot(settings.controllerValues),
-      };
+    const committed = {
+      ...prediction,
+      editorCss: $state.snapshot(remoteSettings.editorCss),
+      controllerValues: $state.snapshot(settings.controllerValues),
+    };
 
-      this.#committedContent = [...this.#committedContent, committed];
-      this.#currentPrediction = null;
-
-      setTimeout(() => {
-        return resolve(true);
-      }, 50);
-    });
+    this.#committedContent.push(committed);
   }
 
   // Additional helper methods
