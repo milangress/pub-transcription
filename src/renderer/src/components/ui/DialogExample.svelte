@@ -11,11 +11,11 @@
 
   type Props = {
     buttonText: string;
-    title: string;
+    dialogTitle: string;
     description: Snippet;
   };
 
-  let { buttonText, title, description }: Props = $props();
+  let { buttonText, dialogTitle, description }: Props = $props();
 
   let open = $state(false);
   const items = [
@@ -35,7 +35,7 @@
 
 <Button {buttonText} onclick={() => (open = true)} />
 
-<Dialog bind:open {title} {description}>
+<Dialog bind:open title={dialogTitle} {description}>
   <div class="dialog-body">
     <Tabs tab1Label="Tab 1 label" tab2Label="Tab 2 label">
       {#snippet tabContent1()}

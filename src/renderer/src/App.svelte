@@ -24,11 +24,6 @@
   const ipc = new IpcListener<IpcRendererEvent>();
   const emitter = new IpcEmitter<IpcEvents>();
 
-  // Only Contains the final sentences
-  let committedContent = $state<TxtObject[]>([]);
-
-  let currentSentence = $state<TxtObject>({} as TxtObject);
-
   let fontFamilys = $state<FontFamily[]>([
     { name: 'Garamondt-Regular' },
     { name: 'American Typewriter' },
@@ -67,8 +62,6 @@
       snapshots.loadSnapshots().catch(console.error);
     }
   });
-
-  let currentContentList = $derived([...committedContent, currentSentence]);
 
   // Update the style tag in the header when editorCss changes from remote
   $effect(() => {
@@ -268,11 +261,6 @@
     }
   });
 
-  function clearAll(): void {
-    console.log('🗑️ Clearing all content');
-    committedContent = [];
-  }
-
   // Function to open editor window for either CSS or SVG filters
   async function openEditor(language: 'css' | 'html'): Promise<void> {
     try {
@@ -312,17 +300,13 @@
   />
 </div>
 
-<Dialog
-  buttonText="Open Dialog"
-  title="Account settings"
-  description={() => 'Manage your account settings and preferences.'}
->
+<Dialog buttonText="Open Dialog" dialogTitle="Account settings">
   <p>Additional dialog content here...</p>
 </Dialog>
 
 <WhisperManagerDialog />
 <main>
-  {#if currentContentList.length > 0}
+  {#if contentStore.committedContent.length > 0}
     <div class={mode === 'mini' ? 'print-context-mini' : 'print-context'}>
       <page size="A3" id="page">
         <div class="content-context">
@@ -383,7 +367,7 @@
         <div class="printControls">
           <button onclick={printFile}>PRINT</button>
           <input id="pageNumberInput" bind:value={pageNumber} type="number" />
-          <button onclick={clearAll}>CLEAR ALL</button>
+          <button onclick={() => contentStore.clearContent()}>CLEAR ALL</button>
           <button onclick={() => emitter.invoke('open-pdf-folder')}> OPEN PDFs FOLDER </button>
           <input bind:value={printerSettings.deviceName} type="text" disabled />
           <label><input bind:checked={printerSettings.yes} type="checkbox" />Force Print</label>
