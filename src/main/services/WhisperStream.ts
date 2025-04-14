@@ -280,7 +280,7 @@ export class WhisperStreamManager {
     ls.stdout?.on('data', (data) => {
       try {
         const parsed = parseStdout(data.toString());
-        if (parsed.type === 'transcription') {
+        if (parsed.type === 'segment_final') {
           console.log('Final: ', parsed.text);
         } else if (parsed.type === 'prediction') {
           console.log('Pred: ', parsed.text);
