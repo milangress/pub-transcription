@@ -20,6 +20,10 @@ export function setupWhisperStreamIPC(): void {
     }
   });
 
+  ipc.handle('whisper:is-running', async () => {
+    return whisperStreamManager.isRunning();
+  });
+
   ipc.handle('whisper:get-params', async () => {
     return whisperStreamManager.getParams();
   });

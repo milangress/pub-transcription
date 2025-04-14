@@ -55,6 +55,7 @@ export type IpcEvents =
       'whisper:start': (config: Partial<ParamsType>) => Promise<boolean>;
       'whisper:stop': () => Promise<boolean>;
       'whisper:get-params': () => Promise<Partial<ParamsType>>;
+      'whisper:is-running': () => Promise<boolean>;
     };
 
 // Renderer ipc events (from main to renderer)

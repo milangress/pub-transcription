@@ -8,14 +8,12 @@
   import CodeEditor from '@components/codeEditor/CodeEditor.svelte';
   import BlockTxt from '@components/pageElement/BlockTxt.svelte';
   import TransInfoMessagesLog from '@components/status/TransInfoMessagesLog.svelte';
-  import log from 'electron-log/renderer';
   import type { FontFamily, TxtObject } from '../src/types';
   import { contentStore } from './stores/contentStore.svelte';
 
   import type { PrintRequest, PrintTask } from 'src/types';
 
   import WhisperManagerDialog from '@/components/managers/WhisperManagerDialog.svelte';
-  import type { SvelteComponent } from 'svelte';
   import { tick } from 'svelte';
   import { WebMidi } from 'webmidi';
 
@@ -23,15 +21,11 @@
   import TitleBar from '@components/ui/TitleBar.svelte';
   import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
   import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
-  import type { WhisperStreamOutput } from 'src/types/whisperParser';
   const ipc = new IpcListener<IpcRendererEvent>();
   const emitter = new IpcEmitter<IpcEvents>();
 
   // Only Contains the final sentences
   let committedContent = $state<TxtObject[]>([]);
-
-  // Contains all incoming TTS sentences
-  let allIncomingTTSMessages = $state<string[]>([]);
 
   let currentSentence = $state<TxtObject>({} as TxtObject);
 
@@ -75,45 +69,6 @@
   });
 
   let currentContentList = $derived([...committedContent, currentSentence]);
-
-  ipc.on('whisper-ccp-stream:transcription', (_, value) => {
-    allIncomingTTSMessages = [value, ...allIncomingTTSMessages];
-
-    console.log('🔊 Incoming TTS message:', value);
-    if (isHandlingOverflow) {
-      log.warn('Overflow handling in progress, discarding:', value);
-      return;
-    }
-
-    // Handle the transcription using our new function
-    handleTranscription(value);
-  });
-
-  function handleTranscription(data: WhisperStreamOutput): void {
-    if (data.type === 'transcription') {
-      // Only commit if it's not in the unwanted list
-      log.info('Committing:', data.text);
-      // Commit the current prediction
-      contentStore.commitPrediction();
-
-      contentStore.updatePrediction(data.text, remoteSettings.editorCss, settings.controllerValues);
-
-      // Set the component type if we have a current prediction
-      if (contentStore.currentPrediction) {
-        contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
-      }
-    } else if (data.type === 'prediction') {
-      // Just update the current prediction
-      contentStore.updatePrediction(data.text, remoteSettings.editorCss, settings.controllerValues);
-
-      // Set the component type if we have a current prediction
-      if (contentStore.currentPrediction) {
-        contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
-      }
-    } else {
-      console.log('👀 unknown transcription type', data);
-    }
-  }
 
   // Update the style tag in the header when editorCss changes from remote
   $effect(() => {
@@ -357,11 +312,11 @@
   />
 </div>
 
-<Dialog buttonText="Open Dialog" title="Account settings">
-  {#snippet description()}
-    Manage your account settings and preferences.
-  {/snippet}
-
+<Dialog
+  buttonText="Open Dialog"
+  title="Account settings"
+  description={() => 'Manage your account settings and preferences.'}
+>
   <p>Additional dialog content here...</p>
 </Dialog>
 

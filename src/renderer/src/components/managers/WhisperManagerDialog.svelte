@@ -13,7 +13,7 @@
 
   $effect(() => {
     if (open) {
-      whisperStore.reloadAudioDevices();
+      whisperStore.reloadInfo();
     }
   });
   $effect(() => {
@@ -196,7 +196,7 @@
       <Button
         buttonText="Reload Devices"
         variant="outline"
-        onclick={() => whisperStore.reloadAudioDevices()}
+        onclick={() => whisperStore.reloadInfo()}
       />
       <div class="spacer"></div>
       <Button buttonText="Stop" variant="destructive" onclick={stopStream} />
