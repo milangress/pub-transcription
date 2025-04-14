@@ -5,7 +5,7 @@ import type { SvelteComponent } from 'svelte';
 import type {
   DeviceType,
   ParamsType,
-  TranscriptionType,
+  PredictionType,
   WhisperStreamOutput,
 } from '../../../types/whisperParser';
 import { contentStore } from './contentStore.svelte';
@@ -44,19 +44,7 @@ class WhisperStore {
   });
   #miniLogs = $state<string[]>([]);
 
-  #transcriptions = $state<TranscriptionType[]>([]);
-
-  #silencePatterns = $state([
-    '[ Silence ]',
-    '[silence]',
-    '[BLANK_AUDIO]',
-    '[ [ [ [',
-    '[ [ [',
-    '[ [',
-    '(buzzer)',
-    '(buzzing)',
-    '.',
-  ]);
+  #transcriptions = $state<PredictionType[]>([]);
 
   #isHandlingOverflow = $state(false);
 
@@ -64,7 +52,7 @@ class WhisperStore {
     this.setupIpcListeners();
   }
 
-  get transcriptions(): TranscriptionType[] {
+  get transcriptions(): PredictionType[] {
     return this.#transcriptions;
   }
   get devices(): DeviceType[] {
@@ -152,31 +140,17 @@ class WhisperStore {
     }
   }
 
-  private isSilenceOrNoise(text: string): boolean {
-    return this.#silencePatterns.some((pattern) =>
-      text.toLowerCase().includes(pattern.toLowerCase()),
-    );
-  }
-
-  private handleTranscription(data: WhisperStreamOutput): void {
+  private async handleTranscription(data: WhisperStreamOutput): Promise<void> {
     if (this.#isHandlingOverflow) {
       console.warn('Overflow handling in progress, discarding:', data);
       return;
     }
 
-    if (data.type === 'transcription') {
-      // Check if the transcription contains silence or noise patterns
-      if (!this.isSilenceOrNoise(data.text)) {
-        console.log('👀 Final transcription', data.text);
-        contentStore.commitPrediction();
-        contentStore.updatePrediction(
-          data.text,
-          remoteSettings.editorCss,
-          settings.controllerValues,
-        );
-      } else {
-        console.log('👀 Silence or Noise', data.text);
-        // Silence or Noise: Just update the current prediction
+    if (data.type === 'segment_final') {
+      const currentPrediction = contentStore.currentPrediction;
+      if (currentPrediction) {
+        await contentStore.commitPrediction();
+
         contentStore.updatePrediction(
           data.text,
           remoteSettings.editorCss,
@@ -203,8 +177,8 @@ class WhisperStore {
       (_, data: WhisperStreamOutput) => {
         this.#isStreaming = true;
         this.handleTranscription(data);
-        if (data.type === 'transcription') {
-          this.addMiniLog(data.text);
+        if (data.type === 'segment_final') {
+          this.addMiniLog(contentStore.currentPrediction?.content ?? '');
         }
       },
     );

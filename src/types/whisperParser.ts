@@ -100,19 +100,19 @@ const ParamsOutputSchema = z.object({
   params: ParamsSchema,
 });
 
-const TranscriptionBaseSchema = z.object({
+const segmentFinalBaseSchema = z.object({
   iter: z.number(),
   iter_start_ms: z.number(),
   segments: z.array(SegmentSchema),
   text: z.string(),
 });
 
-const PredictionSchema = TranscriptionBaseSchema.extend({
+const PredictionSchema = segmentFinalBaseSchema.extend({
   type: z.literal('prediction'),
 });
 
-const TranscriptionSchema = TranscriptionBaseSchema.extend({
-  type: z.literal('transcription'),
+const segmentFinalSchema = segmentFinalBaseSchema.extend({
+  type: z.literal('segment_final'),
 });
 
 // Combined schema for all possible output types
@@ -123,7 +123,7 @@ export const WhisperStreamOutputSchema = z.discriminatedUnion('type', [
   StderrSchema,
   ParamsOutputSchema,
   PredictionSchema,
-  TranscriptionSchema,
+  segmentFinalSchema,
 ]);
 
 // Define TypeScript types from schemas
@@ -138,7 +138,7 @@ export type StdoutType = z.infer<typeof StdoutSchema>;
 export type StderrType = z.infer<typeof StderrSchema>;
 export type ParamsOutputType = z.infer<typeof ParamsOutputSchema>;
 export type PredictionType = z.infer<typeof PredictionSchema>;
-export type TranscriptionType = z.infer<typeof TranscriptionSchema>;
+export type segmentFinalType = z.infer<typeof segmentFinalSchema>;
 export type WhisperStreamOutput = z.infer<typeof WhisperStreamOutputSchema>;
 
 /**
@@ -199,12 +199,12 @@ export function isOutputType<T extends WhisperStreamOutput['type']>(
 }
 
 /**
- * Helper function to get all transcriptions from an array of outputs
+ * Helper function to get all final segments from an array of outputs
  * @param outputs Array of parsed outputs
- * @returns Array of transcription objects
+ * @returns Array of final segment objects
  */
-export function getTranscriptions(outputs: WhisperStreamOutput[]): TranscriptionType[] {
-  return outputs.filter((output): output is TranscriptionType => output.type === 'transcription');
+export function getFinalSegments(outputs: WhisperStreamOutput[]): segmentFinalType[] {
+  return outputs.filter((output): output is segmentFinalType => output.type === 'segment_final');
 }
 
 /**
@@ -214,15 +214,4 @@ export function getTranscriptions(outputs: WhisperStreamOutput[]): Transcription
  */
 export function getPredictions(outputs: WhisperStreamOutput[]): PredictionType[] {
   return outputs.filter((output): output is PredictionType => output.type === 'prediction');
-}
-
-/**
- * Helper function to get the combined text from all transcriptions
- * @param outputs Array of parsed outputs
- * @returns The combined transcription text
- */
-export function getCombinedTranscriptionText(outputs: WhisperStreamOutput[]): string {
-  return getTranscriptions(outputs)
-    .map((transcription) => transcription.text)
-    .join(' ');
 }

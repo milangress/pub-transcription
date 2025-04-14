@@ -8,6 +8,18 @@ class ContentStore {
   #currentPrediction = $state<TxtObject | null>(null);
   #committedContent = $state<TxtObject[]>([]);
 
+  #silencePatterns = $state([
+    '[ Silence ]',
+    '[silence]',
+    '[BLANK_AUDIO]',
+    '[ [ [ [',
+    '[ [ [',
+    '[ [',
+    '(buzzer)',
+    '(buzzing)',
+    '.',
+  ]);
+
   get currentPrediction(): TxtObject | null {
     return this.#currentPrediction;
   }
@@ -38,22 +50,35 @@ class ContentStore {
       };
     }
   }
-  commitPrediction(): void {
-    if (!this.#currentPrediction) return;
+  private isSilenceOrNoise(text: string): boolean {
+    return this.#silencePatterns.some((pattern) =>
+      text.toLowerCase().includes(pattern.toLowerCase()),
+    );
+  }
 
-    // Create a frozen copy with snapshot of controller values and editorCss
-    const committed = {
-      ...this.#currentPrediction,
-      // Take snapshots of the current values
-      editorCss: $state.snapshot(this.#currentPrediction.editorCss),
-      controllerValues: $state.snapshot(this.#currentPrediction.controllerValues),
-      id: Math.random(),
-    };
+  async commitPrediction(): Promise<boolean> {
+    return new Promise((resolve) => {
+      if (!this.#currentPrediction) return resolve(false);
+      if (this.isSilenceOrNoise(this.#currentPrediction.content)) return resolve(false);
 
-    // Add to committed content
-    this.#committedContent = [...this.#committedContent, committed];
-    // Reset prediction
-    this.#currentPrediction = null;
+      // Create a frozen copy with snapshot of controller values and editorCss
+      const committed = {
+        ...this.#currentPrediction,
+        // Take snapshots of the current values
+        editorCss: $state.snapshot(this.#currentPrediction.editorCss),
+        controllerValues: $state.snapshot(this.#currentPrediction.controllerValues),
+        id: Math.random(),
+      };
+
+      // Add to committed content
+      this.#committedContent = [...this.#committedContent, committed];
+      // Reset prediction
+      this.#currentPrediction = null;
+
+      setTimeout(() => {
+        return resolve(true);
+      }, 50);
+    });
   }
 
   // Additional helper methods
