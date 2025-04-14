@@ -1,13 +1,26 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
-
+  import { untrack, type Snippet } from 'svelte';
+  import { useDebounce } from '../hooks/useDebounce.svelte';
   type Props = {
     rows?: number;
     lines: string[];
     header?: Snippet;
   };
 
-  let { rows = 10, lines, header }: Props = $props();
+  let { rows = 10, header, lines }: Props = $props();
+
+  let debouncedLogLines = useDebounce(lines, 500);
+
+  export function setLines(newLines: string[]) {
+    debouncedLogLines.update(newLines);
+  }
+  $effect(() => {
+    if (lines) {
+      untrack(() => {
+        setLines(lines);
+      });
+    }
+  });
 
   // Container refs for virtual scrolling
   let containerRef = $state<HTMLDivElement | null>(null);
@@ -22,26 +35,26 @@
 
   // Calculate visible range
   const visibleLines = $derived.by(() => {
-    if (!lineHeight) return { start: 0, end: lines.length };
+    if (!lineHeight) return { start: 0, end: debouncedLogLines.value.length };
 
     const visibleRows = Math.ceil(containerHeight / lineHeight);
     const bufferRows = Math.ceil(visibleRows / 2); // Add half a page as buffer
 
     const startIndex = Math.max(0, Math.floor(scrollTop / lineHeight) - bufferRows);
     const endIndex = Math.min(
-      lines.length,
+      debouncedLogLines.value.length,
       Math.ceil((scrollTop + containerHeight) / lineHeight) + bufferRows,
     );
 
     return {
       start: startIndex,
       end: endIndex,
-      isNearBottom: lines.length - endIndex < 1,
+      isNearBottom: debouncedLogLines.value.length - endIndex < 1,
     };
   });
 
   $effect(() => {
-    checkForNewMessages(lines.length);
+    checkForNewMessages(debouncedLogLines.value.length);
   });
 
   function checkForNewMessages(linesLenght: number) {
@@ -53,7 +66,7 @@
   // Calculate padding to maintain scroll position
   const padding = $derived.by(() => ({
     top: visibleLines.start * lineHeight,
-    bottom: (lines.length - visibleLines.end) * lineHeight,
+    bottom: (debouncedLogLines.value.length - visibleLines.end) * lineHeight,
   }));
 
   // Handle scroll events
@@ -121,7 +134,7 @@
     style:padding-bottom="{padding.bottom}px"
     use:initMeasurements
   >
-    {#each lines.slice(visibleLines.start, visibleLines.end) as line, i (visibleLines.start + i)}
+    {#each debouncedLogLines.value.slice(visibleLines.start, visibleLines.end) as line, i (visibleLines.start + i)}
       <div class="log-line">
         {line}
       </div>
@@ -131,8 +144,8 @@
 
 <style>
   .log-output {
-    background-color: #000;
-    color: #fff;
+    background-color: rgb(255, 255, 255);
+    color: #000000;
     font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', monospace;
     font-size: var(--font-size-sm);
     line-height: 1.5;
@@ -168,20 +181,23 @@
 
   /* Style scrollbar for better visibility */
   .log-output::-webkit-scrollbar {
-    width: 12px;
+    width: 16px;
   }
 
   .log-output::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: transparent;
+    border-left: 1px solid var(--border-color);
   }
 
   .log-output::-webkit-scrollbar-thumb {
-    background-color: #333;
-    border: 3px solid #1a1a1a;
+    background-color: var(--accent-color);
+    border: 3px solid var(--accent-color);
     border-radius: 6px;
+    width: 16px;
+    height: 23px;
   }
 
   .log-output::-webkit-scrollbar-thumb:hover {
-    background-color: #444;
+    background-color: var(--accent-color-hover);
   }
 </style>

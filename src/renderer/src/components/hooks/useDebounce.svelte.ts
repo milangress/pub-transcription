@@ -1,16 +1,16 @@
-export const useDebounce = (
-  initialValue: unknown,
+export const useDebounce = <T>(
+  initialValue: T,
   delay: number = 250,
 ): {
-  value: unknown;
-  update: (newValue: unknown) => void;
+  value: T;
+  update: (newValue: T) => void;
   loading: boolean;
 } => {
   let timeout = $state<ReturnType<typeof setTimeout> | null>(null);
-  let value = $state<unknown>(initialValue);
+  let value = $state<T>(initialValue);
   let loading = $state<boolean>(false);
 
-  const update = (newValue: unknown): void => {
+  const update = (newValue: T): void => {
     if (timeout) clearTimeout(timeout);
     loading = true;
 
@@ -21,7 +21,7 @@ export const useDebounce = (
   };
 
   return {
-    get value(): unknown {
+    get value(): T {
       return value;
     },
     update,

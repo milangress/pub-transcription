@@ -1,7 +1,5 @@
-import BlockTxt from '@components/pageElement/BlockTxt.svelte';
 import { IpcEmitter, IpcListener } from '@electron-toolkit/typed-ipc/renderer';
 import type { IpcEvents, IpcRendererEvent } from 'src/types/ipc';
-import type { SvelteComponent } from 'svelte';
 import type {
   DeviceType,
   ParamsType,
@@ -9,8 +7,6 @@ import type {
   WhisperStreamOutput,
 } from '../../../types/whisperParser';
 import { contentStore } from './contentStore.svelte';
-import { remoteSettings } from './remoteSettings.svelte.ts';
-import { settings } from './settings.svelte.js';
 
 class WhisperStore {
   #isStreaming = $state(false);
@@ -149,25 +145,17 @@ class WhisperStore {
     if (data.type === 'segment_final') {
       const currentPrediction = contentStore.currentPrediction;
       if (currentPrediction) {
+        console.log('👀 [Final]');
         await contentStore.commitPrediction();
-
-        contentStore.updatePrediction(
-          data.text,
-          remoteSettings.editorCss,
-          settings.controllerValues,
-        );
       }
-
-      // Set the component type if we have a current prediction
-      if (contentStore.currentPrediction) {
-        contentStore.currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
-      }
-    } else if (data.type === 'prediction') {
-      console.log('👀 Prediction', data.text);
-      // Just update the current prediction
-      contentStore.updatePrediction(data.text, remoteSettings.editorCss, settings.controllerValues);
+      console.log('🪱', contentStore.committedContent);
     } else {
-      console.log('👀 unknown transcription type', data);
+      if (data.type === 'prediction') {
+        console.log('👀 Prediction', data);
+        contentStore.updatePrediction(data);
+      } else {
+        console.warn('👀 unknown transcription type', data);
+      }
     }
   }
 

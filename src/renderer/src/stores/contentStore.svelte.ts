@@ -1,5 +1,9 @@
+import BlockTxt from '@components/pageElement/BlockTxt.svelte';
 import type { TxtObject } from 'src/renderer/src/types';
 import type { SvelteComponent } from 'svelte';
+import type { WhisperStreamOutput } from '../../../types/whisperParser';
+import { remoteSettings } from './remoteSettings.svelte.ts';
+import { settings } from './settings.svelte.js';
 
 // We'll use direct component reference in the App.svelte
 // and create TxtObjects there with the proper component reference
@@ -28,28 +32,25 @@ class ContentStore {
     return this.#committedContent;
   }
 
-  updatePrediction(
-    text: string,
-    editorCss: string,
-    controllerValues: Record<string, number>,
-  ): void {
-    // Update the current prediction without creating a new object (no flickering)
+  updatePrediction(data: WhisperStreamOutput): void {
+    if (data.type !== 'prediction') return;
+
     if (this.#currentPrediction) {
-      this.#currentPrediction.content = text;
-      this.#currentPrediction.editorCss = editorCss;
-      // Keep using the global controllerValues for the prediction (remains reactive)
+      this.#currentPrediction.content = data.text;
+      this.#currentPrediction.editorCss = remoteSettings.editorCss;
+      this.#currentPrediction.controllerValues = settings.controllerValues;
+      this.#currentPrediction.type = BlockTxt as unknown as typeof SvelteComponent;
     } else {
-      // Create new prediction if it doesn't exist
       this.#currentPrediction = {
-        // Will be set in App.svelte
-        type: null as unknown as typeof SvelteComponent,
-        content: text,
-        editorCss,
-        controllerValues, // Reference to the global values
+        type: BlockTxt as unknown as typeof SvelteComponent,
+        content: data.text,
+        editorCss: remoteSettings.editorCss,
+        controllerValues: settings.controllerValues,
         id: Math.random(),
       };
     }
   }
+
   private isSilenceOrNoise(text: string): boolean {
     return this.#silencePatterns.some((pattern) =>
       text.toLowerCase().includes(pattern.toLowerCase()),
@@ -61,18 +62,15 @@ class ContentStore {
       if (!this.#currentPrediction) return resolve(false);
       if (this.isSilenceOrNoise(this.#currentPrediction.content)) return resolve(false);
 
-      // Create a frozen copy with snapshot of controller values and editorCss
+      console.log('👀 [Commit]', this.#currentPrediction.content);
+
       const committed = {
         ...this.#currentPrediction,
-        // Take snapshots of the current values
-        editorCss: $state.snapshot(this.#currentPrediction.editorCss),
-        controllerValues: $state.snapshot(this.#currentPrediction.controllerValues),
-        id: Math.random(),
+        editorCss: $state.snapshot(remoteSettings.editorCss),
+        controllerValues: $state.snapshot(settings.controllerValues),
       };
 
-      // Add to committed content
       this.#committedContent = [...this.#committedContent, committed];
-      // Reset prediction
       this.#currentPrediction = null;
 
       setTimeout(() => {
