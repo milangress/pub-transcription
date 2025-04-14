@@ -169,18 +169,21 @@ export class WhisperStreamManager {
         whisperLogger.debug(`getAudioDevices stdout: ${line}`);
         const [result, error] = jsonSafeParseWrap(line);
         if (error.Ok() && result && typeof result === 'object' && 'type' in result) {
+          whisperLogger.debug(`getAudioDevices stdout JSON: ${line}`);
           const response = result as WhisperInitResponse;
-          if (response.type === 'init' && Array.isArray(response.devices)) {
+          if (response.type === 'init') {
             initResponse = response;
             return resolve(response);
           }
+        } else {
+          whisperLogger.debug(`getAudioDevices JSON error: ${error}`, result);
         }
       });
 
-      ls.stderr.on('data', (data) => {
-        const line = new TextDecoder().decode(data);
-        whisperLogger.debug(`getAudioDevices stderr: ${line}`);
-      });
+      // ls.stderr.on('data', (data) => {
+      // const line = new TextDecoder().decode(data);
+      // whisperLogger.debug(`getAudioDevices stderr: ${line}`);
+      // });
 
       ls.on('error', (error: Error) => {
         whisperLogger.error(`getAudioDevices error: ${error.message}`);
@@ -188,9 +191,11 @@ export class WhisperStreamManager {
       });
 
       ls.on('close', (code: number | null) => {
-        if (!initResponse) {
-          reject(new Error(`Process exited with code ${code} without returning devices`));
-        }
+        setTimeout(() => {
+          if (!initResponse) {
+            reject(new Error(`Process exited with code ${code} without returning devices`));
+          }
+        }, 2000);
       });
 
       // Reset options

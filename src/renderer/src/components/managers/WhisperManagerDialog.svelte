@@ -10,31 +10,12 @@
 
   // State
   let open = $state(false);
-  let selectedDevice = $state<string>('-1'); // Default device
-  let isStreaming = $state(false);
 
-  async function startStopStream() {
-    if (isStreaming) {
-      try {
-        await whisperStore.stopStream();
-        isStreaming = false;
-        whisperStore.addStatusMessage('Stopped whisper stream');
-      } catch (error) {
-        whisperStore.addStatusMessage(`Error stopping stream: ${error}`);
-      }
-    } else {
-      try {
-        await whisperStore.startStream({
-          ...whisperStore.params,
-          capture_id: parseInt(selectedDevice),
-        });
-        isStreaming = true;
-        whisperStore.addStatusMessage('Started whisper stream');
-      } catch (error) {
-        whisperStore.addStatusMessage(`Error starting stream: ${error}`);
-      }
+  $effect(() => {
+    if (open) {
+      whisperStore.reloadAudioDevicesAndParams();
     }
-  }
+  });
 </script>
 
 <Button buttonText="Transcription Settings" onclick={() => (open = true)} />
@@ -51,8 +32,8 @@
           <div class="input-row">
             <label for="device-select">Microphone:</label>
             <Select
-              items={whisperStore.devices.map((d) => ({ value: d.id.toString(), label: d.name }))}
-              bind:value={selectedDevice}
+              items={whisperStore.deviceOptionsObject}
+              bind:value={whisperStore.captureIdString}
               type="single"
             />
           </div>
@@ -214,11 +195,8 @@
           onclick={() => whisperStore.reloadAudioDevicesAndParams()}
         />
         <div class="spacer"></div>
-        <Button
-          buttonText={isStreaming ? 'Stop Stream' : 'Start Stream'}
-          variant={isStreaming ? 'destructive' : 'default'}
-          onclick={startStopStream}
-        />
+        <Button buttonText="Stop" variant="destructive" onclick={() => whisperStore.stopStream()} />
+        <Button buttonText="Start" variant="default" onclick={() => whisperStore.startStream()} />
         <Button buttonText="Close" variant="outline" onclick={() => (open = false)} />
       </div>
     </div>
